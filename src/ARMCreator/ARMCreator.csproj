@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>maskx.ARMCreator</AssemblyName>
+    <Authors>maskx</Authors>
+    <Version>0.0.1</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/maskx/ARMCreator</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/maskx/ARMCreator</RepositoryUrl>
+    <RootNamespace>maskx.OrchestrationCreator</RootNamespace>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="maskx.Expression" Version="0.0.4" />
+    <PackageReference Include="Microsoft.Azure.DurableTask.Core" Version="2.1.3" />
+    <PackageReference Include="System.Text.Json" Version="4.7.0" />
+  </ItemGroup>
+</Project>
