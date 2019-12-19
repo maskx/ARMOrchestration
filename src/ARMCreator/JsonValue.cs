@@ -275,5 +275,14 @@ namespace maskx.OrchestrationCreator
                 return e.GetInt64();
             });
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is JsonValue jv)
+            {
+                return this.RootElement.IsEqual(jv.RootElement);
+            }
+            return false;
+        }
     }
 }

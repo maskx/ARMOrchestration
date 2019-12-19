@@ -228,5 +228,76 @@ namespace ARMCreatorTest
         }
 
         #endregion Array and object
+
+        #region Comparison
+
+        [Trait("ARMFunctions", "Comparison")]
+        [Fact(DisplayName = "equals")]
+        public void equals()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"checkInts","true"},
+                {"checkStrings","true" },
+                {"checkArrays","true" },
+                {"checkObjects","true"}
+            };
+
+            TestHelper.FunctionTest("equals", result);
+        }
+
+        [Trait("ARMFunctions", "Comparison")]
+        [Fact(DisplayName = "greater")]
+        public void greater()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"checkInts","false"},
+                {"checkStrings","true" }
+            };
+
+            TestHelper.FunctionTest("greater", result);
+        }
+
+        [Trait("ARMFunctions", "Comparison")]
+        [Fact(DisplayName = "greaterOrEquals")]
+        public void greaterOrEquals()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"checkInts","false"},
+                {"checkStrings","true" }
+            };
+
+            TestHelper.FunctionTest("greaterOrEquals", result);
+        }
+
+        [Trait("ARMFunctions", "Comparison")]
+        [Fact(DisplayName = "less")]
+        public void less()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"checkInts","true"},
+                {"checkStrings","false" }
+            };
+
+            TestHelper.FunctionTest("less", result);
+        }
+
+        [Trait("ARMFunctions", "Comparison")]
+        [Fact(DisplayName = "lessOrEquals")]
+        public void lessOrEquals()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"checkInts","true"},
+                {"checkStrings","false" }
+            };
+
+            TestHelper.FunctionTest("lessOrEquals", result);
+        }
+
+        #endregion Comparison
     }
 }

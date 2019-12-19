@@ -198,6 +198,79 @@ namespace maskx.OrchestrationCreator
 
             #endregion Array and object
 
+            #region Comparison
+
+            Functions.Add("equals", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                if (pars[0] is JsonValue jv)
+                {
+                    args.Result = jv.Equals(pars[1]);
+                }
+                else
+                {
+                    args.Result = pars[0].ToString() == pars[1].ToString();
+                }
+            });
+            Functions.Add("greater", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = false;
+                if (pars[0] is string s)
+                {
+                    args.Result = string.Compare(s, pars[1] as string) > 0;
+                }
+                else
+                {
+                    //ARM only support int
+                    args.Result = Convert.ToInt32(pars[0]) > Convert.ToInt32(pars[1]);
+                }
+            });
+            Functions.Add("greaterorequals", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = false;
+                if (pars[0] is string s)
+                {
+                    args.Result = string.Compare(s, pars[1] as string) >= 0;
+                }
+                else
+                {
+                    //ARM only support int
+                    args.Result = Convert.ToInt32(pars[0]) >= Convert.ToInt32(pars[1]);
+                }
+            });
+            Functions.Add("less", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = false;
+                if (pars[0] is string s)
+                {
+                    args.Result = string.Compare(s, pars[1] as string) < 0;
+                }
+                else
+                {
+                    //ARM only support int
+                    args.Result = Convert.ToInt32(pars[0]) < Convert.ToInt32(pars[1]);
+                }
+            });
+            Functions.Add("lessorequals", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = false;
+                if (pars[0] is string s)
+                {
+                    args.Result = string.Compare(s, pars[1] as string) <= 0;
+                }
+                else
+                {
+                    //ARM only support int
+                    args.Result = Convert.ToInt32(pars[0]) <= Convert.ToInt32(pars[1]);
+                }
+            });
+
+            #endregion Comparison
+
             #region Logical functions
 
             Functions.Add("and", (args, cxt) =>
