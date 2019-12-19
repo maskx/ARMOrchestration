@@ -51,8 +51,15 @@ namespace maskx.OrchestrationCreator
                         { "parameters",input.Parameters}
                     });
                     var t = type.ToLower();
-                    if ("string" == t || "bool" == t)
+                    if ("string" == t)
                         child.Add($"\"{item.Name}\":\"{v}\"");
+                    else if ("bool" == t)
+                    {
+                        if ((bool)v)
+                            child.Add($"\"{item.Name}\":true");
+                        else
+                            child.Add($"\"{item.Name}\":false");
+                    }
                     else if ("object" == t || "array" == t)
                         child.Add($"\"{item.Name}\":{(v as JsonValue).RawString}");
                     else

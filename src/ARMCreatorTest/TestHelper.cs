@@ -15,11 +15,13 @@ namespace ARMCreatorTest
             string s = Path.Combine(AppContext.BaseDirectory, "Inputs\\functions", $"{filename}.json");
             return File.ReadAllText(s);
         }
+
         public static string GetNodeStringValue(string filename, string path)
         {
             var templatString = TestHelper.GetFunctionInputContent(filename);
             return new JsonValue(templatString).GetNodeStringValue(path);
         }
+
         public static void FunctionTest(string filename, Dictionary<string, string> result)
         {
             var templatString = TestHelper.GetFunctionInputContent(filename);
@@ -28,13 +30,14 @@ namespace ARMCreatorTest
             using var templateDoc = JsonDocument.Parse(templatString);
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement;
-            Assert.True(templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement));
-
-            List<string> child = new List<string>();
-            foreach (var item in outputDefineElement.EnumerateObject())
+            if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
             {
-                Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement v));
-                Assert.Equal(result[item.Name], v.GetRawText());
+                List<string> child = new List<string>();
+                foreach (var item in outputDefineElement.EnumerateObject())
+                {
+                    Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement v), $"cannot find {item.Name} in output");
+                    Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
+                }
             }
         }
     }

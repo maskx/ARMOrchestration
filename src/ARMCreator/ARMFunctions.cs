@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 
 namespace maskx.OrchestrationCreator
 {
@@ -18,9 +19,13 @@ namespace maskx.OrchestrationCreator
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 string str = string.Empty;
-                if (par1 is string || par1 is bool)
+                if (par1 is string)
                 {
                     str = $"[\"{par1}\"]";
+                }
+                else if (par1 is bool f)
+                {
+                    str = f ? "true" : "false";
                 }
                 else if (par1 is JsonValue)
                 {
@@ -54,16 +59,143 @@ namespace maskx.OrchestrationCreator
             {
                 args.Result = false;
                 var pars = args.EvaluateParameters(cxt);
-                if (pars[0] is string)
+                if (pars[0] is string s)
                 {
-                    if ((pars[0] as string).IndexOf(pars[1] as string) > 0)
+                    if (s.IndexOf(pars[1] as string) > 0)
                         args.Result = true;
                 }
-                else if (pars[0] is JsonValue)
+                else if (pars[0] is JsonValue jv)
                 {
-                    args.Result = (pars[0] as JsonValue).Contains(pars[1]);
+                    args.Result = jv.Contains(pars[1]);
                 }
             });
+            Functions.Add("createarray", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = new JsonValue($"[{string.Join(",", pars.Select(JsonValue.PackageJson))}]");
+            });
+            Functions.Add("first", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                if (par1 is string s)
+                    args.Result = s[0].ToString();
+                else if (par1 is JsonValue jv)
+                    args.Result = jv[0];
+            });
+            Functions.Add("intersection", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                JsonValue jv = pars[0] as JsonValue;
+                for (int i = 1; i < pars.Length; i++)
+                {
+                    jv = jv.Intersect(pars[i] as JsonValue);
+                }
+                args.Result = jv;
+            });
+            Functions.Add("json", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = new JsonValue(par1.ToString());
+            });
+            Functions.Add("last", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                if (par1 is string s)
+                    args.Result = s.Last().ToString();
+                else if (par1 is JsonValue jv)
+                    args.Result = jv[jv.Length - 1];
+            });
+            Functions.Add("length", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                if (par1 is string s)
+                    args.Result = s.Length;
+                else if (par1 is JsonValue jv)
+                    args.Result = jv.Length;
+            });
+            Functions.Add("max", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                if (pars[0] is JsonValue jv)
+                {
+                    args.Result = jv.Max();
+                }
+                else
+                {
+                    args.Result = pars.Max();
+                }
+            });
+            Functions.Add("min", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                if (pars[0] is JsonValue jv)
+                {
+                    args.Result = jv.Min();
+                }
+                else
+                {
+                    args.Result = pars.Min();
+                }
+            });
+            Functions.Add("range", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                List<int> nums = new List<int>();
+                int index = Convert.ToInt32(pars[0]);
+                int length = index + Convert.ToInt32(pars[1]);
+                for (; index < length; index++)
+                {
+                    nums.Add(index);
+                }
+                args.Result = new JsonValue($"[{string.Join(",", nums)}]");
+            });
+            Functions.Add("skip", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                int numberToSkip = Convert.ToInt32(pars[1]);
+                if (pars[0] is string s)
+                {
+                    args.Result = s.Substring(numberToSkip);
+                }
+                else if (pars[0] is JsonValue jv)
+                {
+                    List<string> ele = new List<string>();
+                    for (int i = numberToSkip; i < jv.Length; i++)
+                    {
+                        ele.Add(JsonValue.PackageJson(jv[i]));
+                    }
+                    args.Result = new JsonValue($"[{string.Join(",", ele)}]");
+                }
+            });
+            Functions.Add("take", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                int numberToTake = Convert.ToInt32(pars[1]);
+                if (pars[0] is string s)
+                {
+                    args.Result = s.Substring(0, numberToTake);
+                }
+                else if (pars[0] is JsonValue jv)
+                {
+                    List<string> ele = new List<string>();
+                    for (int i = 0; i < numberToTake; i++)
+                    {
+                        ele.Add(JsonValue.PackageJson(jv[i]));
+                    }
+                    args.Result = new JsonValue($"[{string.Join(",", ele)}]");
+                }
+            });
+            Functions.Add("union", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                JsonValue jv = pars[0] as JsonValue;
+                for (int i = 1; i < pars.Length; i++)
+                {
+                    jv = jv.Union(pars[i] as JsonValue);
+                }
+                args.Result = jv;
+            });
+
             #endregion Array and object
 
             #region Logical functions
@@ -167,12 +299,11 @@ namespace maskx.OrchestrationCreator
                 else if (par1 is JsonValue)
                 {
                     var p = par1 as JsonValue;
-                    if (p.RawString == "{}" || p.RawString == "[]")
+                    if (p.RawString == "{}" || p.RawString == "[]" || p.RawString == "null")
                         args.Result = true;
                 }
                 else if (par1 is string && string.IsNullOrEmpty(par1 as string))
                     args.Result = true;
-
             });
 
             #endregion String

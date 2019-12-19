@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
+using maskx.OrchestrationCreator.Extensions;
 
 namespace maskx.OrchestrationCreator
 {
@@ -11,33 +14,85 @@ namespace maskx.OrchestrationCreator
         public string RawString { get; set; }
         private JsonDocument json = null;
 
+        private JsonElement RootElement
+        {
+            get
+            {
+                if (json == null)
+                    json = JsonDocument.Parse(RawString);
+                return json.RootElement;
+            }
+        }
+
+        public JsonValueKind ValueKind
+        {
+            get
+            {
+                return RootElement.ValueKind;
+            }
+        }
+
         public JsonValue(string rawString)
         {
             this.RawString = rawString;
         }
+
+        public object this[int index]
+        {
+            get
+            {
+                return GetElementValue(RootElement[index]);
+            }
+        }
+
+        public object this[string name]
+        {
+            get
+            {
+                if (RootElement.TryGetProperty(name, out JsonElement ele))
+                {
+                    return GetElementValue(ele);
+                }
+                throw new IndexOutOfRangeException();
+            }
+        }
+
+        public int Length
+        {
+            get
+            {
+                if (RootElement.ValueKind == JsonValueKind.Array)
+                    return RootElement.GetArrayLength();
+                else if (RootElement.ValueKind == JsonValueKind.Object)
+                    return RootElement.EnumerateObject().Count();
+                return 0;
+            }
+        }
+
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
         {
-            if (json == null)
-                json = JsonDocument.Parse(RawString);
-            int i = 0;
-            int index = (int)indexes[0];
-            foreach (var item in json.RootElement.EnumerateArray())
+            try
             {
-                if (i == index)
+                if (indexes[0] is string)
                 {
-                    result = GetElementValue(item);
-                    return true;
+                    result = this[(string)indexes[0]];
                 }
-                i++;
+                else
+                {
+                    result = this[(int)indexes[0]];
+                }
+                return true;
+            }
+            catch
+            {
             }
             result = null;
             return false;
         }
+
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
-            if (json == null)
-                json = JsonDocument.Parse(RawString);
-            if (json.RootElement.TryGetProperty(binder.Name, out JsonElement element))
+            if (RootElement.TryGetProperty(binder.Name, out JsonElement element))
             {
                 result = GetElementValue(element);
                 return true;
@@ -60,30 +115,36 @@ namespace maskx.OrchestrationCreator
                 case JsonValueKind.Object:
                 case JsonValueKind.Array:
                     return new JsonValue(element.GetRawText());
+
                 case JsonValueKind.String:
                     return element.GetString();
+
                 case JsonValueKind.Number:
                     return element.GetDecimal();
+
                 case JsonValueKind.True:
                     return true;
+
                 case JsonValueKind.False:
                     return false;
+
                 case JsonValueKind.Null:
                     return null;
+
                 default:
                     return element.GetRawText();
             }
         }
+
         public override string ToString()
         {
             return this.RawString;
         }
+
         public string GetNodeStringValue(string path)
         {
-            if (json == null)
-                json = JsonDocument.Parse(RawString);
             string[] p = path.Split('/');
-            JsonElement ele = json.RootElement;
+            JsonElement ele = RootElement;
             foreach (var item in p)
             {
                 if (!ele.TryGetProperty(item, out ele))
@@ -91,32 +152,31 @@ namespace maskx.OrchestrationCreator
             }
             return ele.GetRawText();
         }
+
         public bool Contains(object item)
         {
-            if (json == null)
-                json = JsonDocument.Parse(RawString);
-            var root = json.RootElement;
-            if (root.ValueKind == JsonValueKind.Array)
+            if (RootElement.ValueKind == JsonValueKind.Array)
             {
-                Type t = item.GetType();
-                foreach (var element in json.RootElement.EnumerateArray())
+                var jv = item as JsonValue;
+                foreach (var element in RootElement.EnumerateArray())
                 {
-                    if (element.ValueKind == JsonValueKind.String && element.GetString() == item.ToString())
+                    if (jv != null)
                     {
+                        if (element.ValueKind == JsonValueKind.Array || element.ValueKind == JsonValueKind.Object)
+                        {
+                            if (element.IsEqual(jv.RootElement))
+                                return true;
+                        }
+                    }
+                    else if (element.ValueKind == JsonValueKind.String && element.ValueEquals(item.ToString()))
                         return true;
-                    }
-                    if (element.ValueKind == JsonValueKind.Number)
-                    {
-                        if (t == typeof(int) && element.GetInt64() == (Int64)item)
-                            return true;
-                        else if (element.GetDecimal() == (decimal)item)
-                            return true;
-                    }
+                    else if (element.GetRawText() == item.ToString())
+                        return true;
                 }
             }
-            else if (root.ValueKind == JsonValueKind.Object)
+            else if (RootElement.ValueKind == JsonValueKind.Object)
             {
-                foreach (var obj in json.RootElement.EnumerateObject())
+                foreach (var obj in RootElement.EnumerateObject())
                 {
                     if (obj.Name == item.ToString())
                         return true;
@@ -125,5 +185,95 @@ namespace maskx.OrchestrationCreator
             return false;
         }
 
+        public JsonValue Intersect(JsonValue target)
+        {
+            var s = this.RootElement;
+            var t = target.RootElement;
+            if (s.ValueKind == JsonValueKind.Array)
+            {
+                var newJsonStr = string.Join(",",
+                      s.EnumerateArray()
+                         .Intersect(t.EnumerateArray(), new JsonElementEqualityComparer())
+                         .Select((e) =>
+                         {
+                             return e.GetRawText();
+                         }));
+                return new JsonValue($"[{newJsonStr}]");
+            }
+            else if (s.ValueKind == JsonValueKind.Object)
+            {
+                List<string> newObjList = new List<string>();
+                foreach (var item in s.EnumerateObject())
+                {
+                    if (t.TryGetProperty(item.Name, out JsonElement ele)
+                        && item.Value.IsEqual(ele))
+                    {
+                        newObjList.Add($"\"{item.Name}\":{ele.GetRawText()}");
+                    }
+                }
+                string newObjString = string.Join(",", newObjList);
+                return new JsonValue($"{{{newObjString}}}");
+            }
+            return null;
+        }
+
+        public JsonValue Union(JsonValue target)
+        {
+            var s = this.RootElement;
+            var t = target.RootElement;
+            if (s.ValueKind == JsonValueKind.Array)
+            {
+                var newJsonStr = string.Join(",",
+                      s.EnumerateArray()
+                         .Union(t.EnumerateArray(), new JsonElementEqualityComparer())
+                         .Select((e) =>
+                         {
+                             return e.GetRawText();
+                         }));
+                return new JsonValue($"[{newJsonStr}]");
+            }
+            else if (s.ValueKind == JsonValueKind.Object)
+            {
+                Dictionary<string, object> newObjList = new Dictionary<string, object>();
+                foreach (var item in s.EnumerateObject())
+                {
+                    newObjList.Add(item.Name, item.Value.GetRawText());
+                }
+                foreach (var item in t.EnumerateObject())
+                {
+                    newObjList[item.Name] = item.Value.GetRawText();
+                }
+                return new JsonValue($"{{{string.Join(",", newObjList.Select(k => $"\"{k.Key}\":{k.Value}"))}}}");
+            }
+            return null;
+        }
+
+        public static string PackageJson(object value)
+        {
+            if (value is string)
+                return $"\"{value}\"";
+            else if (value is bool)
+                return ((bool)value) ? "true" : "false";
+            else
+                return value.ToString();
+        }
+
+        public object Max()
+        {
+            return RootElement.EnumerateArray().Max((e) =>
+            {
+                //ARM only support int in array
+                return e.GetInt64();
+            });
+        }
+
+        public object Min()
+        {
+            return RootElement.EnumerateArray().Min((e) =>
+            {
+                //ARM only support int in array
+                return e.GetInt64();
+            });
+        }
     }
 }
