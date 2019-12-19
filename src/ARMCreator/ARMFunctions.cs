@@ -400,6 +400,47 @@ namespace maskx.OrchestrationCreator
             });
 
             #endregion String
+
+            #region Numeric
+
+            Functions.Add("add", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = Convert.ToInt32(pars[0]) + Convert.ToInt32(pars[1]);
+            });
+            Functions.Add("div", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = Convert.ToInt32(pars[0]) / Convert.ToInt32(pars[1]);
+            });
+            Functions.Add("float", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = Convert.ToDecimal(par1);
+            });
+            Functions.Add("int", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = Convert.ToInt32(par1);
+            });
+            Functions.Add("mod", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var d = Math.DivRem(Convert.ToInt32(pars[0]), Convert.ToInt32(pars[1]), out int result);
+                args.Result = result;
+            });
+            Functions.Add("mul", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = Convert.ToInt32(pars[0]) * Convert.ToInt32(pars[1]);
+            });
+            Functions.Add("sub", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = Convert.ToInt32(pars[0]) - Convert.ToInt32(pars[1]);
+            });
+
+            #endregion Numeric
         }
 
         public static object Run(string function, Dictionary<string, object> context)

@@ -376,5 +376,75 @@ namespace ARMCreatorTest
         }
 
         #endregion Logical
+
+        #region Numeric
+
+        [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "add")]
+        public void add()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"addResult","8"}
+            };
+            TestHelper.FunctionTest("add", result);
+        }
+
+        [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "div")]
+        public void div()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"divResult","2"}
+            };
+            TestHelper.FunctionTest("div", result);
+        }
+
+        [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "int")]
+        public void Int()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"intResult","4"}
+            };
+            TestHelper.FunctionTest("int", result);
+        }
+
+        [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "mod")]
+        public void mod()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"modResult","1"}
+            };
+            TestHelper.FunctionTest("mod", result);
+        }
+
+        [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "mul")]
+        public void mul()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"mulResult","15"}
+            };
+            TestHelper.FunctionTest("mul", result);
+        }
+
+        [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "sub")]
+        public void sub()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"subResult","4"}
+            };
+            TestHelper.FunctionTest("sub", result);
+        }
+
+        #endregion Numeric
     }
 }
