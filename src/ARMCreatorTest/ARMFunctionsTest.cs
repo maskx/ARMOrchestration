@@ -332,5 +332,49 @@ namespace ARMCreatorTest
         }
 
         #endregion Deployment
+
+        #region Logical
+
+        [Trait("ARMFunctions", "Logical")]
+        [Fact(DisplayName = "and or not")]
+        public void and()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"andExampleOutput","false"},
+                {"orExampleOutput","true" },
+                {"notExampleOutput","false"}
+            };
+            TestHelper.FunctionTest("and", result);
+        }
+
+        [Trait("ARMFunctions", "Logical")]
+        [Fact(DisplayName = "bool")]
+        public void Bool()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"trueString","true"},
+                {"falseString","false" },
+                {"trueInt","true"},
+                { "falseInt","false"}
+            };
+            TestHelper.FunctionTest("bool", result);
+        }
+
+        [Trait("ARMFunctions", "Logical")]
+        [Fact(DisplayName = "if")]
+        public void If()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"yesOutput","\"yes\""},
+                {"noOutput","\"no\"" },
+                {"objectOutput","{\"test\": \"value1\"}"}
+            };
+            TestHelper.FunctionTest("if", result);
+        }
+
+        #endregion Logical
     }
 }
