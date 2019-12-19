@@ -271,7 +271,7 @@ namespace maskx.OrchestrationCreator
 
             #endregion Comparison
 
-            #region Logical functions
+            #region Logical
 
             Functions.Add("and", (args, cxt) =>
             {
@@ -321,13 +321,13 @@ namespace maskx.OrchestrationCreator
                 }
             });
 
-            #endregion Logical functions
+            #endregion Logical
 
-            #region Deployment value
+            #region Deployment
 
             Functions.Add("parameters", (args, cxt) =>
             {
-                if (!cxt.TryGetValue("parametersDefine", out object pds))
+                if (!cxt.TryGetValue("parametersdefine", out object pds))
                     return;
                 if (string.IsNullOrEmpty(pds.ToString()))
                 {
@@ -357,9 +357,29 @@ namespace maskx.OrchestrationCreator
                 {
                     args.Result = JsonValue.GetElementValue(defValue);
                 }
+                if (args.Result is string s)
+                    args.Result = Run(s, cxt);
+            });
+            Functions.Add("variables", (args, cxt) =>
+            {
+                if (!cxt.TryGetValue("variabledefine", out object pds))
+                    return;
+                if (string.IsNullOrEmpty(pds.ToString()))
+                {
+                    throw new Exception("ARM Template does not define the variables");
+                }
+                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
+                using var defineDoc = JsonDocument.Parse(pds.ToString());
+                if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
+                {
+                    throw new Exception($"ARM Template does not define the variables:{par1}");
+                }
+                args.Result = JsonValue.GetElementValue(parEleDef);
+                if (args.Result is string s)
+                    args.Result = Run(s, cxt);
             });
 
-            #endregion Deployment value
+            #endregion Deployment
 
             #region String
 
@@ -400,6 +420,11 @@ namespace maskx.OrchestrationCreator
                 return expression.Evaluate(context);
             }
             return function;
+        }
+
+        public static void SetFunction(string name, Action<FunctionArgs, Dictionary<string, object>> func)
+        {
+            Functions[name] = func;
         }
     }
 }

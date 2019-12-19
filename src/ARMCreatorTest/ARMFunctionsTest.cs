@@ -299,5 +299,38 @@ namespace ARMCreatorTest
         }
 
         #endregion Comparison
+
+        #region Deployment
+
+        [Trait("ARMFunctions", "Deployment")]
+        [Fact(DisplayName = "parameters")]
+        public void parameters()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"stringOutput","\"option 1\""},
+                {"intOutput","1" },
+                {"arrayOutput","[ 1, 2, 3 ]"},
+                {"crossOutput","\"option 1\""}
+            };
+            result.Add("objectOutput", TestHelper.GetNodeStringValue("parameters", "parameters/objectParameter/defaultValue"));
+            TestHelper.FunctionTest("parameters", result);
+        }
+
+        [Trait("ARMFunctions", "Deployment")]
+        [Fact(DisplayName = "variables")]
+        public void variables()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"exampleOutput1","\"myVariable\""},
+                {"exampleOutput2","[ 1, 2, 3, 4 ]" },
+                {"exampleOutput3","\"myVariable\""}
+            };
+            result.Add("exampleOutput4", TestHelper.GetNodeStringValue("variables", "variables/var4"));
+            TestHelper.FunctionTest("variables", result);
+        }
+
+        #endregion Deployment
     }
 }

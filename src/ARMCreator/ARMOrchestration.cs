@@ -46,7 +46,7 @@ namespace maskx.OrchestrationCreator
                     var type = item.Value.GetProperty("type").GetString();
                     var value = item.Value.GetProperty("value").GetString();
                     var v = ARMFunctions.Run(value, new Dictionary<string, object>() {
-                        { "parametersDefine",parameterDefineString},
+                        { "parametersdefine",parameterDefineString},
                         { "variabledefine",variableDefineString},
                         { "parameters",input.Parameters}
                     });
