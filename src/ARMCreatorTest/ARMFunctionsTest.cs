@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using maskx.OrchestrationCreator.Extensions;
 
 namespace ARMCreatorTest
 {
@@ -31,7 +32,7 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"stringOutput","\"default\"" },
+                {"stringOutput","default" },
                 { "intOutput","1"},
                 { "objectOutput","{\"first\": \"default\"}"},
                 {"arrayOutput","[1]" },
@@ -100,8 +101,8 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"arrayOutput","\"one\"" },
-                { "stringOutput","\"O\""}
+                {"arrayOutput","one" },
+                { "stringOutput","O"}
             };
             TestHelper.FunctionTest("first", result);
         }
@@ -137,8 +138,8 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"arrayOutput","\"three\"" },
-                {"stringOutput","\"e\""}
+                {"arrayOutput","three" },
+                {"stringOutput","e"}
             };
             TestHelper.FunctionTest("last", result);
         }
@@ -191,6 +192,7 @@ namespace ARMCreatorTest
             TestHelper.FunctionTest("range", result);
         }
 
+        [Trait("ARMFunctions", "String")]
         [Trait("ARMFunctions", "Array and object")]
         [Fact(DisplayName = "skip")]
         public void skip()
@@ -198,11 +200,12 @@ namespace ARMCreatorTest
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
                 {"arrayOutput","[\"three\"]" },
-                {"stringOutput","\"two three\"" }
+                {"stringOutput","two three" }
             };
             TestHelper.FunctionTest("skip", result);
         }
 
+        [Trait("ARMFunctions", "String")]
         [Trait("ARMFunctions", "Array and object")]
         [Fact(DisplayName = "take")]
         public void take()
@@ -210,7 +213,7 @@ namespace ARMCreatorTest
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
                 {"arrayOutput","[\"one\",\"two\"]" },
-                {"stringOutput","\"on\"" }
+                {"stringOutput","on" }
             };
             TestHelper.FunctionTest("take", result);
         }
@@ -308,10 +311,10 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"stringOutput","\"option 1\""},
+                {"stringOutput","option 1"},
                 {"intOutput","1" },
                 {"arrayOutput","[ 1, 2, 3 ]"},
-                {"crossOutput","\"option 1\""}
+                {"crossOutput","option 1"}
             };
             result.Add("objectOutput", TestHelper.GetNodeStringValue("parameters", "parameters/objectParameter/defaultValue"));
             TestHelper.FunctionTest("parameters", result);
@@ -323,9 +326,9 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"exampleOutput1","\"myVariable\""},
+                {"exampleOutput1","myVariable"},
                 {"exampleOutput2","[ 1, 2, 3, 4 ]" },
-                {"exampleOutput3","\"myVariable\""}
+                {"exampleOutput3","myVariable"}
             };
             result.Add("exampleOutput4", TestHelper.GetNodeStringValue("variables", "variables/var4"));
             TestHelper.FunctionTest("variables", result);
@@ -368,8 +371,8 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"yesOutput","\"yes\""},
-                {"noOutput","\"no\"" },
+                {"yesOutput","yes"},
+                {"noOutput","no" },
                 {"objectOutput","{\"test\": \"value1\"}"}
             };
             TestHelper.FunctionTest("if", result);
@@ -446,5 +449,199 @@ namespace ARMCreatorTest
         }
 
         #endregion Numeric
+
+        #region String
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "base64")]
+        public void base64()
+        {
+            //base64tojson: the JSON standard need double quota
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"base64Output","b25lLCB0d28sIHRocmVl"},
+                {"toStringOutput","one, two, three"},
+                {"toJsonOutput","{\"one\": \"a\", \"two\": \"b\"}"}
+            };
+            TestHelper.FunctionTest("base64", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "dataUri")]
+        public void dataUri()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"dataUriOutput","data:text/plain;charset=utf8;base64,SGVsbG8="},
+                {"toStringOutput","Hello, World!"}
+            };
+            TestHelper.FunctionTest("dataUri", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "endsWith startsWith")]
+        public void endsWith()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"startsTrue","true"},
+                {"startsCapTrue","true"},
+                {"startsFalse","false"},
+                {"endsTrue","true"},
+                {"endsCapTrue","true"},
+                {"endsFalse","false"}
+            };
+            TestHelper.FunctionTest("endsWith", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "format")]
+        public void format()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"formatTest","Hello, User. Formatted number: 8,175,133" }
+            };
+            TestHelper.FunctionTest("format", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "newGuid")]
+        public void newGuid()
+        {
+            var templatString = TestHelper.GetFunctionInputContent("newGuid");
+            ARMOrchestration orchestration = new ARMOrchestration();
+            var outputString = orchestration.RunTask(null, (templatString, string.Empty)).Result;
+            using var outputDoc = JsonDocument.Parse(outputString);
+            var outputRoot = outputDoc.RootElement;
+
+            Assert.True(outputRoot.TryGetProperty("guidOutput", out JsonElement v), $"cannot find guidOutput in output");
+            Assert.True(Guid.TryParse(v.GetString(), out Guid d));
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "indexOf lastIndexOf")]
+        public void indexOf()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"firstT","0" },
+                {"lastT","3" },
+                {"firstString","2" },
+                {"lastString","0" },
+                {"notFound","-1" },
+            };
+            TestHelper.FunctionTest("indexOf", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "padLeft")]
+        public void padLeft()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"stringOutput","0000000123" }
+            };
+            TestHelper.FunctionTest("padLeft", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "replace")]
+        public void replace()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"firstOutput","1231231234" },
+                {"secondOutput","123-123-xxxx" }
+            };
+            TestHelper.FunctionTest("replace", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "split")]
+        public void split()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"firstOutput","[\"one\",\"two\",\"three\"]"},
+                {"secondOutput","[\"one\",\"two\",\"three\"]"}
+            };
+            TestHelper.FunctionTest("split", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "string")]
+        public void stringMethod()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "intOutput","5"}
+            };
+            result.Add("objectOutput", TestHelper.GetNodeStringValue("string", "parameters/testObject/defaultValue"));
+            result.Add("arrayOutput", TestHelper.GetNodeStringValue("string", "parameters/testArray/defaultValue"));
+            TestHelper.FunctionTest("string", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "substring")]
+        public void substring()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "substringOutput","two"}
+            };
+            TestHelper.FunctionTest("substring", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "toLower toUpper")]
+        public void toLower()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "toLowerOutput","one two three"},
+                { "toUpperOutput","ONE TWO THREE"}
+        };
+            TestHelper.FunctionTest("toLower", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "trim")]
+        public void trim()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "return","one two three"}
+        };
+            TestHelper.FunctionTest("trim", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "uri uriComponentToString uriComponent")]
+        public void uri()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "uriOutput","http://contoso.com/resources/nested/azuredeploy.json"},
+                { "componentOutput","http%3A%2F%2Fcontoso.com%2Fresources%2Fnested%2Fazuredeploy.json"},
+                { "toStringOutput","http://contoso.com/resources/nested/azuredeploy.json"}
+            };
+            TestHelper.FunctionTest("uri", result);
+        }
+
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "utcNow")]
+        public void utcNow()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "utcOutput",DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'")},
+                { "utcShortOutput",DateTime.UtcNow.ToString("d")},
+                { "utcCustomOutput",DateTime.UtcNow.ToString("M d")}
+            };
+            TestHelper.FunctionTest("utcNow", result);
+        }
+
+        #endregion String
     }
 }

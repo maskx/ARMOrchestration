@@ -53,7 +53,7 @@ namespace maskx.OrchestrationCreator
             if (content.StartsWith("[") && content.EndsWith("]") && !content.StartsWith("[["))
             {
                 string functionString = content.TrimStart('[').TrimEnd(']');
-                return ARMFunctions.Run(functionString, null);
+                return ARMFunctions.Evaluate(functionString, null);
             }
             return content;
         }

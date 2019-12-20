@@ -250,10 +250,10 @@ namespace maskx.OrchestrationCreator
 
         public static string PackageJson(object value)
         {
-            if (value is string)
-                return $"\"{value}\"";
-            else if (value is bool)
-                return ((bool)value) ? "true" : "false";
+            if (value is string s)
+                return $"\"{s.GetRawString()}\"";
+            else if (value is bool b)
+                return b ? "true" : "false";
             else
                 return value.ToString();
         }

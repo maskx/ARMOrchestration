@@ -358,7 +358,7 @@ namespace maskx.OrchestrationCreator
                     args.Result = JsonValue.GetElementValue(defValue);
                 }
                 if (args.Result is string s)
-                    args.Result = Run(s, cxt);
+                    args.Result = Evaluate(s, cxt);
             });
             Functions.Add("variables", (args, cxt) =>
             {
@@ -376,13 +376,117 @@ namespace maskx.OrchestrationCreator
                 }
                 args.Result = JsonValue.GetElementValue(parEleDef);
                 if (args.Result is string s)
-                    args.Result = Run(s, cxt);
+                    args.Result = Evaluate(s, cxt);
             });
 
             #endregion Deployment
 
             #region String
 
+            Functions.Add("base64", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                var plainTextBytes = Encoding.UTF8.GetBytes(par1 as string);
+                args.Result = Convert.ToBase64String(plainTextBytes);
+            });
+            Functions.Add("base64tostring", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                var base64EncodedBytes = Convert.FromBase64String(par1 as string);
+                args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
+            });
+            Functions.Add("base64tojson", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                var base64EncodedBytes = Convert.FromBase64String(par1 as string);
+                args.Result = new JsonValue(Encoding.UTF8.GetString(base64EncodedBytes));
+            });
+            Functions.Add("datauri", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                var plainTextBytes = Encoding.UTF8.GetBytes(par1 as string);
+                args.Result = "data:text/plain;charset=utf8;base64," + Convert.ToBase64String(plainTextBytes);
+            });
+            Functions.Add("datauritostring", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                var s = (par1 as string);
+                s = s.Substring(s.LastIndexOf(',') + 1).Trim();
+                var base64EncodedBytes = Convert.FromBase64String(s);
+                args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
+            });
+            Functions.Add("endswith", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = (pars[0] as string).EndsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
+            });
+            Functions.Add("startswith", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = (pars[0] as string).StartsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
+            });
+            Functions.Add("format", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = string.Format((pars[0] as string), pars.Skip(1).ToArray());
+            });
+            Functions.Add("indexof", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = (pars[0] as string).IndexOf(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
+            });
+            Functions.Add("lastindexof", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = (pars[0] as string).LastIndexOf(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
+            });
+            Functions.Add("padleft", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var s = pars[0] as string;
+                var width = (int)pars[1];
+                if (pars.Length > 2)
+                {
+                    char c = pars[2].ToString()[0];
+                    args.Result = s.PadLeft(width, c);
+                }
+                else
+                    args.Result = s.PadLeft(width);
+            });
+            Functions.Add("replace", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = (pars[0] as string).Replace(pars[1] as string, pars[2] as string);
+            });
+            Functions.Add("split", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var str = pars[0] as string;
+                string[] rtv;
+                if (pars[1] is string split)
+                    rtv = str.Split(split[0]);
+                else if (pars[1] is JsonValue jv)
+                {
+                    var splits = new char[jv.Length];
+                    for (int i = 0; i < splits.Length; i++)
+                    {
+                        splits[i] = (jv[i] as string)[0];
+                    }
+                    rtv = str.Split(splits);
+                }
+                else
+                    rtv = null;
+                args.Result = new JsonValue($"[\"{ string.Join("\",\"", rtv)}\"]");
+            });
+            Functions.Add("newguid", (args, cxt) =>
+            {
+                args.Result = Guid.NewGuid().ToString();
+            });
+            Functions.Add("string", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = par1.ToString();
+            });
             Functions.Add("empty", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
@@ -397,6 +501,58 @@ namespace maskx.OrchestrationCreator
                 }
                 else if (par1 is string && string.IsNullOrEmpty(par1 as string))
                     args.Result = true;
+            });
+            Functions.Add("substring", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var s = pars[0] as string;
+                var startIndex = (int)pars[1];
+                if (pars.Length > 2)
+                {
+                    args.Result = s.Substring(startIndex, (int)pars[2]);
+                }
+                else
+                {
+                    args.Result = s.Substring(startIndex);
+                }
+            });
+            Functions.Add("tolower", (args, cxt) =>
+            {
+                args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToLower();
+            });
+            Functions.Add("toupper", (args, cxt) =>
+            {
+                args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToUpper();
+            });
+            Functions.Add("trim", (args, cxt) =>
+            {
+                args.Result = args.Parameters[0].Evaluate(cxt).ToString().Trim();
+            });
+            Functions.Add("uri", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = System.IO.Path.Combine(pars[0] as string, pars[1] as string);
+            });
+            Functions.Add("uricomponent", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = Uri.EscapeDataString(par1 as string);
+            });
+            Functions.Add("uricomponenttostring", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = Uri.UnescapeDataString(par1 as string);
+            });
+            Functions.Add("utcnow", (args, cxt) =>
+            {
+                if (args.Parameters.Length > 0)
+                {
+                    args.Result = DateTime.UtcNow.ToString(args.Parameters[0].Evaluate(cxt).ToString());
+                }
+                else
+                {
+                    args.Result = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
+                }
             });
 
             #endregion String
@@ -443,7 +599,17 @@ namespace maskx.OrchestrationCreator
             #endregion Numeric
         }
 
-        public static object Run(string function, Dictionary<string, object> context)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="function"></param>
+        /// <param name="context">
+        /// parametersdefine
+        /// variabledefine
+        /// parameters
+        /// </param>
+        /// <returns></returns>
+        public static object Evaluate(string function, Dictionary<string, object> context)
         {
             if (function.StartsWith("[") && function.EndsWith("]") && !function.StartsWith("[["))
             {

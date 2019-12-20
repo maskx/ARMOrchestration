@@ -36,7 +36,10 @@ namespace ARMCreatorTest
                 foreach (var item in outputDefineElement.EnumerateObject())
                 {
                     Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement v), $"cannot find {item.Name} in output");
-                    Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
+                    if (v.ValueKind == JsonValueKind.String)
+                        Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
+                    else
+                        Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
                 }
             }
         }

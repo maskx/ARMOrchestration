@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using maskx.OrchestrationCreator.Extensions;
 
 namespace maskx.OrchestrationCreator
 {
@@ -45,14 +46,14 @@ namespace maskx.OrchestrationCreator
                 {
                     var type = item.Value.GetProperty("type").GetString();
                     var value = item.Value.GetProperty("value").GetString();
-                    var v = ARMFunctions.Run(value, new Dictionary<string, object>() {
+                    var v = ARMFunctions.Evaluate(value, new Dictionary<string, object>() {
                         { "parametersdefine",parameterDefineString},
                         { "variabledefine",variableDefineString},
                         { "parameters",input.Parameters}
                     });
                     var t = type.ToLower();
                     if ("string" == t)
-                        child.Add($"\"{item.Name}\":\"{v}\"");
+                        child.Add($"\"{item.Name}\":\"{(v as string).GetRawString()}\"");
                     else if ("bool" == t)
                     {
                         if ((bool)v)
