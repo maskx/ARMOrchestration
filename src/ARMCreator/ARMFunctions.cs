@@ -564,6 +564,34 @@ namespace maskx.OrchestrationCreator
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = Convert.ToInt32(pars[0]) + Convert.ToInt32(pars[1]);
             });
+            Functions.Add("copyindex", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                string loopName = string.Empty; ;
+                int offset = 0;
+                if (pars.Length == 0)
+                {
+                    loopName = cxt["copyindexcurrentloopname"].ToString();
+                }
+                else if (pars.Length == 1)
+                {
+                    if (pars[0] is string s)
+                    {
+                        loopName = s;
+                    }
+                    else
+                    {
+                        loopName = cxt["copyindexcurrentloopname"].ToString();
+                        offset = (int)pars[0];
+                    }
+                }
+                else
+                {
+                    loopName = pars[0] as string;
+                    offset = (int)pars[1];
+                }
+                args.Result = (cxt["copyindex"] as Dictionary<string, int>)[loopName] + offset;
+            });
             Functions.Add("div", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);

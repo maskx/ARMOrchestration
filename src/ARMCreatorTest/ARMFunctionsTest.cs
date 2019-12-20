@@ -394,6 +394,29 @@ namespace ARMCreatorTest
         }
 
         [Trait("ARMFunctions", "Numeric")]
+        [Fact(DisplayName = "copyindex")]
+        public void copyindex()
+        {
+            Dictionary<string, object> cxt = new Dictionary<string, object>() {
+                {"copyindexcurrentloopname","loop1" },
+                {"copyindex",new Dictionary<string,int>(){
+                    {"loop1",2 },
+                    {"loop2",7 }
+                }
+                }
+            };
+
+            object rtv = ARMFunctions.Evaluate("[copyindex()]", cxt);
+            Assert.Equal(2, (int)rtv);
+            rtv = ARMFunctions.Evaluate("[copyindex(1)]", cxt);
+            Assert.Equal(3, (int)rtv);
+            rtv = ARMFunctions.Evaluate("[copyindex('loop2')]", cxt);
+            Assert.Equal(7, (int)rtv);
+            rtv = ARMFunctions.Evaluate("[copyindex('loop2',2)]", cxt);
+            Assert.Equal(9, (int)rtv);
+        }
+
+        [Trait("ARMFunctions", "Numeric")]
         [Fact(DisplayName = "div")]
         public void div()
         {

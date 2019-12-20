@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.29519.161
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ARMCreator", "src\ARMCreator\ARMCreator.csproj", "{E0270FEA-D3EC-4634-976F-9877ED26EDC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ARMCreatorTest", "src\ARMCreatorTest\ARMCreatorTest.csproj", "{0AC04383-A5B4-4A91-ABD4-89626FE158A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ARMCreatorTest", "src\ARMCreatorTest\ARMCreatorTest.csproj", "{0AC04383-A5B4-4A91-ABD4-89626FE158A3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{8CC95BB9-7214-4774-94B0-FB385186593D}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
