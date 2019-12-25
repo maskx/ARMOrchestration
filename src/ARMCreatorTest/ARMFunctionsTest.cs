@@ -1,11 +1,9 @@
 ﻿using maskx.OrchestrationCreator;
+using maskx.OrchestrationCreator.ARMTemplate;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using Xunit;
-using maskx.OrchestrationCreator.Extensions;
-using maskx.OrchestrationCreator.ARMTemplate;
 
 namespace ARMCreatorTest
 {
@@ -536,10 +534,10 @@ namespace ARMCreatorTest
         {
             var templatString = TestHelper.GetFunctionInputContent("newGuid");
             ARMOrchestration orchestration = new ARMOrchestration();
-            var outputString = orchestration.RunTask(null, new ARMOrchestrationInput()
+            var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
             {
                 Template = Template.Parse(templatString)
-            }).Result;
+            })).Result.Content;
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement;
 

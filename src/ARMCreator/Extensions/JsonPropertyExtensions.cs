@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace maskx.OrchestrationCreator.Extensions
@@ -18,9 +17,5 @@ namespace maskx.OrchestrationCreator.Extensions
         {
             throw new NotImplementedException();
         }
-    }
-
-    public static class JsonPropertyExtensions
-    {
     }
 }

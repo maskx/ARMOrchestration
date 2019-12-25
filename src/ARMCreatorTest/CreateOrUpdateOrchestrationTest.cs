@@ -1,23 +1,57 @@
 using DurableTask.Core;
 using maskx.OrchestrationCreator;
+using maskx.OrchestrationCreator.ARMTemplate;
+using maskx.OrchestrationService;
+using maskx.OrchestrationService.OrchestrationCreator;
+using maskx.OrchestrationService.Worker;
 using System;
 using Xunit;
 
 namespace ARMCreatorTest
 {
+    [Collection("WebHost ARMOrchestartion")]
     [Trait("c", "CreateOrUpdateOrchestration")]
     public class CreateOrUpdateOrchestrationTest
     {
+        private ARMOrchestartionFixture fixture;
+
+        public CreateOrUpdateOrchestrationTest(ARMOrchestartionFixture fixture)
+        {
+            this.fixture = fixture;
+        }
+
+        [Trait("CreateOrUpdateOrchestration", "Condition")]
         [Fact(DisplayName = "TrueCondition")]
         public void TrueCondition()
         {
-            CreateOrUpdateInput input = new CreateOrUpdateInput()
-            {
-                Resource = "{\"condition\": true}"
-            };
-            CreateOrUpdateOrchestration createOrUpdateOrchestration = new CreateOrUpdateOrchestration();
+            var instance = new OrchestrationInstance() { InstanceId = Guid.NewGuid().ToString("N") };
 
-            createOrUpdateOrchestration.RunTask(null, input).Wait();
+            fixture.OrchestrationWorker.JumpStartOrchestrationAsync(new Job()
+            {
+                InstanceId = instance.InstanceId,
+                Orchestration = new Orchestration()
+                {
+                    Creator = "DICreator",
+                    Uri = typeof(ARMOrchestration).FullName + "_"
+                },
+                Input = TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
+                {
+                    Template = Template.Parse(TestHelper.GetTemplateContent("Condition/TrueCondition")),
+                    Parameters = string.Empty
+                })
+            }).Wait();
+            while (true)
+            {
+                var result = TestHelper.TaskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+                if (result != null)
+                {
+                    Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
+                    var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
+                    Assert.Equal(200, response.Code);
+
+                    break;
+                }
+            }
         }
 
         [Fact(DisplayName = "EmptyCondition")]
@@ -25,23 +59,13 @@ namespace ARMCreatorTest
         {
             CreateOrUpdateInput input = new CreateOrUpdateInput()
             {
-                Resource = "{\"condition\": \"\"}"
             };
             CreateOrUpdateOrchestration createOrUpdateOrchestration = new CreateOrUpdateOrchestration();
-
-            createOrUpdateOrchestration.RunTask(null, input).Wait();
         }
 
         [Fact(DisplayName = "NoCondition")]
         public void NoCondition()
         {
-            CreateOrUpdateInput input = new CreateOrUpdateInput()
-            {
-                Resource = "{}"
-            };
-            CreateOrUpdateOrchestration createOrUpdateOrchestration = new CreateOrUpdateOrchestration();
-
-            createOrUpdateOrchestration.RunTask(null, input).Wait();
         }
 
         [Fact(DisplayName = "FunctionCondition")]
@@ -49,11 +73,8 @@ namespace ARMCreatorTest
         {
             CreateOrUpdateInput input = new CreateOrUpdateInput()
             {
-                Resource = "{\"condition\": \"[bool(1)]\"}"
             };
             CreateOrUpdateOrchestration createOrUpdateOrchestration = new CreateOrUpdateOrchestration();
-
-            createOrUpdateOrchestration.RunTask(null, input).Wait();
         }
 
         [Fact(DisplayName = "WrongFunctionCondition")]
@@ -61,11 +82,8 @@ namespace ARMCreatorTest
         {
             CreateOrUpdateInput input = new CreateOrUpdateInput()
             {
-                Resource = "{\"condition\": \"[[abc]\"}"
             };
             CreateOrUpdateOrchestration createOrUpdateOrchestration = new CreateOrUpdateOrchestration();
-
-            createOrUpdateOrchestration.RunTask(null, input).Wait();
         }
     }
 }

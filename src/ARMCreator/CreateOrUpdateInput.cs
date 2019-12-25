@@ -1,14 +1,11 @@
-﻿using System;
+﻿using maskx.OrchestrationCreator.ARMTemplate;
 using System.Collections.Generic;
-using System.Text;
 
 namespace maskx.OrchestrationCreator
 {
     public class CreateOrUpdateInput
     {
-        public string Resource { get; set; }
-        public string Parameters { get; set; }
-        public string Variable { get; set; }
-        public string ParameterDefine { get; set; }
+        public Resource Resource { get; set; }
+        public Dictionary<string, object> OrchestrationContext { get; set; }
     }
 }

@@ -9,8 +9,8 @@
         "null2": null,
         "string": "default",
         "int": 1,
-        "object": {"first": "default"},
-        "array": [1]
+        "object": { "first": "default" },
+        "array": [ 1 ]
       }
     }
   },

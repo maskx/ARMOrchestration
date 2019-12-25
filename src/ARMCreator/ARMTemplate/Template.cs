@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace maskx.OrchestrationCreator.ARMTemplate
@@ -12,7 +11,8 @@ namespace maskx.OrchestrationCreator.ARMTemplate
         public string ApiProfile { get; set; }
         public string Parameters { get; set; }
         public string Variables { get; set; }
-        public string Resources { get; set; }
+        public List<Resource> Resources { get; set; } = new List<Resource>();
+
         public Dictionary<string, Function> Functions { get; set; } = new Dictionary<string, Function>();
         public string Outputs { get; set; }
 
@@ -72,7 +72,10 @@ namespace maskx.OrchestrationCreator.ARMTemplate
             }
             if (root.TryGetProperty("resources", out JsonElement resources))
             {
-                template.Resources = resources.GetRawText();
+                foreach (var item in resources.EnumerateArray())
+                {
+                    template.Resources.Add(Resource.Parse(item.GetRawText()));
+                }
             }
             if (root.TryGetProperty("outputs", out JsonElement outputDefineElement))
             {
