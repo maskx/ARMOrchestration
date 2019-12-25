@@ -1,4 +1,5 @@
 ﻿using maskx.OrchestrationCreator;
+using maskx.OrchestrationCreator.ARMTemplate;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +27,10 @@ namespace ARMCreatorTest
         {
             var templatString = TestHelper.GetFunctionInputContent(filename);
             ARMOrchestration orchestration = new ARMOrchestration();
-            var outputString = orchestration.RunTask(null, (templatString, string.Empty)).Result;
+            var outputString = orchestration.RunTask(null, new ARMOrchestrationInput()
+            {
+                Template = Template.Parse(templatString)
+            }).Result;
             using var templateDoc = JsonDocument.Parse(templatString);
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement;

@@ -120,7 +120,7 @@ namespace maskx.OrchestrationCreator
                     return element.GetString();
 
                 case JsonValueKind.Number:
-                    return element.GetDecimal();
+                    return element.GetInt32();
 
                 case JsonValueKind.True:
                     return true;

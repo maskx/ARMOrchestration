@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace maskx.OrchestrationCreator
 {
@@ -327,21 +328,10 @@ namespace maskx.OrchestrationCreator
 
             Functions.Add("parameters", (args, cxt) =>
             {
-                if (!cxt.TryGetValue("parametersdefine", out object pds))
-                    return;
-                if (string.IsNullOrEmpty(pds.ToString()))
-                {
-                    throw new Exception("ARM Template does not define the parameters");
-                }
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-                using var defineDoc = JsonDocument.Parse(pds.ToString());
-                if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
-                {
-                    throw new Exception($"ARM Template does not define the parameter:{par1}");
-                }
                 if (cxt.TryGetValue("parameters", out object parameters))
                 {
-                    if (!string.IsNullOrEmpty(parameters.ToString()))
+                    if (parameters != null && !string.IsNullOrEmpty(parameters.ToString()))
                     {
                         using var jsonDoc = JsonDocument.Parse(parameters.ToString());
                         if (jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
@@ -353,7 +343,21 @@ namespace maskx.OrchestrationCreator
                         }
                     }
                 }
-                if (!args.HasResult && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                if (args.HasResult) return;
+                if (!cxt.TryGetValue("parametersdefine", out object pds)
+                    || pds == null
+                    || string.IsNullOrEmpty(pds.ToString()))
+                {
+                    throw new Exception("ARM Template does not define the parameters");
+                }
+
+                using var defineDoc = JsonDocument.Parse(pds.ToString());
+                if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
+                {
+                    throw new Exception($"ARM Template does not define the parameter:{par1}");
+                }
+
+                if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
                 {
                     args.Result = JsonValue.GetElementValue(defValue);
                 }
@@ -634,6 +638,7 @@ namespace maskx.OrchestrationCreator
         /// <param name="context">
         /// parametersdefine
         /// variabledefine
+        /// functionsdefine
         /// parameters
         /// </param>
         /// <returns></returns>
@@ -650,6 +655,32 @@ namespace maskx.OrchestrationCreator
                         {
                             func(args, cxt);
                         }
+                        else if (cxt.TryGetValue("userDefinedFunctions", out object udfs))
+                        {
+                            if ((udfs as Dictionary<string, ARMTemplate.Function>).TryGetValue(name.ToLower(), out ARMTemplate.Function udf))
+                            {
+                                Expression.Expression expression1 = new Expression.Expression(udf.Output);
+                                Dictionary<string, object> udfContext = new Dictionary<string, object>();
+                                using JsonDocument udfPar = JsonDocument.Parse(udf.Parameters);
+                                var rootEle = udfPar.RootElement;
+                                var pars = args.EvaluateParameters(cxt);
+                                JObject jObject = new JObject();
+                                for (int i = 0; i < pars.Length; i++)
+                                {
+                                    var t = rootEle[i].GetProperty("type").GetString();
+                                    JProperty p = null;
+                                    if ("object" == t)
+                                        p = new JProperty("value", JObject.Parse(pars[i].ToString()));
+                                    else if ("array" == t)
+                                        p = new JProperty("value", JArray.Parse(pars[i].ToString()));
+                                    else
+                                        p = new JProperty("value", pars[i]);
+                                    jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
+                                }
+                                udfContext.Add("parameters", jObject.ToString(Newtonsoft.Json.Formatting.None));
+                                args.Result = GetOutput(udf.Output, udfContext);
+                            }
+                        }
                     }
                 };
                 return expression.Evaluate(context);
@@ -660,6 +691,37 @@ namespace maskx.OrchestrationCreator
         public static void SetFunction(string name, Action<FunctionArgs, Dictionary<string, object>> func)
         {
             Functions[name] = func;
+        }
+
+        public static object GetOutput(string output, Dictionary<string, object> context)
+        {
+            using JsonDocument outDoc = JsonDocument.Parse(output);
+            var rootEle = outDoc.RootElement;
+            var type = rootEle.GetProperty("type").GetString();
+            var value = rootEle.GetProperty("value").GetString();
+            var v = ARMFunctions.Evaluate(value, context);
+            return v;
+        }
+
+        public static string GetOutputs(string outputs, Dictionary<string, object> context)
+        {
+            JsonDocument outDoc = JsonDocument.Parse(outputs);
+            var outputDefineElement = outDoc.RootElement;
+            JObject jOutput = new JObject();
+            foreach (var item in outputDefineElement.EnumerateObject())
+            {
+                var type = item.Value.GetProperty("type").GetString();
+                var value = item.Value.GetProperty("value").GetString();
+                var v = ARMFunctions.Evaluate(value, context);
+                var t = type.ToLower();
+                if ("object" == t)
+                    jOutput.Add(item.Name, JObject.Parse(v.ToString()));
+                else if ("array" == t)
+                    jOutput.Add(item.Name, JArray.Parse(v.ToString()));
+                else
+                    jOutput.Add(item.Name, new JValue(v));
+            }
+            return jOutput.ToString(Newtonsoft.Json.Formatting.None);
         }
     }
 }

@@ -5,68 +5,37 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using maskx.OrchestrationCreator.Extensions;
+using Newtonsoft.Json.Linq;
 
 namespace maskx.OrchestrationCreator
 {
-    public class ARMOrchestration : TaskOrchestration<string, (string Template, string Parameters)>
+    public class ARMOrchestration : TaskOrchestration<string, ARMOrchestrationInput>
     {
-        public override async Task<string> RunTask(OrchestrationContext context, (string Template, string Parameters) input)
+        public override async Task<string> RunTask(OrchestrationContext context, ARMOrchestrationInput input)
         {
             List<Task> tasks = new List<Task>();
-            using var jsonDoc = JsonDocument.Parse(input.Template);
-            var root = jsonDoc.RootElement;
-            string parameterDefineString = string.Empty;
-            string variableDefineString = string.Empty;
-            if (root.TryGetProperty("parameters", out JsonElement parameterDefineElement))
+            Dictionary<string, object> armContext = new Dictionary<string, object>();
+            armContext.Add("parameters", input.Parameters);
+            armContext.Add("parametersdefine", input.Template.Parameters);
+            armContext.Add("variabledefine", input.Template.Variables);
+            armContext.Add("userDefinedFunctions", input.Template.Functions);
+            if (!string.IsNullOrEmpty(input.Template.Resources))
             {
-                parameterDefineString = parameterDefineElement.GetRawText();
-            }
-            if (root.TryGetProperty("variables", out JsonElement variableDefineElement))
-            {
-                variableDefineString = variableDefineElement.GetRawText();
-            }
-            var resources = root.GetProperty("resources");
-            for (int i = 0; i < resources.GetArrayLength(); i++)
-            {
-                var resource = resources[i];
-                var p = new CreateOrUpdateInput()
+                JsonDocument resDoc = JsonDocument.Parse(input.Template.Resources);
+                var resources = resDoc.RootElement;
+                for (int i = 0; i < resources.GetArrayLength(); i++)
                 {
-                    Resource = resource.GetRawText(),
-                    Parameters = input.Parameters,
-                    Variable = variableDefineString,
-                    ParameterDefine = parameterDefineString
-                };
-                tasks.Add(context.CreateSubOrchestrationInstance<string>(typeof(CreateOrUpdateOrchestration), p));
+                    var resource = resources[i];
+                    var p = new CreateOrUpdateInput()
+                    {
+                    };
+                    tasks.Add(context.CreateSubOrchestrationInstance<string>(typeof(CreateOrUpdateOrchestration), p));
+                }
             }
             Task.WaitAll(tasks.ToArray());
-            if (root.TryGetProperty("outputs", out JsonElement outputDefineElement))
+            if (!string.IsNullOrEmpty(input.Template.Outputs))
             {
-                List<string> child = new List<string>();
-                foreach (var item in outputDefineElement.EnumerateObject())
-                {
-                    var type = item.Value.GetProperty("type").GetString();
-                    var value = item.Value.GetProperty("value").GetString();
-                    var v = ARMFunctions.Evaluate(value, new Dictionary<string, object>() {
-                        { "parametersdefine",parameterDefineString},
-                        { "variabledefine",variableDefineString},
-                        { "parameters",input.Parameters}
-                    });
-                    var t = type.ToLower();
-                    if ("string" == t)
-                        child.Add($"\"{item.Name}\":\"{(v as string).GetRawString()}\"");
-                    else if ("bool" == t)
-                    {
-                        if ((bool)v)
-                            child.Add($"\"{item.Name}\":true");
-                        else
-                            child.Add($"\"{item.Name}\":false");
-                    }
-                    else if ("object" == t || "array" == t)
-                        child.Add($"\"{item.Name}\":{(v as JsonValue).RawString}");
-                    else
-                        child.Add($"\"{item.Name}\":{v}");
-                }
-                return $"{{{string.Join(",", child)}}}";
+                return ARMFunctions.GetOutputs(input.Template.Outputs, armContext);
             }
             return string.Empty;
         }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 using maskx.OrchestrationCreator.Extensions;
+using maskx.OrchestrationCreator.ARMTemplate;
 
 namespace ARMCreatorTest
 {
@@ -20,9 +21,9 @@ namespace ARMCreatorTest
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
                 { "intOutput","[1]"},
-                { "stringOutput","[\"efgh\"]"}
+                { "stringOutput","[\"efgh\"]"},
+                { "objectOutput","[{\"a\":\"b\",\"c\":\"d\"}]"}
             };
-            result.Add("objectOutput", $"[{TestHelper.GetNodeStringValue("array", "parameters/objectToConvert/defaultValue")}]");
             TestHelper.FunctionTest("array", result);
         }
 
@@ -34,7 +35,7 @@ namespace ARMCreatorTest
             {
                 {"stringOutput","default" },
                 { "intOutput","1"},
-                { "objectOutput","{\"first\": \"default\"}"},
+                { "objectOutput","{\"first\":\"default\"}"},
                 {"arrayOutput","[1]" },
                 {"emptyOutput","true" }
             };
@@ -47,7 +48,7 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"return",$"[{TestHelper.GetNodeStringValue("concat","parameters/firstArray/defaultValue")},{TestHelper.GetNodeStringValue("concat","parameters/secondArray/defaultValue")}]" }
+                {"return","[[\"1-1\",\"1-2\",\"1-3\"],[\"2-1\",\"2-2\",\"2-3\"]]"}
             };
             TestHelper.FunctionTest("concat", result);
         }
@@ -74,11 +75,11 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"stringArray","[\"a\",\"b\",\"c\"]" },
-                {"intArray","[1,2,3]" }
+                {"stringArray","[\"a\",\"b\",\"c\"]"},
+                {"intArray","[1,2,3]"},
+                {"objectArray","[{\"one\":\"a\",\"two\":\"b\",\"three\":\"c\"}]"},
+                {"arrayArray","[[\"one\",\"two\",\"three\"]]"}
             };
-            result.Add("objectArray", $"[{TestHelper.GetNodeStringValue("createarray", "parameters/objectToTest/defaultValue")}]");
-            result.Add("arrayArray", $"[{TestHelper.GetNodeStringValue("createarray", "parameters/arrayToTest/defaultValue")}]");
             TestHelper.FunctionTest("createarray", result);
         }
 
@@ -125,9 +126,9 @@ namespace ARMCreatorTest
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"jsonOutput","{\"a\": \"b\"}" },
+                {"jsonOutput","{\"a\":\"b\"}" },
                 {"nullOutput","true"},
-                {"paramOutput","{\"a\": \"demo value\"}"}
+                {"paramOutput","{\"a\":\"demo value\"}"}
             };
             TestHelper.FunctionTest("json", result);
         }
@@ -313,10 +314,11 @@ namespace ARMCreatorTest
             {
                 {"stringOutput","option 1"},
                 {"intOutput","1" },
-                {"arrayOutput","[ 1, 2, 3 ]"},
-                {"crossOutput","option 1"}
+                {"arrayOutput","[1,2,3]"},
+                {"crossOutput","option 1"},
+                {"objectOutput","{\"one\":\"a\",\"two\":\"b\"}"}
             };
-            result.Add("objectOutput", TestHelper.GetNodeStringValue("parameters", "parameters/objectParameter/defaultValue"));
+            //  result.Add("objectOutput", TestHelper.GetNodeStringValue("parameters", "parameters/objectParameter/defaultValue"));
             TestHelper.FunctionTest("parameters", result);
         }
 
@@ -327,10 +329,10 @@ namespace ARMCreatorTest
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
                 {"exampleOutput1","myVariable"},
-                {"exampleOutput2","[ 1, 2, 3, 4 ]" },
-                {"exampleOutput3","myVariable"}
+                {"exampleOutput2","[1,2,3,4]" },
+                {"exampleOutput3","myVariable"},
+                {"exampleOutput4","{\"property1\":\"value1\",\"property2\":\"value2\"}"}
             };
-            result.Add("exampleOutput4", TestHelper.GetNodeStringValue("variables", "variables/var4"));
             TestHelper.FunctionTest("variables", result);
         }
 
@@ -373,7 +375,7 @@ namespace ARMCreatorTest
             {
                 {"yesOutput","yes"},
                 {"noOutput","no" },
-                {"objectOutput","{\"test\": \"value1\"}"}
+                {"objectOutput","{\"test\":\"value1\"}"}
             };
             TestHelper.FunctionTest("if", result);
         }
@@ -484,7 +486,7 @@ namespace ARMCreatorTest
             {
                 {"base64Output","b25lLCB0d28sIHRocmVl"},
                 {"toStringOutput","one, two, three"},
-                {"toJsonOutput","{\"one\": \"a\", \"two\": \"b\"}"}
+                {"toJsonOutput","{\"one\":\"a\",\"two\":\"b\"}"}
             };
             TestHelper.FunctionTest("base64", result);
         }
@@ -534,7 +536,10 @@ namespace ARMCreatorTest
         {
             var templatString = TestHelper.GetFunctionInputContent("newGuid");
             ARMOrchestration orchestration = new ARMOrchestration();
-            var outputString = orchestration.RunTask(null, (templatString, string.Empty)).Result;
+            var outputString = orchestration.RunTask(null, new ARMOrchestrationInput()
+            {
+                Template = Template.Parse(templatString)
+            }).Result;
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement;
 

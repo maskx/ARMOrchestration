@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "storageNamePrefix": {
+      "type": "string",
+      "defaultValue": "abc"
+    }
+  },
+  "resources": [
+  ],
+  "functions": [
+    {
+      "namespace": "contoso",
+      "members": {
+        "uniqueName": {
+          "parameters": [
+            {
+              "name": "namePrefix",
+              "type": "string"
+            }
+          ],
+          "output": {
+            "type": "string",
+            "value": "[concat(toLower(parameters('namePrefix')),'-123' )]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "addResult": {
+      "type": "int",
+      "value": "[contoso.uniqueName(parameters('storageNamePrefix'))]"
+    }
+  }
+}

@@ -6,7 +6,8 @@ namespace maskx.OrchestrationCreator.ARMTemplate
 {
     public class Function
     {
-        public string Namespace { get; set; }
-        public Dictionary<string, object> Memebers { get; set; }
+        public string FullName { get; set; }
+        public string Parameters { get; set; }
+        public string Output { get; set; }
     }
 }
