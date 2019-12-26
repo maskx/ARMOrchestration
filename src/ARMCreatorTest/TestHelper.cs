@@ -9,6 +9,7 @@ using maskx.OrchestrationCreator.ARMTemplate;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Orchestration;
+using maskx.OrchestrationService.OrchestrationCreator;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -125,10 +126,6 @@ namespace ARMCreatorTest
             }
         }
 
-        public static void ARMOrchestrationTest(string templateString, string parameterString, Dictionary<string, string> result)
-        {
-        }
-
         public static IOrchestrationService CreateOrchestrationService()
         {
             var service = new SQLServerOrchestrationService(
@@ -180,7 +177,7 @@ namespace ARMCreatorTest
                  List<Type> activityTypes = new List<Type>();
 
                  orchestrationTypes.Add(typeof(AsyncRequestOrchestration));
-                 orchestrationTypes.Add(typeof(CreateOrUpdateOrchestration));
+                 orchestrationTypes.Add(typeof(ResourceOrchestration));
                  orchestrationTypes.Add(typeof(ARMOrchestration));
 
                  activityTypes.Add(typeof(AsyncRequestActivity));
@@ -214,6 +211,38 @@ namespace ARMCreatorTest
 
                  #endregion CommunicationWorker
              });
+        }
+
+        public static void OrchestrationTest(OrchestrationWorker worker, string filename)
+        {
+            var instance = new OrchestrationInstance() { InstanceId = Guid.NewGuid().ToString("N") };
+
+            worker.JumpStartOrchestrationAsync(new Job()
+            {
+                InstanceId = instance.InstanceId,
+                Orchestration = new Orchestration()
+                {
+                    Creator = "DICreator",
+                    Uri = typeof(ARMOrchestration).FullName + "_"
+                },
+                Input = TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
+                {
+                    Template = Template.Parse(TestHelper.GetTemplateContent(filename)),
+                    Parameters = string.Empty
+                })
+            }).Wait();
+            while (true)
+            {
+                var result = TestHelper.TaskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+                if (result != null)
+                {
+                    Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
+                    var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
+                    Assert.Equal(200, response.Code);
+
+                    break;
+                }
+            }
         }
     }
 }

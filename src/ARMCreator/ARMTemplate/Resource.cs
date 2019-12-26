@@ -6,15 +6,24 @@ namespace maskx.OrchestrationCreator.ARMTemplate
 {
     public class Resource
     {
-        public string Condition { get; set; }
+        public object Condition { get; set; }
         public string ApiVersion { get; set; }
         public string Type { get; set; }
         public string Name { get; set; }
         public string Location { get; set; }
         public string Tags { get; set; }
         public string Comments { get; set; }
-        public string Copy { get; set; }
+        public Copy Copy { get; set; }
+
+        /// <summary>
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
+        /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
+        ///
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#depend-on-resources-in-a-loop
+        /// Depend on resources in a loop
+        /// </summary>
         public List<string> DependsOn { get; set; } = new List<string>();
+
         public string Properties { get; set; }
         public string SKU { get; set; }
         public string Kind { get; set; }
@@ -28,7 +37,12 @@ namespace maskx.OrchestrationCreator.ARMTemplate
             var root = resDoc.RootElement;
             if (root.TryGetProperty("condition", out JsonElement condition))
             {
-                resource.Condition = condition.GetRawText();
+                if (condition.ValueKind == JsonValueKind.True)
+                    resource.Condition = true;
+                else if (condition.ValueKind == JsonValueKind.False)
+                    resource.Condition = false;
+                else if (condition.ValueKind == JsonValueKind.String)
+                    resource.Condition = condition.GetString();
             }
             if (root.TryGetProperty("apiVersion", out JsonElement apiVersion))
             {
@@ -68,7 +82,7 @@ namespace maskx.OrchestrationCreator.ARMTemplate
             }
             if (root.TryGetProperty("copy", out JsonElement copy))
             {
-                resource.Copy = copy.GetString();
+                resource.Copy = Copy.Parse(copy.GetString());
             }
             if (root.TryGetProperty("dependsOn", out JsonElement dependsOn))
             {

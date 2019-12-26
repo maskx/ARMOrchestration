@@ -183,4 +183,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Templates\CopyIndex\" />
+  </ItemGroup>
 </Project>
