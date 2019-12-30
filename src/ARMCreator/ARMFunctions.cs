@@ -710,16 +710,48 @@ namespace maskx.OrchestrationCreator
             JObject jOutput = new JObject();
             foreach (var item in outputDefineElement.EnumerateObject())
             {
-                var type = item.Value.GetProperty("type").GetString();
-                var value = item.Value.GetProperty("value").GetString();
-                var v = ARMFunctions.Evaluate(value, context);
-                var t = type.ToLower();
-                if ("object" == t)
-                    jOutput.Add(item.Name, JObject.Parse(v.ToString()));
-                else if ("array" == t)
-                    jOutput.Add(item.Name, JArray.Parse(v.ToString()));
-                else
-                    jOutput.Add(item.Name, new JValue(v));
+                var v = item.Value.GetProperty("value");
+                switch (v.ValueKind)
+                {
+                    case JsonValueKind.Undefined:
+                        jOutput.Add(item.Name, JValue.CreateUndefined());
+                        break;
+
+                    case JsonValueKind.Object:
+                        jOutput.Add(item.Name, JObject.Parse(v.GetRawText()));
+                        break;
+
+                    case JsonValueKind.Array:
+                        jOutput.Add(item.Name, JArray.Parse(v.GetRawText()));
+                        break;
+
+                    case JsonValueKind.String:
+                        var r = ARMFunctions.Evaluate(v.GetString(), context);
+                        var t = item.Value.GetProperty("type").GetString().ToLower();
+                        if ("object" == t)
+                            jOutput.Add(item.Name, JObject.Parse(r.ToString()));
+                        else if ("array" == t)
+                            jOutput.Add(item.Name, JArray.Parse(r.ToString()));
+                        else
+                            jOutput.Add(item.Name, new JValue(r));
+                        break;
+
+                    case JsonValueKind.Number:
+                        jOutput.Add(item.Name, v.GetInt32());
+                        break;
+
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
+                        jOutput.Add(item.Name, v.GetBoolean());
+                        break;
+
+                    case JsonValueKind.Null:
+                        jOutput.Add(item.Name, JValue.CreateNull());
+                        break;
+
+                    default:
+                        break;
+                }
             }
             return jOutput.ToString(Newtonsoft.Json.Formatting.None);
         }

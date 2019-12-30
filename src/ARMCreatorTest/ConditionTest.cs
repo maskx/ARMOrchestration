@@ -1,16 +1,10 @@
-﻿using DurableTask.Core;
-using maskx.OrchestrationCreator;
-using maskx.OrchestrationCreator.ARMTemplate;
-using maskx.OrchestrationService;
-using maskx.OrchestrationService.OrchestrationCreator;
-using maskx.OrchestrationService.Worker;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using maskx.OrchestrationService;
 using Xunit;
 
 namespace ARMCreatorTest
 {
+    [Collection("WebHost ARMOrchestartion")]
+    [Trait("ResourceOrchestration", "Condition")]
     public class ConditionTest
     {
         private ARMOrchestartionFixture fixture;
@@ -23,39 +17,53 @@ namespace ARMCreatorTest
         [Fact(DisplayName = "TrueCondition")]
         public void TrueCondition()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker, "Condition/TrueCondition");
-        }
-
-        [Fact(DisplayName = "EmptyCondition")]
-        public void EmptyCondition()
-        {
-            ResourceOrchestrationInput input = new ResourceOrchestrationInput()
-            {
-            };
-            ResourceOrchestration createOrUpdateOrchestration = new ResourceOrchestration();
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker, "Condition/TrueCondition", (instance, args) =>
+             {
+                 if (args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId)
+                 {
+                     var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
+                     Assert.Equal(201, r.Code);
+                 }
+             });
         }
 
         [Fact(DisplayName = "NoCondition")]
         public void NoCondition()
         {
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker, "Condition/NoCondition", (instance, args) =>
+            {
+                if (args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId)
+                {
+                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
+                    Assert.Equal(201, r.Code);
+                }
+            });
         }
 
-        [Fact(DisplayName = "FunctionCondition")]
-        public void FunctionCondition()
+        [Fact(DisplayName = "FunctionConditionTrue")]
+        public void FunctionConditionTrue()
         {
-            ResourceOrchestrationInput input = new ResourceOrchestrationInput()
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker, "Condition/FunctionConditionTrue", (instance, args) =>
             {
-            };
-            ResourceOrchestration createOrUpdateOrchestration = new ResourceOrchestration();
+                if (args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId)
+                {
+                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
+                    Assert.Equal(201, r.Code);
+                }
+            });
         }
 
-        [Fact(DisplayName = "WrongFunctionCondition")]
-        public void WrongFunctionCondition()
+        [Fact(DisplayName = "FunctionConditionFalse")]
+        public void FunctionConditionFalse()
         {
-            ResourceOrchestrationInput input = new ResourceOrchestrationInput()
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker, "Condition/FunctionConditionFalse", (instance, args) =>
             {
-            };
-            ResourceOrchestration createOrUpdateOrchestration = new ResourceOrchestration();
+                if (args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId)
+                {
+                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
+                    Assert.Equal(200, r.Code);
+                }
+            });
         }
     }
 }

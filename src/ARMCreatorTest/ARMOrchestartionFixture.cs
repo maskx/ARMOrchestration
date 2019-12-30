@@ -1,10 +1,8 @@
-﻿using DurableTask.Core.Serializing;
-using maskx.OrchestrationService.Worker;
+﻿using maskx.OrchestrationService.Worker;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace ARMCreatorTest

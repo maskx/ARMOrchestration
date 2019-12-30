@@ -282,5 +282,10 @@ namespace maskx.OrchestrationCreator
             }
             return false;
         }
+
+        public override int GetHashCode()
+        {
+            return 1305398700 + EqualityComparer<string>.Default.GetHashCode(RawString);
+        }
     }
 }

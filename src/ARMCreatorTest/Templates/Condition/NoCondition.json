@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "apiVersion": "2019-12-25",
+      "type": "<resource-provider-namespace/resource-type-name>",
+      "name": "<name-of-the-resource>"
+    }
+  ],
+  "outputs": {
+    "addResult": {
+      "type": "bool",
+      "value": true
+    }
+  }
+}

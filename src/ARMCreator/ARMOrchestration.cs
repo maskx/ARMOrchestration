@@ -26,7 +26,7 @@ namespace maskx.OrchestrationCreator
                         Resource = resource,
                         OrchestrationContext = armContext
                     };
-                    tasks.Add(context.CreateSubOrchestrationInstance<string>(typeof(ResourceOrchestration), p));
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
                 }
                 else
                 {
@@ -50,7 +50,7 @@ namespace maskx.OrchestrationCreator
                             Resource = resource,
                             OrchestrationContext = copyContext
                         };
-                        tasks.Add(context.CreateSubOrchestrationInstance<string>(typeof(ResourceOrchestration), par));
+                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
                     }
                 }
             }

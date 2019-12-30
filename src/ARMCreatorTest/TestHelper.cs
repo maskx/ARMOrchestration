@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace ARMCreatorTest
@@ -213,13 +214,11 @@ namespace ARMCreatorTest
              });
         }
 
-        public static void OrchestrationTest(OrchestrationWorker worker, string filename)
+        public static void OrchestrationTest(OrchestrationWorker worker, string filename, Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
         {
-            var instance = new OrchestrationInstance() { InstanceId = Guid.NewGuid().ToString("N") };
-
-            worker.JumpStartOrchestrationAsync(new Job()
+            var instance = worker.JumpStartOrchestrationAsync(new Job()
             {
-                InstanceId = instance.InstanceId,
+                InstanceId = Guid.NewGuid().ToString("N"),
                 Orchestration = new Orchestration()
                 {
                     Creator = "DICreator",
@@ -230,7 +229,18 @@ namespace ARMCreatorTest
                     Template = Template.Parse(TestHelper.GetTemplateContent(filename)),
                     Parameters = string.Empty
                 })
-            }).Wait();
+            }).Result;
+            TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();
+
+            worker.RegistOrchestrationCompletedAction((args) =>
+            {
+                if (args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId)
+                {
+                    t.SetResult(args);
+                }
+            });
+            var r = t.Task.Result;
+            validate?.Invoke(instance, r);
             while (true)
             {
                 var result = TestHelper.TaskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
@@ -239,7 +249,6 @@ namespace ARMCreatorTest
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
                     var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
                     Assert.Equal(200, response.Code);
-
                     break;
                 }
             }
