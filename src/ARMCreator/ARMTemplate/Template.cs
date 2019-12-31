@@ -1,87 +1,137 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Linq;
 
 namespace maskx.OrchestrationCreator.ARMTemplate
 {
-    public class Template
+    public class Template : IDisposable
     {
-        public string Schema { get; set; }
-        public string ContentVersion { get; set; }
-        public string ApiProfile { get; set; }
-        public string Parameters { get; set; }
-        public string Variables { get; set; }
-        public List<Resource> Resources { get; set; } = new List<Resource>();
-
-        public Dictionary<string, Function> Functions { get; set; } = new Dictionary<string, Function>();
-        public string Outputs { get; set; }
-
-        public static Template Parse(string str)
+        public string Schema
         {
-            Template template = new Template();
-            using var jsonDoc = JsonDocument.Parse(str);
-            var root = jsonDoc.RootElement;
+            get
+            {
+                if (root.TryGetProperty("$schema", out JsonElement schema))
+                {
+                    return schema.GetString();
+                }
+                return string.Empty;
+            }
+        }
 
-            if (root.TryGetProperty("contentVersion", out JsonElement contentVersionEle))
+        public string ContentVersion
+        {
+            get
             {
-                template.ContentVersion = contentVersionEle.GetString();
-            }
-            if (root.TryGetProperty("apiProfile", out JsonElement apiProfileEle))
-            {
-                template.ApiProfile = apiProfileEle.GetString();
-            }
-            if (root.TryGetProperty("functions", out JsonElement functionsEle))
-            {
-                foreach (var funcDef in functionsEle.EnumerateArray())
+                if (root.TryGetProperty("contentVersion", out JsonElement contentVersion))
                 {
-                    if (!funcDef.TryGetProperty("namespace", out JsonElement nsEle))
-                    {
-                        throw new Exception("cannot find namespace in functions element");
-                    }
-                    string ns = nsEle.GetString();
-                    if (string.IsNullOrEmpty(ns))
-                    {
-                        throw new Exception("namespace cannot be empty");
-                    }
-                    if (funcDef.TryGetProperty("members", out JsonElement memebersEle))
-                    {
-                        foreach (var m in memebersEle.EnumerateObject())
-                        {
-                            var func = new Function() { FullName = $"{ns}.{m.Name}".ToLower() };
-                            if (!m.Value.TryGetProperty("output", out JsonElement outputEle))
-                            {
-                                throw new Exception($"cannot find output member in functions/members/{m.Name}");
-                            }
-                            func.Output = outputEle.GetRawText();
-                            if (m.Value.TryGetProperty("parameters", out JsonElement parEle))
-                            {
-                                func.Parameters = parEle.GetRawText();
-                            }
-                            template.Functions.Add(func.FullName, func);
-                        }
-                    }
+                    return contentVersion.GetString();
                 }
+                return string.Empty;
             }
-            if (root.TryGetProperty("parameters", out JsonElement parameterDefineElement))
+        }
+
+        public string ApiProfile
+        {
+            get
             {
-                template.Parameters = parameterDefineElement.GetRawText();
-            }
-            if (root.TryGetProperty("variables", out JsonElement variableDefineElement))
-            {
-                template.Variables = variableDefineElement.GetRawText();
-            }
-            if (root.TryGetProperty("resources", out JsonElement resources))
-            {
-                foreach (var item in resources.EnumerateArray())
+                if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
                 {
-                    template.Resources.Add(Resource.Parse(item.GetRawText()));
+                    return apiProfile.GetString();
                 }
+                return string.Empty;
             }
-            if (root.TryGetProperty("outputs", out JsonElement outputDefineElement))
+        }
+
+        public string Parameters
+        {
+            get
             {
-                template.Outputs = outputDefineElement.GetRawText();
+                if (root.TryGetProperty("parameters", out JsonElement parameters))
+                {
+                    return parameters.GetRawText();
+                }
+                return string.Empty;
             }
-            return template;
+        }
+
+        public string Variables
+        {
+            get
+            {
+                if (root.TryGetProperty("variables", out JsonElement variables))
+                {
+                    return variables.GetRawText();
+                }
+                return string.Empty;
+            }
+        }
+
+        public IEnumerable<Resource> Resources
+        {
+            get
+            {
+                if (root.TryGetProperty("resources", out JsonElement resources))
+                {
+                    return resources.EnumerateArray().Select((e) => Resource.Parse(e.GetRawText()));
+                }
+                return null;
+            }
+        }
+
+        public Functions Functions
+        {
+            get
+            {
+                if (root.TryGetProperty("functions", out JsonElement functions))
+                {
+                    return new Functions(functions.GetRawText());
+                }
+                return null;
+            }
+        }
+
+        public string Outputs
+        {
+            get
+            {
+                if (root.TryGetProperty("outputs", out JsonElement outputs))
+                {
+                    return outputs.GetRawText();
+                }
+                return string.Empty;
+            }
+        }
+
+        private string jsonString;
+        private JsonDocument jsonDoc;
+
+        private JsonElement root
+        {
+            get
+            {
+                if (jsonDoc == null)
+                    jsonDoc = JsonDocument.Parse(jsonString);
+                return jsonDoc.RootElement;
+            }
+        }
+
+        public Template(string jsonString)
+        {
+            this.jsonString = jsonString;
+        }
+
+        public override string ToString()
+        {
+            return this.jsonString;
+        }
+
+        public void Dispose()
+        {
+            if (this.jsonDoc != null)
+            {
+                jsonDoc.Dispose();
+            }
         }
     }
 }

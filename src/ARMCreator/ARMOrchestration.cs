@@ -12,12 +12,9 @@ namespace maskx.OrchestrationCreator
             ARMOrchestrationInput input = this.DataConverter.Deserialize<ARMOrchestrationInput>(arg);
             List<Task> tasks = new List<Task>();
             Dictionary<string, object> armContext = new Dictionary<string, object>();
-            armContext.Add("parameters", input.Parameters);
-            armContext.Add("parametersdefine", input.Template.Parameters);
-            armContext.Add("variabledefine", input.Template.Variables);
-            armContext.Add("userDefinedFunctions", input.Template.Functions);
-
-            foreach (var resource in input.Template.Resources)
+            armContext.Add("armcontext", input);
+            var template = new ARMTemplate.Template(input.Template);
+            foreach (var resource in template.Resources)
             {
                 if (null == resource.Copy)
                 {
@@ -31,20 +28,19 @@ namespace maskx.OrchestrationCreator
                 else
                 {
                     var copy = resource.Copy;
+                    var loopName = ARMFunctions.Evaluate(copy.Name, armContext).ToString();
+                    var loopCount = (int)ARMFunctions.Evaluate(copy.Count, armContext);
                     var copyindex = new Dictionary<string, int>()
                     {
-                        { copy.Name,0 }
+                        { loopName,0 }
                     };
                     Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                    copyContext.Add("parameters", input.Parameters);
-                    copyContext.Add("parametersdefine", input.Template.Parameters);
-                    copyContext.Add("variabledefine", input.Template.Variables);
-                    copyContext.Add("userDefinedFunctions", input.Template.Functions);
+                    copyContext.Add("armcontext", input);
                     copyContext.Add("copyindex", copyindex);
-                    copyContext.Add("copyindexcurrentloopname", copy.Name);
-                    for (int i = 0; i < copy.Count; i++)
+                    copyContext.Add("copyindexcurrentloopname", loopName);
+                    for (int i = 0; i < loopCount; i++)
                     {
-                        copyindex[copy.Name] = i;
+                        copyindex[loopName] = i;
                         var par = new ResourceOrchestrationInput()
                         {
                             Resource = resource,
@@ -56,9 +52,9 @@ namespace maskx.OrchestrationCreator
             }
             await Task.WhenAll(tasks.ToArray());
             string rtv = string.Empty;
-            if (!string.IsNullOrEmpty(input.Template.Outputs))
+            if (!string.IsNullOrEmpty(template.Outputs))
             {
-                rtv = ARMFunctions.GetOutputs(input.Template.Outputs, armContext);
+                rtv = ARMFunctions.GetOutputs(template.Outputs, armContext);
             }
             return new TaskResult() { Code = 200, Content = rtv };
         }

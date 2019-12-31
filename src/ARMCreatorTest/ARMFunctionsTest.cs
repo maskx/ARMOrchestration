@@ -532,11 +532,10 @@ namespace ARMCreatorTest
         [Fact(DisplayName = "newGuid")]
         public void newGuid()
         {
-            var templatString = TestHelper.GetFunctionInputContent("newGuid");
             ARMOrchestration orchestration = new ARMOrchestration();
             var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
             {
-                Template = Template.Parse(templatString)
+                Template = TestHelper.GetFunctionInputContent("newGuid")
             })).Result.Content;
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement;
@@ -669,5 +668,23 @@ namespace ARMCreatorTest
         }
 
         #endregion String
+
+        #region Resource
+
+        [Trait("ARMFunctions", "Resource")]
+        [Fact(DisplayName = "resourceid")]
+        public void resourceid()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"sameRGOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                {"differentRGOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                {"differentSubOutput","/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                { "nestedResourceOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
+            };
+            TestHelper.FunctionTest("resourceid", result);
+        }
+
+        #endregion Resource
     }
 }

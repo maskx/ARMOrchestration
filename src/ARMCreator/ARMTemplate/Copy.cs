@@ -15,7 +15,7 @@ namespace maskx.OrchestrationCreator.ARMTemplate
         /// <summary>
         /// number-of-iterations
         /// </summary>
-        public int Count { get; set; }
+        public string Count { get; set; }
 
         /// <summary>
         /// "serial" <or> "parallel"
@@ -43,7 +43,7 @@ namespace maskx.OrchestrationCreator.ARMTemplate
             }
             if (root.TryGetProperty("count", out JsonElement count))
             {
-                c.Count = count.GetInt32();
+                c.Count = count.GetRawText();
             }
             if (root.TryGetProperty("mode", out JsonElement mode))
             {

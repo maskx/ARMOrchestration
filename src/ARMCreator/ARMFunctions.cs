@@ -328,6 +328,9 @@ namespace maskx.OrchestrationCreator
 
             Functions.Add("parameters", (args, cxt) =>
             {
+                // TODO: support securestring
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
+
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 if (cxt.TryGetValue("parameters", out object parameters))
                 {
@@ -343,37 +346,30 @@ namespace maskx.OrchestrationCreator
                         }
                     }
                 }
-                if (args.HasResult) return;
-                if (!cxt.TryGetValue("parametersdefine", out object pds)
-                    || pds == null
-                    || string.IsNullOrEmpty(pds.ToString()))
+                if (!args.HasResult && cxt.TryGetValue("armcontext", out object armcxt))
                 {
-                    throw new Exception("ARM Template does not define the parameters");
-                }
-
-                using var defineDoc = JsonDocument.Parse(pds.ToString());
-                if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
-                {
-                    throw new Exception($"ARM Template does not define the parameter:{par1}");
-                }
-
-                if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
-                {
-                    args.Result = JsonValue.GetElementValue(defValue);
+                    var pds = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template).Parameters;
+                    using var defineDoc = JsonDocument.Parse(pds.ToString());
+                    if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
+                    {
+                        throw new Exception($"ARM Template does not define the parameter:{par1}");
+                    }
+                    if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                    {
+                        args.Result = JsonValue.GetElementValue(defValue);
+                    }
                 }
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
             Functions.Add("variables", (args, cxt) =>
             {
-                if (!cxt.TryGetValue("variabledefine", out object pds))
+                if (!cxt.TryGetValue("armcontext", out object armcxt))
                     return;
-                if (string.IsNullOrEmpty(pds.ToString()))
-                {
-                    throw new Exception("ARM Template does not define the variables");
-                }
+                string vars = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template).Variables;
+
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-                using var defineDoc = JsonDocument.Parse(pds.ToString());
+                using var defineDoc = JsonDocument.Parse(vars);
                 if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
                 {
                     throw new Exception($"ARM Template does not define the variables:{par1}");
@@ -381,6 +377,21 @@ namespace maskx.OrchestrationCreator
                 args.Result = JsonValue.GetElementValue(parEleDef);
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
+            });
+            Functions.Add("deployment", (args, cxt) =>
+            {
+                ARMOrchestrationInput input = cxt["armcontext"] as ARMOrchestrationInput;
+                JObject obj = new JObject();
+                obj.Add("name", input.Name);
+                JObject properties = new JObject();
+                properties.Add("template", JObject.Parse(input.Template));
+                properties.Add("parameters", JObject.Parse(input.Parameters));
+                properties.Add("mode", input.Mode);
+                // TODO: Set provisioningState
+                properties.Add("provisioningState", null);
+                properties.Add("templateLink", new JObject("uri", input.TemplateLink));
+                obj.Add("properties", properties);
+                args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));
             });
 
             #endregion Deployment
@@ -629,6 +640,109 @@ namespace maskx.OrchestrationCreator
             });
 
             #endregion Numeric
+
+            #region Resource
+
+            Functions.Add("resourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var input = cxt["armcontext"] as ARMOrchestrationInput;
+                string subscriptionId = input.SubscriptionId;
+                string resourceGroupName = input.ResourceGroup;
+                string[] fullnames;
+                IEnumerable<object> nestResources;
+                string resource = string.Empty;
+                if (pars[0].ToString().IndexOf('/') > 0)
+                {
+                    fullnames = pars[0].ToString().Split('/');
+                    resource = pars[1].ToString();
+                    nestResources = pars.Skip(2);
+                }
+                else if (Guid.TryParse(pars[0].ToString(), out Guid subid))
+                {
+                    subscriptionId = subid.ToString();
+                    if (pars[1].ToString().IndexOf('/') > 0)
+                    {
+                        fullnames = pars[1].ToString().Split('/');
+                        resource = pars[2].ToString();
+                        nestResources = pars.Skip(3);
+                    }
+                    else
+                    {
+                        resourceGroupName = pars[1].ToString();
+                        fullnames = pars[2].ToString().Split('/');
+                        resource = pars[3].ToString();
+                        nestResources = pars.Skip(4);
+                    }
+                }
+                else
+                {
+                    resourceGroupName = pars[0].ToString();
+                    fullnames = pars[1].ToString().Split('/');
+                    resource = pars[2].ToString();
+                    nestResources = pars.Skip(3);
+                }
+                string nestr = "";
+                int typeIndex = 2;
+                foreach (var item in nestResources)
+                {
+                    nestr += $"/{fullnames[typeIndex]}/{item}";
+                    typeIndex++;
+                }
+                args.Result = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            });
+            Functions.Add("subscriptionresourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var input = cxt["armcontext"] as ARMOrchestrationInput;
+                string subscriptionId = input.SubscriptionId;
+                string[] fullnames;
+                IEnumerable<object> nestResources;
+                string resource = string.Empty;
+                if (pars[0].ToString().IndexOf('/') > 0)
+                {
+                    fullnames = pars[0].ToString().Split('/');
+                    resource = pars[1].ToString();
+                    nestResources = pars.Skip(2);
+                }
+                else
+                {
+                    subscriptionId = pars[0].ToString();
+                    fullnames = pars[1].ToString().Split('/');
+                    resource = pars[2].ToString();
+                    nestResources = pars.Skip(3);
+                }
+                string nestr = "";
+                int typeIndex = 2;
+                foreach (var item in nestResources)
+                {
+                    nestr += $"/{fullnames[typeIndex]}/{item}";
+                    typeIndex++;
+                }
+                args.Result = $"/subscriptions/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            });
+            Functions.Add("tenantresourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                string[] fullnames;
+                IEnumerable<object> nestResources;
+                string resource = string.Empty;
+
+                fullnames = pars[0].ToString().Split('/');
+                resource = pars[1].ToString();
+                nestResources = pars.Skip(2);
+
+                string nestr = "";
+                int typeIndex = 2;
+                foreach (var item in nestResources)
+                {
+                    nestr += $"/{fullnames[typeIndex]}/{item}";
+                    typeIndex++;
+                }
+                args.Result = $"/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            });
+
+            #endregion Resource
         }
 
         /// <summary>
@@ -644,6 +758,7 @@ namespace maskx.OrchestrationCreator
         /// <returns></returns>
         public static object Evaluate(string function, Dictionary<string, object> context)
         {
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#escape-characters
             if (function.StartsWith("[") && function.EndsWith("]") && !function.StartsWith("[["))
             {
                 string functionString = function.TrimStart('[').TrimEnd(']');
@@ -654,33 +769,39 @@ namespace maskx.OrchestrationCreator
                         if (Functions.TryGetValue(name.ToLower(), out Action<FunctionArgs, Dictionary<string, object>> func))
                         {
                             func(args, cxt);
+                            return;
                         }
-                        else if (cxt.TryGetValue("userDefinedFunctions", out object udfs))
+                        if (!cxt.TryGetValue("armcontext", out object armcxt))
+                            return;
+                        var udfs = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template).Functions;
+                        if (udfs == null)
+                            return;
+                        var names = name.Split('.');
+                        var ns = udfs[names[0]];
+                        if (ns == null)
+                            return;
+
+                        var member = ns[names[1]];
+                        Expression.Expression expression1 = new Expression.Expression(member.Output);
+                        Dictionary<string, object> udfContext = new Dictionary<string, object>();
+                        using JsonDocument udfPar = JsonDocument.Parse(member.Parameters);
+                        var rootEle = udfPar.RootElement;
+                        var pars = args.EvaluateParameters(cxt);
+                        JObject jObject = new JObject();
+                        for (int i = 0; i < pars.Length; i++)
                         {
-                            if ((udfs as Dictionary<string, ARMTemplate.Function>).TryGetValue(name.ToLower(), out ARMTemplate.Function udf))
-                            {
-                                Expression.Expression expression1 = new Expression.Expression(udf.Output);
-                                Dictionary<string, object> udfContext = new Dictionary<string, object>();
-                                using JsonDocument udfPar = JsonDocument.Parse(udf.Parameters);
-                                var rootEle = udfPar.RootElement;
-                                var pars = args.EvaluateParameters(cxt);
-                                JObject jObject = new JObject();
-                                for (int i = 0; i < pars.Length; i++)
-                                {
-                                    var t = rootEle[i].GetProperty("type").GetString();
-                                    JProperty p = null;
-                                    if ("object" == t)
-                                        p = new JProperty("value", JObject.Parse(pars[i].ToString()));
-                                    else if ("array" == t)
-                                        p = new JProperty("value", JArray.Parse(pars[i].ToString()));
-                                    else
-                                        p = new JProperty("value", pars[i]);
-                                    jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
-                                }
-                                udfContext.Add("parameters", jObject.ToString(Newtonsoft.Json.Formatting.None));
-                                args.Result = GetOutput(udf.Output, udfContext);
-                            }
+                            var t = rootEle[i].GetProperty("type").GetString();
+                            JProperty p = null;
+                            if ("object" == t)
+                                p = new JProperty("value", JObject.Parse(pars[i].ToString()));
+                            else if ("array" == t)
+                                p = new JProperty("value", JArray.Parse(pars[i].ToString()));
+                            else
+                                p = new JProperty("value", pars[i]);
+                            jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
                         }
+                        udfContext.Add("parameters", jObject.ToString(Newtonsoft.Json.Formatting.None));
+                        args.Result = GetOutput(member.Output, udfContext);
                     }
                 };
                 return expression.Evaluate(context);
@@ -705,7 +826,7 @@ namespace maskx.OrchestrationCreator
 
         public static string GetOutputs(string outputs, Dictionary<string, object> context)
         {
-            JsonDocument outDoc = JsonDocument.Parse(outputs);
+            using JsonDocument outDoc = JsonDocument.Parse(outputs);
             var outputDefineElement = outDoc.RootElement;
             JObject jOutput = new JObject();
             foreach (var item in outputDefineElement.EnumerateObject())

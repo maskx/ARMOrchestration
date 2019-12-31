@@ -20,7 +20,6 @@ The context need 3 value:
 ### [Deployment](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-deployment)
 
 TODO£º
-* deployment
 * environment
 
 ### [Logical](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-logical)
@@ -46,10 +45,8 @@ TODO:
 * providers
 * reference
 * resourceGroup
-* resourceId
 * subscription
-* subscriptionResourceId
-* tenantResourceId
+
 
 ### [String](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-string)
 

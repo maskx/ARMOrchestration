@@ -4,6 +4,10 @@ using System.Text.Json;
 
 namespace maskx.OrchestrationCreator.ARMTemplate
 {
+    /// <summary>
+    /// 部署服务需提供以下API
+    /// https://docs.microsoft.com/en-us/rest/api/resources/
+    /// </summary>
     public class Resource
     {
         public object Condition { get; set; }
@@ -16,11 +20,16 @@ namespace maskx.OrchestrationCreator.ARMTemplate
         public Copy Copy { get; set; }
 
         /// <summary>
-        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
         /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
         ///
-        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#depend-on-resources-in-a-loop
         /// Depend on resources in a loop
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#depend-on-resources-in-a-loop
+        ///
+        ///
+        /// You only need to define dependencies for resources that are deployed in the same template.
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
+        ///
         /// </summary>
         public List<string> DependsOn { get; set; } = new List<string>();
 
@@ -29,6 +38,8 @@ namespace maskx.OrchestrationCreator.ARMTemplate
         public string Kind { get; set; }
         public string Plan { get; set; }
         public List<Resource> Resources { get; set; }
+        public string ResourceGroup { get; set; }
+        public string SubscriptionId { get; set; }
 
         public static Resource Parse(string str)
         {
@@ -113,6 +124,14 @@ namespace maskx.OrchestrationCreator.ARMTemplate
                 {
                     resource.Resources.Add(Resource.Parse(r.GetRawText()));
                 }
+            }
+            if (root.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
+            {
+                resource.ResourceGroup = resourceGroup.GetString();
+            }
+            if (root.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
+            {
+                resource.SubscriptionId = subscriptionId.GetString();
             }
             return resource;
         }

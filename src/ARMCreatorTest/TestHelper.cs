@@ -27,6 +27,8 @@ namespace ARMCreatorTest
     {
         public static IConfigurationRoot Configuration { get; private set; }
         public static DataConverter DataConverter { get; private set; } = new JsonDataConverter();
+        public static string SubscriptionId = "C1FA36C2-4D58-45E8-9C51-498FADB4D8BF";
+        public static string ResourceGroup = "ResourceGroup1";
 
         public static string ConnectionString
         {
@@ -108,7 +110,9 @@ namespace ARMCreatorTest
             ARMOrchestration orchestration = new ARMOrchestration();
             var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
             {
-                Template = Template.Parse(templateString)
+                Template = templateString,
+                ResourceGroup = TestHelper.ResourceGroup,
+                SubscriptionId = TestHelper.SubscriptionId
             })).Result.Content;
             using var templateDoc = JsonDocument.Parse(templateString);
             using var outputDoc = JsonDocument.Parse(outputString);
@@ -226,7 +230,7 @@ namespace ARMCreatorTest
                 },
                 Input = TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
                 {
-                    Template = Template.Parse(TestHelper.GetTemplateContent(filename)),
+                    Template = TestHelper.GetTemplateContent(filename),
                     Parameters = string.Empty
                 })
             }).Result;
