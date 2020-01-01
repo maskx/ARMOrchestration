@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Xunit;
 
-namespace ARMCreatorTest
+namespace ARMCreatorTest.TestARMFunctions
 {
     [Trait("C", "ARMFunctions")]
     public class UserDefinedFunctionTest

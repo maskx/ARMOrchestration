@@ -1,7 +1,7 @@
 ﻿using maskx.OrchestrationCreator;
 using Newtonsoft.Json.Linq;
 
-namespace ARMCreatorTest
+namespace ARMCreatorTest.TestARMFunctions
 {
     internal class CustomARMFunctionTest
     {

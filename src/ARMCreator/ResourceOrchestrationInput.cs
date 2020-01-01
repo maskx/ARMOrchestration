@@ -5,7 +5,7 @@ namespace maskx.OrchestrationCreator
 {
     public class ResourceOrchestrationInput
     {
-        public Resource Resource { get; set; }
+        public string Resource { get; set; }
         public Dictionary<string, object> OrchestrationContext { get; set; }
     }
 }

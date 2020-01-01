@@ -5,7 +5,6 @@ using maskx.DurableTask.SQLServer;
 using maskx.DurableTask.SQLServer.Settings;
 using maskx.DurableTask.SQLServer.Tracking;
 using maskx.OrchestrationCreator;
-using maskx.OrchestrationCreator.ARMTemplate;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Orchestration;
@@ -82,7 +81,7 @@ namespace ARMCreatorTest
 
         public static string GetFunctionInputContent(string filename)
         {
-            string s = Path.Combine(AppContext.BaseDirectory, "Functions", $"{filename}.json");
+            string s = Path.Combine(AppContext.BaseDirectory, "TestARMFunctions/json", $"{filename}.json");
             return File.ReadAllText(s);
         }
 
@@ -145,6 +144,8 @@ namespace ARMCreatorTest
         public static IHostBuilder CreateHostBuilder(
             CommunicationWorkerOptions communicationWorkerOptions = null,
             List<Type> orchestrationTypes = null,
+            List<Type> activityTypes = null,
+            IDictionary<Type, object> interfaceActivitys = null,
             Action<HostBuilderContext, IServiceCollection> config = null)
         {
             return Host.CreateDefaultBuilder()
@@ -156,8 +157,7 @@ namespace ARMCreatorTest
              })
              .ConfigureServices((hostContext, services) =>
              {
-                 if (config != null)
-                     config(hostContext, services);
+                 config?.Invoke(hostContext, services);
                  services.AddHttpClient();
                  services.AddSingleton((sp) =>
                  {
@@ -179,7 +179,8 @@ namespace ARMCreatorTest
                  });
                  if (orchestrationTypes == null)
                      orchestrationTypes = new List<Type>();
-                 List<Type> activityTypes = new List<Type>();
+                 if (activityTypes == null)
+                     activityTypes = new List<Type>();
 
                  orchestrationTypes.Add(typeof(AsyncRequestOrchestration));
                  orchestrationTypes.Add(typeof(ResourceOrchestration));
@@ -191,6 +192,8 @@ namespace ARMCreatorTest
                  {
                      options.GetBuildInOrchestrators = () => orchestrationTypes;
                      options.GetBuildInTaskActivities = () => activityTypes;
+                     if (interfaceActivitys != null)
+                         options.GetBuildInTaskActivitiesFromInterface = () => interfaceActivitys;
                  });
 
                  services.AddSingleton<OrchestrationWorker>();
@@ -218,7 +221,10 @@ namespace ARMCreatorTest
              });
         }
 
-        public static void OrchestrationTest(OrchestrationWorker worker, string filename, Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
+        public static void OrchestrationTest(OrchestrationWorker worker,
+            string filename,
+            Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
+            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
         {
             var instance = worker.JumpStartOrchestrationAsync(new Job()
             {
@@ -235,16 +241,18 @@ namespace ARMCreatorTest
                 })
             }).Result;
             TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();
-
-            worker.RegistOrchestrationCompletedAction((args) =>
+            if (isValidateOrchestration != null)
             {
-                if (args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId)
+                worker.RegistOrchestrationCompletedAction((args) =>
                 {
-                    t.SetResult(args);
-                }
-            });
-            var r = t.Task.Result;
-            validate?.Invoke(instance, r);
+                    if (isValidateOrchestration(instance, args))
+                    {
+                        t.SetResult(args);
+                    }
+                });
+                var r = t.Task.Result;
+                validate?.Invoke(instance, r);
+            }
             while (true)
             {
                 var result = TestHelper.TaskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;

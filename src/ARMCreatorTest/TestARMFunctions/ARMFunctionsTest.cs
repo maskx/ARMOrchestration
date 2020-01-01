@@ -1,11 +1,10 @@
 ﻿using maskx.OrchestrationCreator;
-using maskx.OrchestrationCreator.ARMTemplate;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
 
-namespace ARMCreatorTest
+namespace ARMCreatorTest.TestARMFunctions
 {
     [Trait("C", "ARMFunctions")]
     public class ARMFunctionsTest
@@ -398,7 +397,7 @@ namespace ARMCreatorTest
         public void copyindex()
         {
             Dictionary<string, object> cxt = new Dictionary<string, object>() {
-                {"copyindexcurrentloopname","loop1" },
+                {"currentloopname","loop1" },
                 {"copyindex",new Dictionary<string,int>(){
                     {"loop1",2 },
                     {"loop2",7 }

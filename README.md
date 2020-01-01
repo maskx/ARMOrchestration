@@ -5,13 +5,12 @@
 ```CSharp
 ARMFunctions.Evaluate(string function, Dictionary<string, object> context)
 ```
-The context need 3 value:
+The context need 1 value:
 
 |key|value|description|
 |-|-|-|
-|parametersdefine||the content of parameters property in template file|
-|variabledefine||the content of variables property in template file|
-|parameters||the content of parameters file|
+|armcontext|ARMOrchestrationInput||
+|
 
 ### [Array and object](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-array)
 
@@ -33,7 +32,7 @@ copyIndex need two item in context:
 |key|vaule|description|
 |-|-|-|
 |copyindex|Dictionary<string,int>|the key is loopname,and the value is current loop index|
-|copyindexcurrentloopname|string|If no value is provided for loopName, this loopname is used |
+|currentloopname|string|If no value is provided for loopName, this loopname is used |
  
 
 

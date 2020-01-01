@@ -73,7 +73,7 @@ namespace maskx.OrchestrationCreator.ARMTemplate
             {
                 if (root.TryGetProperty("resources", out JsonElement resources))
                 {
-                    return resources.EnumerateArray().Select((e) => Resource.Parse(e.GetRawText()));
+                    return resources.EnumerateArray().Select((e) => new Resource(e.GetRawText(), this.context));
                 }
                 return null;
             }
@@ -116,9 +116,12 @@ namespace maskx.OrchestrationCreator.ARMTemplate
             }
         }
 
-        public Template(string jsonString)
+        private Dictionary<string, object> context;
+
+        public Template(string jsonString, Dictionary<string, object> context)
         {
             this.jsonString = jsonString;
+            this.context = context;
         }
 
         public override string ToString()

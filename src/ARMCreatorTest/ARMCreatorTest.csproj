@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="maskx.OrchestrationService" Version="2.1.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
@@ -32,154 +31,154 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\resourceid.json">
+    <None Update="TestARMFunctions\json\resourceid.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\UserDefinedFunction.json">
+    <None Update="TestARMFunctions\json\UserDefinedFunction.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\utcNow.json">
+    <None Update="TestARMFunctions\json\utcNow.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\uri.json">
+    <None Update="TestARMFunctions\json\uri.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\trim.json">
+    <None Update="TestARMFunctions\json\trim.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\toLower.json">
+    <None Update="TestARMFunctions\json\toLower.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\substring.json">
+    <None Update="TestARMFunctions\json\substring.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\string.json">
+    <None Update="TestARMFunctions\json\string.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\split.json">
+    <None Update="TestARMFunctions\json\split.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\replace.json">
+    <None Update="TestARMFunctions\json\replace.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\padLeft.json">
+    <None Update="TestARMFunctions\json\padLeft.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\newGuid.json">
+    <None Update="TestARMFunctions\json\newGuid.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\indexOf.json">
+    <None Update="TestARMFunctions\json\indexOf.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\format.json">
+    <None Update="TestARMFunctions\json\format.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\endsWith.json">
+    <None Update="TestARMFunctions\json\endsWith.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\dataUri.json">
+    <None Update="TestARMFunctions\json\dataUri.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\base64.json">
+    <None Update="TestARMFunctions\json\base64.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\sub.json">
+    <None Update="TestARMFunctions\json\sub.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\mul.json">
+    <None Update="TestARMFunctions\json\mul.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\int.json">
+    <None Update="TestARMFunctions\json\int.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\div.json">
+    <None Update="TestARMFunctions\json\div.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\add.json">
+    <None Update="TestARMFunctions\json\add.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\if.json">
+    <None Update="TestARMFunctions\json\if.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\bool.json">
+    <None Update="TestARMFunctions\json\bool.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\and.json">
+    <None Update="TestARMFunctions\json\and.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\mod.json">
+    <None Update="TestARMFunctions\json\mod.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\variables.json">
+    <None Update="TestARMFunctions\json\variables.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\parameters.json">
+    <None Update="TestARMFunctions\json\parameters.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\lessOrEquals.json">
+    <None Update="TestARMFunctions\json\lessOrEquals.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\less.json">
+    <None Update="TestARMFunctions\json\less.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\greaterOrEquals.json">
+    <None Update="TestARMFunctions\json\greaterOrEquals.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\greater.json">
+    <None Update="TestARMFunctions\json\greater.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\equals.json">
+    <None Update="TestARMFunctions\json\equals.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\union.json">
+    <None Update="TestARMFunctions\json\union.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\take.json">
+    <None Update="TestARMFunctions\json\take.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\skip.json">
+    <None Update="TestARMFunctions\json\skip.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\range.json">
+    <None Update="TestARMFunctions\json\range.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\min.json">
+    <None Update="TestARMFunctions\json\min.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\max.json">
+    <None Update="TestARMFunctions\json\max.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\length.json">
+    <None Update="TestARMFunctions\json\length.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\last.json">
+    <None Update="TestARMFunctions\json\last.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\json.json">
+    <None Update="TestARMFunctions\json\json.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\intersection.json">
+    <None Update="TestARMFunctions\json\intersection.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\first.json">
+    <None Update="TestARMFunctions\json\first.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\createarray.json">
+    <None Update="TestARMFunctions\json\createarray.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\contains.json">
+    <None Update="TestARMFunctions\json\contains.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\concat.json">
+    <None Update="TestARMFunctions\json\concat.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\empty.json">
+    <None Update="TestARMFunctions\json\empty.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\coalesce.json">
+    <None Update="TestARMFunctions\json\coalesce.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Functions\array.json">
+    <None Update="TestARMFunctions\json\array.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Templates\Condition\FunctionConditionFalse.json">

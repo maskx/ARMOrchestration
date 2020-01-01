@@ -348,7 +348,7 @@ namespace maskx.OrchestrationCreator
                 }
                 if (!args.HasResult && cxt.TryGetValue("armcontext", out object armcxt))
                 {
-                    var pds = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template).Parameters;
+                    var pds = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template, cxt).Parameters;
                     using var defineDoc = JsonDocument.Parse(pds.ToString());
                     if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
                     {
@@ -366,7 +366,7 @@ namespace maskx.OrchestrationCreator
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))
                     return;
-                string vars = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template).Variables;
+                string vars = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template, cxt).Variables;
 
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 using var defineDoc = JsonDocument.Parse(vars);
@@ -586,7 +586,7 @@ namespace maskx.OrchestrationCreator
                 int offset = 0;
                 if (pars.Length == 0)
                 {
-                    loopName = cxt["copyindexcurrentloopname"].ToString();
+                    loopName = cxt["currentloopname"].ToString();
                 }
                 else if (pars.Length == 1)
                 {
@@ -596,7 +596,7 @@ namespace maskx.OrchestrationCreator
                     }
                     else
                     {
-                        loopName = cxt["copyindexcurrentloopname"].ToString();
+                        loopName = cxt["currentloopname"].ToString();
                         offset = (int)pars[0];
                     }
                 }
@@ -773,7 +773,7 @@ namespace maskx.OrchestrationCreator
                         }
                         if (!cxt.TryGetValue("armcontext", out object armcxt))
                             return;
-                        var udfs = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template).Functions;
+                        var udfs = new ARMTemplate.Template((armcxt as ARMOrchestrationInput).Template, cxt).Functions;
                         if (udfs == null)
                             return;
                         var names = name.Split('.');

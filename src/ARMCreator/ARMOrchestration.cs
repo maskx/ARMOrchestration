@@ -13,14 +13,14 @@ namespace maskx.OrchestrationCreator
             List<Task> tasks = new List<Task>();
             Dictionary<string, object> armContext = new Dictionary<string, object>();
             armContext.Add("armcontext", input);
-            var template = new ARMTemplate.Template(input.Template);
+            var template = new ARMTemplate.Template(input.Template, armContext);
             foreach (var resource in template.Resources)
             {
                 if (null == resource.Copy)
                 {
                     var p = new ResourceOrchestrationInput()
                     {
-                        Resource = resource,
+                        Resource = resource.ToString(),
                         OrchestrationContext = armContext
                     };
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
@@ -28,8 +28,8 @@ namespace maskx.OrchestrationCreator
                 else
                 {
                     var copy = resource.Copy;
-                    var loopName = ARMFunctions.Evaluate(copy.Name, armContext).ToString();
-                    var loopCount = (int)ARMFunctions.Evaluate(copy.Count, armContext);
+                    var loopName = copy.Name;
+                    var loopCount = copy.Count;
                     var copyindex = new Dictionary<string, int>()
                     {
                         { loopName,0 }
@@ -37,13 +37,13 @@ namespace maskx.OrchestrationCreator
                     Dictionary<string, object> copyContext = new Dictionary<string, object>();
                     copyContext.Add("armcontext", input);
                     copyContext.Add("copyindex", copyindex);
-                    copyContext.Add("copyindexcurrentloopname", loopName);
+                    copyContext.Add("currentloopname", loopName);
                     for (int i = 0; i < loopCount; i++)
                     {
                         copyindex[loopName] = i;
                         var par = new ResourceOrchestrationInput()
                         {
-                            Resource = resource,
+                            Resource = resource.ToString(),
                             OrchestrationContext = copyContext
                         };
                         tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));

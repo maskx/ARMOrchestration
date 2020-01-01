@@ -3,7 +3,7 @@ using System;
 
 namespace maskx.OrchestrationCreator.Activity
 {
-    public class SetDependsOnActivity : TaskActivity<string, string>
+    public class WaitDependsOnActivity : TaskActivity<string, string>
     {
         protected override string Execute(TaskContext context, string input)
         {

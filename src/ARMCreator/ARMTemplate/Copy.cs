@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json;
 
 namespace maskx.OrchestrationCreator.ARMTemplate
 {
@@ -10,54 +11,116 @@ namespace maskx.OrchestrationCreator.ARMTemplate
         /// <summary>
         /// name-of-loop
         /// </summary>
-        public string Name { get; set; }
+        public string Name
+        {
+            get
+            {
+                if (root.TryGetProperty("name", out JsonElement name))
+                {
+                    return name.GetString();
+                }
+                return string.Empty;
+            }
+        }
 
         /// <summary>
         /// number-of-iterations
         /// </summary>
-        public string Count { get; set; }
+        public int Count
+        {
+            get
+            {
+                if (root.TryGetProperty("count", out JsonElement count))
+                {
+                    return (int)ARMFunctions.Evaluate(count.GetString(), this.context);
+                }
+                return 0;
+            }
+        }
 
         /// <summary>
         /// "serial" <or> "parallel"
         /// </summary>
-        public string Mode { get; set; }
+        public string Mode
+        {
+            get
+            {
+                if (root.TryGetProperty("mode", out JsonElement mode))
+                {
+                    return mode.GetString();
+                }
+                return "parallel";
+            }
+        }
 
         /// <summary>
         /// number-to-deploy-serially
         /// </summary>
-        public int BatchSize { get; set; }
+        public int BatchSize
+        {
+            get
+            {
+                if (root.TryGetProperty("batchSize", out JsonElement batchSize))
+                {
+                    if (batchSize.ValueKind == JsonValueKind.Number)
+                        return batchSize.GetInt32();
+                    else if (batchSize.ValueKind == JsonValueKind.String)
+                        return (int)ARMFunctions.Evaluate(batchSize.GetString(), this.context);
+                }
+                return 1;
+            }
+        }
 
         /// <summary>
         /// values-for-the-property-or-variable
         /// </summary>
-        public string Input { get; set; }
-
-        public static Copy Parse(string str)
+        public string Input
         {
-            var c = new Copy();
-            using JsonDocument json = JsonDocument.Parse(str);
-            var root = json.RootElement;
-            if (root.TryGetProperty("name", out JsonElement name))
+            get
             {
-                c.Name = name.GetString();
+                if (root.TryGetProperty("input", out JsonElement input))
+                {
+                    return input.GetString();
+                }
+                return string.Empty;
             }
-            if (root.TryGetProperty("count", out JsonElement count))
+        }
+
+        private string jsonString;
+        private JsonDocument jsonDoc;
+
+        private JsonElement root
+        {
+            get
             {
-                c.Count = count.GetRawText();
+                if (jsonDoc == null)
+                    jsonDoc = JsonDocument.Parse(jsonString);
+                return jsonDoc.RootElement;
             }
-            if (root.TryGetProperty("mode", out JsonElement mode))
+        }
+
+        private ARMOrchestrationInput armInput;
+
+        public override string ToString()
+        {
+            return this.jsonString;
+        }
+
+        public void Dispose()
+        {
+            if (this.jsonDoc != null)
             {
-                c.Mode = mode.GetString();
+                jsonDoc.Dispose();
             }
-            if (root.TryGetProperty("batchSize", out JsonElement batchSize))
-            {
-                c.BatchSize = batchSize.GetInt32();
-            }
-            if (root.TryGetProperty("input", out JsonElement input))
-            {
-                c.Input = input.GetString();
-            }
-            return c;
+        }
+
+        private Dictionary<string, object> context;
+
+        public Copy(string jsonString, Dictionary<string, object> context)
+        {
+            this.jsonString = jsonString;
+            this.context = context;
+            this.armInput = context["armcontext"] as ARMOrchestrationInput;
         }
     }
 }

@@ -1,7 +1,10 @@
 ﻿using DurableTask.Core;
 using maskx.OrchestrationCreator.Activity;
+using maskx.OrchestrationCreator.ARMTemplate;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
+using maskx.OrchestrationService.Orchestration;
+using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -11,53 +14,67 @@ namespace maskx.OrchestrationCreator
     {
         private const string dependsOnEventName = "DependsOn";
         private TaskCompletionSource<string> dependsOnwaitHandler = null;
-        private const string createResourceEventName = "createResource";
-        private TaskCompletionSource<string> createResourceWaitHandler = null;
+        public ResourceOrchestrationOptions options;
+
+        public ResourceOrchestration(IOptions<ResourceOrchestrationOptions> options)
+        {
+            this.options = options?.Value;
+        }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-            var resourceDeploy = input.Resource;
+            var resourceDeploy = new Resource(input.Resource, input.OrchestrationContext);
 
             #region Condition
 
-            if (null != resourceDeploy.Condition)
-            {
-                if (resourceDeploy.Condition is bool b)
-                {
-                    if (!b) return new TaskResult() { Code = 200, Content = "condition is false" };
-                }
-                else if (resourceDeploy.Condition is string s)
-                {
-                    var c = ARMFunctions.Evaluate(s, input.OrchestrationContext);
-                    if (c is bool b1 && !b1)
-                        return new TaskResult() { Code = 200, Content = $"condition {s} evaluate result is {c}" };
-                }
-            }
+            if (!resourceDeploy.Condition)
+                return new TaskResult() { Code = 200, Content = "condition is false" };
 
             #endregion Condition
 
             #region DependsOn
 
-            if (resourceDeploy.DependsOn.Count > 0)
+            if (resourceDeploy.DependsOn != null)
             {
                 dependsOnwaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<string>(typeof(SetDependsOnActivity), "");
+                await context.ScheduleTask<string>(typeof(WaitDependsOnActivity), "");
                 await dependsOnwaitHandler.Task;
             }
 
             #endregion DependsOn
 
-            // TODO: check policy
+            #region check policy
 
-            // TODO: 获取资源信息
-            // 如果资源已存在，operation 为 PUT
-            string requestOperation = "POST";
+            var checkPolicyResult = await context.ScheduleTask<TaskResult>("IARMPolicy.Check", "", "123");
+            if (checkPolicyResult.Code != 200)
+            {
+                return checkPolicyResult;
+            }
 
-            // TODO:配额检查
+            #endregion check policy
+
+            #region Begin Create Resource
+
+            var beginResourceResult = await context.ScheduleTask<TaskResult>("IResource.Begin", "");
+            if (beginResourceResult.Code != 200)
+            {
+                return beginResourceResult;
+            }
+
+            #endregion Begin Create Resource
+
+            #region Begin Quota
+
+            var beginQuotaResult = await context.ScheduleTask<TaskResult>("IQuota.Begin", "");
+            if (beginQuotaResult.Code != 200)
+            {
+                return beginQuotaResult;
+            }
+
+            #endregion Begin Quota
 
             #region Create or Update Resource
 
-            createResourceWaitHandler = new TaskCompletionSource<string>();
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
             ruleField.Add("ApiVersion", ARMFunctions.Evaluate(resourceDeploy.ApiVersion, input.OrchestrationContext));
             ruleField.Add("Type", ARMFunctions.Evaluate(resourceDeploy.Type, input.OrchestrationContext));
@@ -68,68 +85,89 @@ namespace maskx.OrchestrationCreator
             ruleField.Add("Plan", resourceDeploy.Plan);
             AsyncRequestInput asyncRequestInput = new AsyncRequestInput()
             {
-                EventName = createResourceEventName,
                 RequestTo = "ResourceProvider",// TODO: 支持Subscription level Resource和Tenant level Resource后，将有不同的ResourceTo
-                RequestOperation = requestOperation,
+                RequestOperation = "PUT",//ResourceProvider 处理 Create Or Update
                 RequsetContent = resourceDeploy.Properties,
-                RuleField = ruleField
+                RuleField = ruleField,
+                Processor = this.options.RPCommunicationProcessorName
             };
-            await context.ScheduleTask<TaskResult>(typeof(AsyncRequestActivity), asyncRequestInput);
-            await createResourceWaitHandler.Task;
-            var result = DataConverter.Deserialize<TaskResult>(createResourceWaitHandler.Task.Result);
-            // TODO: 提交资产
-            // TODO: 提交配额
-            // TODO: resourceDeploy.Tags
-            // TODO: 更新关联资源：如删除NIC，要更新SLB的后端地址池
+            var response = await context.CreateSubOrchestrationInstance<TaskResult>(
+                 typeof(AsyncRequestOrchestration),
+                 asyncRequestInput);
+            if (response.Code != 200)
+                return response;
 
             #endregion Create or Update Resource
 
+            #region Commit Quota
+
+            await context.ScheduleTask<TaskResult>("IQuota.Commit", "");
+
+            #endregion Commit Quota
+
+            #region Commit Resource
+
+            await context.ScheduleTask<TaskResult>("IResource.Commit", "");
+
+            #endregion Commit Resource
+
+            #region Apply Policy
+
+            var applyPolicyResult = await context.ScheduleTask<TaskResult>("IARMPolicy.Apply", "", string.Empty);
+            if (applyPolicyResult.Code != 200)
+            {
+                return checkPolicyResult;
+            }
+
+            #endregion Apply Policy
+
             #region Create Or Update child resource
 
-            List<Task> tasks = new List<Task>();
-            foreach (var r in resourceDeploy.Resources)
+            if (resourceDeploy.Resources != null)
             {
-                if (null == r.Copy)
+                List<Task> tasks = new List<Task>();
+                foreach (var r in resourceDeploy.Resources)
                 {
-                    var p = new ResourceOrchestrationInput()
+                    if (null == r.Copy)
                     {
-                        Resource = r,
-                        OrchestrationContext = input.OrchestrationContext
-                    };
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
-                }
-                else
-                {
-                    var copy = r.Copy;
-                    var loopName = ARMFunctions.Evaluate(copy.Name, input.OrchestrationContext).ToString();
-                    var loopCount = (int)ARMFunctions.Evaluate(copy.Count, input.OrchestrationContext);
-                    var copyindex = new Dictionary<string, int>()
+                        var p = new ResourceOrchestrationInput()
+                        {
+                            Resource = r.ToString(),
+                            OrchestrationContext = input.OrchestrationContext
+                        };
+                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
+                    }
+                    else
+                    {
+                        var copy = r.Copy;
+                        var loopName = copy.Name;
+                        var loopCount = copy.Count;
+                        var copyindex = new Dictionary<string, int>()
                     {
                         { loopName,0 }
                     };
-                    Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                    copyContext.Add("armcontext", input.OrchestrationContext);
-                    copyContext.Add("copyindex", copyindex);
-                    copyContext.Add("copyindexcurrentloopname", copy.Name);
-                    for (int i = 0; i < loopCount; i++)
-                    {
-                        copyindex[loopName] = i;
-                        var par = new ResourceOrchestrationInput()
+                        Dictionary<string, object> copyContext = new Dictionary<string, object>();
+                        copyContext.Add("armcontext", input.OrchestrationContext);
+                        copyContext.Add("copyindex", copyindex);
+                        copyContext.Add("currentloopname", loopName);
+                        for (int i = 0; i < loopCount; i++)
                         {
-                            Resource = r,
-                            OrchestrationContext = copyContext
-                        };
-                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
+                            copyindex[loopName] = i;
+                            var par = new ResourceOrchestrationInput()
+                            {
+                                Resource = r.ToString(),
+                                OrchestrationContext = copyContext
+                            };
+                            tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
+                        }
                     }
                 }
+                await Task.WhenAll(tasks.ToArray());
             }
-            await Task.WhenAll(tasks.ToArray());
 
             #endregion Create Or Update child resource
 
-            // TODO: Apply Policy
-
-            return new TaskResult() { Code = 201 };
+            return new TaskResult() { Code = 200 };
         }
 
         public override void OnEvent(OrchestrationContext context, string name, string input)
