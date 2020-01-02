@@ -12,8 +12,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{8CC95BB9-721
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrchestrationService", "..\OrchestrationService\src\OrchestrationService\OrchestrationService.csproj", "{27FD3BAD-3EEB-40FD-B5E0-CE86A4471A86}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,10 +26,6 @@ Global
 		{0AC04383-A5B4-4A91-ABD4-89626FE158A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0AC04383-A5B4-4A91-ABD4-89626FE158A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0AC04383-A5B4-4A91-ABD4-89626FE158A3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{27FD3BAD-3EEB-40FD-B5E0-CE86A4471A86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{27FD3BAD-3EEB-40FD-B5E0-CE86A4471A86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{27FD3BAD-3EEB-40FD-B5E0-CE86A4471A86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{27FD3BAD-3EEB-40FD-B5E0-CE86A4471A86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

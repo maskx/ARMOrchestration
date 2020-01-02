@@ -1,7 +1,7 @@
 ﻿using maskx.OrchestrationCreator.ARMTemplate;
 using System.Collections.Generic;
 
-namespace maskx.OrchestrationCreator
+namespace maskx.OrchestrationCreator.Orchestrations
 {
     public class ResourceOrchestrationInput
     {

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using maskx.OrchestrationCreator.Orchestrations;
 
 namespace maskx.OrchestrationCreator
 {
@@ -647,102 +648,121 @@ namespace maskx.OrchestrationCreator
             {
                 var pars = args.EvaluateParameters(cxt);
                 var input = cxt["armcontext"] as ARMOrchestrationInput;
-                string subscriptionId = input.SubscriptionId;
-                string resourceGroupName = input.ResourceGroup;
-                string[] fullnames;
-                IEnumerable<object> nestResources;
-                string resource = string.Empty;
-                if (pars[0].ToString().IndexOf('/') > 0)
-                {
-                    fullnames = pars[0].ToString().Split('/');
-                    resource = pars[1].ToString();
-                    nestResources = pars.Skip(2);
-                }
-                else if (Guid.TryParse(pars[0].ToString(), out Guid subid))
-                {
-                    subscriptionId = subid.ToString();
-                    if (pars[1].ToString().IndexOf('/') > 0)
-                    {
-                        fullnames = pars[1].ToString().Split('/');
-                        resource = pars[2].ToString();
-                        nestResources = pars.Skip(3);
-                    }
-                    else
-                    {
-                        resourceGroupName = pars[1].ToString();
-                        fullnames = pars[2].ToString().Split('/');
-                        resource = pars[3].ToString();
-                        nestResources = pars.Skip(4);
-                    }
-                }
+                var t = new ARMTemplate.Template(input.Template, cxt);
+                if (t.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
+                    args.Result = resourceId(pars, input);
+                else if (t.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
+                    args.Result = subscriptionResourceId(pars, input);
                 else
-                {
-                    resourceGroupName = pars[0].ToString();
-                    fullnames = pars[1].ToString().Split('/');
-                    resource = pars[2].ToString();
-                    nestResources = pars.Skip(3);
-                }
-                string nestr = "";
-                int typeIndex = 2;
-                foreach (var item in nestResources)
-                {
-                    nestr += $"/{fullnames[typeIndex]}/{item}";
-                    typeIndex++;
-                }
-                args.Result = $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+                    args.Result = tenantResourceId(pars);
             });
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
                 var input = cxt["armcontext"] as ARMOrchestrationInput;
-                string subscriptionId = input.SubscriptionId;
-                string[] fullnames;
-                IEnumerable<object> nestResources;
-                string resource = string.Empty;
-                if (pars[0].ToString().IndexOf('/') > 0)
+                args.Result = subscriptionResourceId(pars, input);
+            });
+            Functions.Add("tenantresourceid", (args, cxt) =>
+            {
+                args.Result = tenantResourceId(args.EvaluateParameters(cxt));
+            });
+
+            #endregion Resource
+        }
+
+        public static string resourceId(object[] pars, ARMOrchestrationInput input)
+        {
+            string subscriptionId = input.SubscriptionId;
+            string resourceGroupName = input.ResourceGroup;
+            string[] fullnames;
+            IEnumerable<object> nestResources;
+            string resource;
+            if (pars[0].ToString().IndexOf('/') > 0)
+            {
+                fullnames = pars[0].ToString().Split('/');
+                resource = pars[1].ToString();
+                nestResources = pars.Skip(2);
+            }
+            else if (Guid.TryParse(pars[0].ToString(), out Guid subid))
+            {
+                subscriptionId = subid.ToString();
+                if (pars[1].ToString().IndexOf('/') > 0)
                 {
-                    fullnames = pars[0].ToString().Split('/');
-                    resource = pars[1].ToString();
-                    nestResources = pars.Skip(2);
-                }
-                else
-                {
-                    subscriptionId = pars[0].ToString();
                     fullnames = pars[1].ToString().Split('/');
                     resource = pars[2].ToString();
                     nestResources = pars.Skip(3);
                 }
-                string nestr = "";
-                int typeIndex = 2;
-                foreach (var item in nestResources)
+                else
                 {
-                    nestr += $"/{fullnames[typeIndex]}/{item}";
-                    typeIndex++;
+                    resourceGroupName = pars[1].ToString();
+                    fullnames = pars[2].ToString().Split('/');
+                    resource = pars[3].ToString();
+                    nestResources = pars.Skip(4);
                 }
-                args.Result = $"/subscriptions/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
-            });
-            Functions.Add("tenantresourceid", (args, cxt) =>
+            }
+            else
             {
-                var pars = args.EvaluateParameters(cxt);
-                string[] fullnames;
-                IEnumerable<object> nestResources;
-                string resource = string.Empty;
+                resourceGroupName = pars[0].ToString();
+                fullnames = pars[1].ToString().Split('/');
+                resource = pars[2].ToString();
+                nestResources = pars.Skip(3);
+            }
+            string nestr = "";
+            int typeIndex = 2;
+            foreach (var item in nestResources)
+            {
+                nestr += $"/{fullnames[typeIndex]}/{item}";
+                typeIndex++;
+            }
+            return $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+        }
 
+        private static string subscriptionResourceId(object[] pars, ARMOrchestrationInput input)
+        {
+            string subscriptionId = input.SubscriptionId;
+            string[] fullnames;
+            IEnumerable<object> nestResources;
+            string resource;
+            if (pars[0].ToString().IndexOf('/') > 0)
+            {
                 fullnames = pars[0].ToString().Split('/');
                 resource = pars[1].ToString();
                 nestResources = pars.Skip(2);
+            }
+            else
+            {
+                subscriptionId = pars[0].ToString();
+                fullnames = pars[1].ToString().Split('/');
+                resource = pars[2].ToString();
+                nestResources = pars.Skip(3);
+            }
+            string nestr = "";
+            int typeIndex = 2;
+            foreach (var item in nestResources)
+            {
+                nestr += $"/{fullnames[typeIndex]}/{item}";
+                typeIndex++;
+            }
+            return $"/subscriptions/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+        }
 
-                string nestr = "";
-                int typeIndex = 2;
-                foreach (var item in nestResources)
-                {
-                    nestr += $"/{fullnames[typeIndex]}/{item}";
-                    typeIndex++;
-                }
-                args.Result = $"/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
-            });
+        private static string tenantResourceId(object[] pars)
+        {
+            string[] fullnames;
+            IEnumerable<object> nestResources;
 
-            #endregion Resource
+            fullnames = pars[0].ToString().Split('/');
+            string resource = pars[1].ToString();
+            nestResources = pars.Skip(2);
+
+            string nestr = "";
+            int typeIndex = 2;
+            foreach (var item in nestResources)
+            {
+                nestr += $"/{fullnames[typeIndex]}/{item}";
+                typeIndex++;
+            }
+            return $"/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         /// <summary>

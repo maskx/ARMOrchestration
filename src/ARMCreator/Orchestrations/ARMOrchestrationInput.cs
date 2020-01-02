@@ -1,4 +1,4 @@
-﻿namespace maskx.OrchestrationCreator
+﻿namespace maskx.OrchestrationCreator.Orchestrations
 {
     public class ARMOrchestrationInput
     {
@@ -9,7 +9,7 @@
         /// <summary>
         /// Complete  or Incremental
         /// </summary>
-        public string Mode { get; set; }
+        public string Mode { get; set; } = "Incremental";
 
         /// <summary>
         /// Deployment Name

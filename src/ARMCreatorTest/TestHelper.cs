@@ -5,6 +5,8 @@ using maskx.DurableTask.SQLServer;
 using maskx.DurableTask.SQLServer.Settings;
 using maskx.DurableTask.SQLServer.Tracking;
 using maskx.OrchestrationCreator;
+using maskx.OrchestrationCreator.ARMTemplate;
+using maskx.OrchestrationCreator.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Orchestration;
@@ -13,6 +15,7 @@ using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,6 +27,37 @@ namespace ARMCreatorTest
 {
     public class TestHelper
     {
+        public static ARMOrchestrationOptions ARMOrchestrationOptions
+        {
+            get
+            {
+                return new ARMOrchestrationOptions()
+                {
+                };
+            }
+        }
+
+        public static AsyncRequestInput CreateAsyncRequestInput(string processorName, ResourceOrchestrationInput input)
+        {
+            var resource = new Resource(input.Resource, input.OrchestrationContext);
+            Dictionary<string, object> ruleField = new Dictionary<string, object>();
+            ruleField.Add("ApiVersion", ARMFunctions.Evaluate(resource.ApiVersion, input.OrchestrationContext));
+            ruleField.Add("Type", ARMFunctions.Evaluate(resource.Type, input.OrchestrationContext));
+            ruleField.Add("Name", ARMFunctions.Evaluate(resource.Name, input.OrchestrationContext));
+            ruleField.Add("Location", ARMFunctions.Evaluate(resource.Location, input.OrchestrationContext));
+            ruleField.Add("SKU", resource.SKU);
+            ruleField.Add("Kind", ARMFunctions.Evaluate(resource.Kind, input.OrchestrationContext));
+            ruleField.Add("Plan", resource.Plan);
+            return new AsyncRequestInput()
+            {
+                RequestTo = "ResourceProvider",// TODO: 支持Subscription level Resource和Tenant level Resource后，将有不同的ResourceTo
+                RequestOperation = "PUT",//ResourceProvider 处理 Create Or Update
+                RequsetContent = resource.Properties,
+                //   RuleField = ruleField,
+                Processor = processorName
+            };
+        }
+
         public static IConfigurationRoot Configuration { get; private set; }
         public static DataConverter DataConverter { get; private set; } = new JsonDataConverter();
         public static string SubscriptionId = "C1FA36C2-4D58-45E8-9C51-498FADB4D8BF";
@@ -106,7 +140,16 @@ namespace ARMCreatorTest
         public static void FunctionTest(string filename, Dictionary<string, string> result)
         {
             var templateString = TestHelper.GetFunctionInputContent(filename);
-            ARMOrchestration orchestration = new ARMOrchestration();
+            var options = new ResourceOrchestrationOptions()
+            {
+                GetCreateResourceRequestInput = (input) =>
+                {
+                    return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
+                }
+            };
+            ARMOrchestration orchestration = new ARMOrchestration(
+                Options.Create(TestHelper.ARMOrchestrationOptions),
+                Options.Create(options));
             var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
             {
                 Template = templateString,

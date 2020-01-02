@@ -7,6 +7,10 @@ namespace maskx.OrchestrationCreator.ARMTemplate
 {
     public class Template : IDisposable
     {
+        public const string ResourceGroupDeploymentLevel = "resourcegroup";
+        public const string SubscriptionDeploymentLevel = "subscription";
+        public const string TenantDeploymentLevel = "tenant";
+
         public string Schema
         {
             get
@@ -100,6 +104,29 @@ namespace maskx.OrchestrationCreator.ARMTemplate
                     return outputs.GetRawText();
                 }
                 return string.Empty;
+            }
+        }
+
+        private string _DeployLevel = string.Empty;
+
+        /// <summary>
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-subscription
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-management-group
+        /// </summary>
+        public string DeployLevel
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_DeployLevel))
+                {
+                    if (this.Schema.EndsWith("deploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                        _DeployLevel = ResourceGroupDeploymentLevel;
+                    else if (this.Schema.EndsWith("subscriptionDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                        _DeployLevel = SubscriptionDeploymentLevel;
+                    else if (this.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                        _DeployLevel = TenantDeploymentLevel;
+                }
+                return _DeployLevel;
             }
         }
 

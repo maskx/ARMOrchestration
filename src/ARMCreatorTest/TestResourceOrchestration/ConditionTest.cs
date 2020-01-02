@@ -4,6 +4,7 @@ using Xunit;
 namespace ARMCreatorTest.TestResourceOrchestration
 {
     [Collection("WebHost ARMOrchestartion")]
+    [Trait("c", "ResourceOrchestration")]
     [Trait("ResourceOrchestration", "Condition")]
     public class ConditionTest
     {

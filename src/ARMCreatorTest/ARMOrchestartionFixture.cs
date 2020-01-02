@@ -1,5 +1,8 @@
 ﻿using ARMCreatorTest.Mock;
 using maskx.OrchestrationCreator;
+using maskx.OrchestrationCreator.ARMTemplate;
+using maskx.OrchestrationCreator.Orchestrations;
+using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,21 +23,25 @@ namespace ARMCreatorTest
             List<Type> orchestrationTypes = new List<Type>();
             List<Type> activityTypes = new List<Type>();
             Dictionary<Type, object> interfaceActivitys = new Dictionary<Type, object>();
-            interfaceActivitys.Add(typeof(IARMPolicy), new MockARMPolicy());
-            interfaceActivitys.Add(typeof(IQuota), new MockQuota());
-            interfaceActivitys.Add(typeof(IResource), new MockResource());
             workerHost = TestHelper.CreateHostBuilder(options,
-                orchestrationTypes,
-                activityTypes,
-                interfaceActivitys,
-                (hostContext, services) =>
-                {
-                    services.AddSingleton<ICommunicationProcessor>(new MockCommunicationProcessor());
-                    services.Configure<ResourceOrchestrationOptions>((options) =>
-                    {
-                        options.RPCommunicationProcessorName = "MockCommunicationProcessor";
-                    });
-                }).Build();
+               orchestrationTypes,
+               activityTypes,
+               interfaceActivitys,
+               (hostContext, services) =>
+               {
+                   services.AddSingleton<ICommunicationProcessor>(new MockCommunicationProcessor());
+                   services.Configure<ResourceOrchestrationOptions>((options) =>
+                   {
+                       // options.GetCheckPolicyRequestInput = (input) =>
+                       //{
+                       //    return CreateAsyncRequestInput("MockCommunicationProcessor", input);
+                       //};
+                       options.GetCreateResourceRequestInput = (input) =>
+                      {
+                          return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
+                      };
+                   });
+               }).Build();
             workerHost.RunAsync();
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();
         }

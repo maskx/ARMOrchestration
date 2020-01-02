@@ -1,6 +1,4 @@
-﻿using ARMCreatorTest.Mock;
-using maskx.OrchestrationCreator;
-using maskx.OrchestrationService;
+﻿using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,25 +6,21 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 
-namespace ARMCreatorTest.TestIARMPolicy
+namespace ARMCreatorTest.TestResourceOrchestration
 {
     [Trait("c", "ResourceOrchestration")]
     [Trait("ResourceOrchestration", "ICheckPolicy")]
-    public class IARMPolicyTest : IDisposable
+    public class PolicyTest : IDisposable
     {
         private IHost workerHost = null;
         public OrchestrationWorker OrchestrationWorker { get; private set; }
 
-        public IARMPolicyTest()
+        public PolicyTest()
         {
             CommunicationWorkerOptions options = new CommunicationWorkerOptions();
             List<Type> orchestrationTypes = new List<Type>();
             List<Type> activityTypes = new List<Type>();
             Dictionary<Type, object> interfaceActivitys = new Dictionary<Type, object>();
-            activityTypes.Add(typeof(MockARMPolicy));
-            interfaceActivitys.Add(typeof(IARMPolicy), new MockARMPolicy());
-            interfaceActivitys.Add(typeof(IQuota), new MockQuota());
-            interfaceActivitys.Add(typeof(IResource), new MockResource());
             workerHost = TestHelper.CreateHostBuilder(options, orchestrationTypes, activityTypes, interfaceActivitys).Build();
             workerHost.RunAsync();
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();

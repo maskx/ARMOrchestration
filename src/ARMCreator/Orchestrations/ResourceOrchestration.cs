@@ -2,13 +2,12 @@
 using maskx.OrchestrationCreator.Activity;
 using maskx.OrchestrationCreator.ARMTemplate;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Orchestration;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace maskx.OrchestrationCreator
+namespace maskx.OrchestrationCreator.Orchestrations
 {
     public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
@@ -34,10 +33,10 @@ namespace maskx.OrchestrationCreator
 
             #region DependsOn
 
-            if (resourceDeploy.DependsOn != null)
+            if (!string.IsNullOrEmpty(resourceDeploy.DependsOn))
             {
                 dependsOnwaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<string>(typeof(WaitDependsOnActivity), "");
+                await context.ScheduleTask<string>(typeof(WaitDependsOnOrchestration), (resourceDeploy.DependsOn, input.OrchestrationContext));
                 await dependsOnwaitHandler.Task;
             }
 
@@ -45,79 +44,109 @@ namespace maskx.OrchestrationCreator
 
             #region check policy
 
-            var checkPolicyResult = await context.ScheduleTask<TaskResult>("IARMPolicy.Check", "", "123");
-            if (checkPolicyResult.Code != 200)
+            if (options.GetCheckPolicyRequestInput != null)
             {
-                return checkPolicyResult;
+                var checkPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                typeof(AsyncRequestOrchestration),
+                                options.GetCheckPolicyRequestInput(input));
+                if (checkPolicyResult.Code != 200)
+                    return checkPolicyResult;
             }
 
             #endregion check policy
 
+            TaskResult beginCreateResourceResult = null;
+
             #region Begin Create Resource
 
-            var beginResourceResult = await context.ScheduleTask<TaskResult>("IResource.Begin", "");
-            if (beginResourceResult.Code != 200)
+            if (options.GetBeginCreateResourceRequestInput != null)
             {
-                return beginResourceResult;
+                beginCreateResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(AsyncRequestOrchestration),
+                options.GetBeginCreateResourceRequestInput(input));
+                if (!(beginCreateResourceResult.Code == 200 || beginCreateResourceResult.Code == 204))
+                    return beginCreateResourceResult;
             }
 
             #endregion Begin Create Resource
 
+            #region Resource ReadOnly Lock Check
+
+            // code=200 update; code=204 create
+            if (beginCreateResourceResult != null && beginCreateResourceResult.Code == 200)
+            {
+                if (options.GetLockCheckRequestInput != null)
+                {
+                    TaskResult readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                       typeof(AsyncRequestOrchestration),
+                                       options.GetLockCheckRequestInput(
+                                           ARMFunctions.Evaluate($"[resourceid('{resourceDeploy.Type}','{resourceDeploy.Name}')]", input.OrchestrationContext).ToString(),
+                                           "readonly"));
+                    if (readonlyLockCheckResult.Code != 404)
+                        return readonlyLockCheckResult;
+                }
+            }
+
+            #endregion Resource ReadOnly Lock Check
+
             #region Begin Quota
 
-            var beginQuotaResult = await context.ScheduleTask<TaskResult>("IQuota.Begin", "");
-            if (beginQuotaResult.Code != 200)
+            if (options.GetCheckQoutaRequestInput != null)
             {
-                return beginQuotaResult;
+                var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                 typeof(AsyncRequestOrchestration),
+                 options.GetCheckQoutaRequestInput(input));
+                if (checkQoutaResult.Code != 200)
+                    return checkQoutaResult;
             }
 
             #endregion Begin Quota
 
             #region Create or Update Resource
 
-            Dictionary<string, object> ruleField = new Dictionary<string, object>();
-            ruleField.Add("ApiVersion", ARMFunctions.Evaluate(resourceDeploy.ApiVersion, input.OrchestrationContext));
-            ruleField.Add("Type", ARMFunctions.Evaluate(resourceDeploy.Type, input.OrchestrationContext));
-            ruleField.Add("Name", ARMFunctions.Evaluate(resourceDeploy.Name, input.OrchestrationContext));
-            ruleField.Add("Location", ARMFunctions.Evaluate(resourceDeploy.Location, input.OrchestrationContext));
-            ruleField.Add("SKU", resourceDeploy.SKU);
-            ruleField.Add("Kind", ARMFunctions.Evaluate(resourceDeploy.Kind, input.OrchestrationContext));
-            ruleField.Add("Plan", resourceDeploy.Plan);
-            AsyncRequestInput asyncRequestInput = new AsyncRequestInput()
-            {
-                RequestTo = "ResourceProvider",// TODO: 支持Subscription level Resource和Tenant level Resource后，将有不同的ResourceTo
-                RequestOperation = "PUT",//ResourceProvider 处理 Create Or Update
-                RequsetContent = resourceDeploy.Properties,
-                RuleField = ruleField,
-                Processor = this.options.RPCommunicationProcessorName
-            };
-            var response = await context.CreateSubOrchestrationInstance<TaskResult>(
+            var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                  typeof(AsyncRequestOrchestration),
-                 asyncRequestInput);
-            if (response.Code != 200)
-                return response;
+                 options.GetCreateResourceRequestInput(input));
+            if (createResourceResult.Code != 200)
+                return createResourceResult;
 
             #endregion Create or Update Resource
 
             #region Commit Quota
 
-            await context.ScheduleTask<TaskResult>("IQuota.Commit", "");
+            if (options.GetCommitQoutaRequestInput != null)
+            {
+                var commitQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(AsyncRequestOrchestration),
+                options.GetCommitQoutaRequestInput(input));
+                if (commitQoutaResult.Code != 200)
+                    return commitQoutaResult;
+            }
 
             #endregion Commit Quota
 
             #region Commit Resource
 
-            await context.ScheduleTask<TaskResult>("IResource.Commit", "");
+            if (options.GetCommitResourceRequestInput != null)
+            {
+                var commitResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(AsyncRequestOrchestration),
+                options.GetCommitResourceRequestInput(input));
+                if (commitResourceResult.Code != 200)
+                    return commitResourceResult;
+            }
 
             #endregion Commit Resource
 
+            #region extension resource
+
+            // TODO: extension resource.such as tags
+
+            #endregion extension resource
+
             #region Apply Policy
 
-            var applyPolicyResult = await context.ScheduleTask<TaskResult>("IARMPolicy.Apply", "", string.Empty);
-            if (applyPolicyResult.Code != 200)
-            {
-                return checkPolicyResult;
-            }
+            // TODO: should start a orchestration
 
             #endregion Apply Policy
 

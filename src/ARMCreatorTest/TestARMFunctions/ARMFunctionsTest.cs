@@ -1,4 +1,6 @@
 ﻿using maskx.OrchestrationCreator;
+using maskx.OrchestrationCreator.Orchestrations;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -531,7 +533,16 @@ namespace ARMCreatorTest.TestARMFunctions
         [Fact(DisplayName = "newGuid")]
         public void newGuid()
         {
-            ARMOrchestration orchestration = new ARMOrchestration();
+            var resOptions = new ResourceOrchestrationOptions()
+            {
+                GetCreateResourceRequestInput = (input) =>
+                 {
+                     return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
+                 }
+            };
+            ARMOrchestration orchestration = new ARMOrchestration(
+                Options.Create(TestHelper.ARMOrchestrationOptions),
+                Options.Create(resOptions));
             var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new ARMOrchestrationInput()
             {
                 Template = TestHelper.GetFunctionInputContent("newGuid")

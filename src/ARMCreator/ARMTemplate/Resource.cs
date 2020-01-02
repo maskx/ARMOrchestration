@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Linq;
+using maskx.OrchestrationCreator.Orchestrations;
 
 namespace maskx.OrchestrationCreator.ARMTemplate
 {
@@ -123,15 +124,15 @@ namespace maskx.OrchestrationCreator.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
         ///
         /// </summary>
-        public IEnumerable<string> DependsOn
+        public string DependsOn
         {
             get
             {
                 if (root.TryGetProperty("dependsOn", out JsonElement dependsOn))
                 {
-                    return dependsOn.EnumerateArray().Select((e) => e.GetRawText());
+                    return dependsOn.GetRawText();
                 }
-                return null;
+                return string.Empty;
             }
         }
 
