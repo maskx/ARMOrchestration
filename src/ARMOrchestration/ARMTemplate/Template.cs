@@ -59,6 +59,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        // TODO: support variable-iteration
+        //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#variable-iteration
         public string Variables
         {
             get

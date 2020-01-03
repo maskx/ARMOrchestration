@@ -30,7 +30,7 @@ namespace ARMCreatorTest
                (hostContext, services) =>
                {
                    services.AddSingleton<ICommunicationProcessor>(new MockCommunicationProcessor());
-                   services.Configure<ResourceOrchestrationOptions>((options) =>
+                   services.Configure<TemplateOrchestrationOptions>((options) =>
                    {
                        // options.GetCheckPolicyRequestInput = (input) =>
                        //{

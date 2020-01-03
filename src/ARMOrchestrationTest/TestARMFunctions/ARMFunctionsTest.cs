@@ -533,7 +533,7 @@ namespace ARMCreatorTest.TestARMFunctions
         [Fact(DisplayName = "newGuid")]
         public void newGuid()
         {
-            var resOptions = new ResourceOrchestrationOptions()
+            var options = new TemplateOrchestrationOptions()
             {
                 GetCreateResourceRequestInput = (input) =>
                  {
@@ -541,8 +541,7 @@ namespace ARMCreatorTest.TestARMFunctions
                  }
             };
             TemplateOrchestration orchestration = new TemplateOrchestration(
-                Options.Create(TestHelper.ARMOrchestrationOptions),
-                Options.Create(resOptions));
+                Options.Create(options));
             var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
             {
                 Template = TestHelper.GetFunctionInputContent("newGuid")

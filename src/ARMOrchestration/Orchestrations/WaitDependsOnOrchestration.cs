@@ -1,9 +1,8 @@
 ﻿using DurableTask.Core;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
-using maskx.ARMOrchestration.Workers;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -16,12 +15,12 @@ namespace maskx.ARMOrchestration.Activity
         private readonly string commandText;
         private const string eventName = "WaitDependsOn";
         private TaskCompletionSource<string> waitHandler = null;
-        private WaitDependsOnWorkerOptions options;
+        private TemplateOrchestrationOptions options;
 
-        public WaitDependsOnOrchestration(IOptions<WaitDependsOnWorkerOptions> options)
+        public WaitDependsOnOrchestration(IOptions<TemplateOrchestrationOptions> options)
         {
             this.options = options?.Value;
-            this.commandText = string.Format(commandTemplate, this.options.WaitDependsOnTableName);
+            this.commandText = string.Format(commandTemplate, this.options.Database.WaitDependsOnTableName);
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, (string dependsOn, Dictionary<string, object> context) input)
@@ -32,7 +31,7 @@ namespace maskx.ARMOrchestration.Activity
             {
             }
             waitHandler = new TaskCompletionSource<string>();
-            using (var db = new DbAccess(this.options.ConnectionString))
+            using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement(this.commandText, pars);
                 await db.ExecuteNonQueryAsync();

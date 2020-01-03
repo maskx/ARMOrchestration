@@ -11,9 +11,9 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
-        public ResourceOrchestrationOptions options;
+        public TemplateOrchestrationOptions options;
 
-        public ResourceOrchestration(IOptions<ResourceOrchestrationOptions> options)
+        public ResourceOrchestration(IOptions<TemplateOrchestrationOptions> options)
         {
             this.options = options?.Value;
         }
@@ -99,7 +99,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             #endregion Begin Quota
 
             #region Create or Update Resource
-
+            // TODO: support property-iteration
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#property-iteration
             var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                  typeof(AsyncRequestOrchestration),
                  options.GetCreateResourceRequestInput(input));
@@ -134,6 +135,8 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Commit Resource
 
+            // TODO: save deployment status to resolve dependson resource
+
             #region extension resource
 
             // TODO: extension resource.such as tags
@@ -153,45 +156,31 @@ namespace maskx.ARMOrchestration.Orchestrations
                 List<Task> tasks = new List<Task>();
                 foreach (var r in resourceDeploy.Resources)
                 {
-                    if (null == r.Copy)
+                    var p = new ResourceOrchestrationInput()
                     {
-                        var p = new ResourceOrchestrationInput()
-                        {
-                            Resource = r.ToString(),
-                            OrchestrationContext = input.OrchestrationContext
-                        };
-                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
-                    }
-                    else
-                    {
-                        var copy = r.Copy;
-                        var loopName = copy.Name;
-                        var loopCount = copy.Count;
-                        var copyindex = new Dictionary<string, int>()
-                    {
-                        { loopName,0 }
+                        Resource = r.ToString(),
+                        OrchestrationContext = input.OrchestrationContext
                     };
-                        Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                        copyContext.Add("armcontext", input.OrchestrationContext);
-                        copyContext.Add("copyindex", copyindex);
-                        copyContext.Add("currentloopname", loopName);
-                        for (int i = 0; i < loopCount; i++)
-                        {
-                            copyindex[loopName] = i;
-                            var par = new ResourceOrchestrationInput()
-                            {
-                                Resource = r.ToString(),
-                                OrchestrationContext = copyContext
-                            };
-                            tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
-                        }
-                    }
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
+                    // ARM does NOT support Iteration for a child resource
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#iteration-for-a-child-resource
+                    //if (null == r.Copy)
+                    //{
+                    //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
+                    //}
+                    //else
+                    //{
+                    //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(GroupOrchestration), p));
+                    //}
                 }
                 await Task.WhenAll(tasks.ToArray());
             }
 
             #endregion Create Or Update child resource
 
+            #region
+            // TODO: save deployment result
+            #endregion
             return new TaskResult() { Code = 200 };
         }
     }

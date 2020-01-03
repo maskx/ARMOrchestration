@@ -1,11 +1,7 @@
-﻿using DurableTask.Core;
+﻿using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
-using maskx.OrchestrationService;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,9 +9,9 @@ namespace maskx.ARMOrchestration.Workers
 {
     public class WaitDependsOnWorker : BackgroundService
     {
-        private WaitDependsOnWorkerOptions options;
+        private TemplateOrchestrationOptions options;
 
-        public WaitDependsOnWorker(IOptions<WaitDependsOnWorkerOptions> options)
+        public WaitDependsOnWorker(IOptions<TemplateOrchestrationOptions> options)
         {
             this.options = options?.Value;
         }
@@ -25,43 +21,53 @@ namespace maskx.ARMOrchestration.Workers
             return Task.CompletedTask;
         }
 
-        public async Task DeleteCommunicationAsync()
+        public async Task DeleteARMOrchestrationTableAsync()
         {
-            using (var db = new DbAccess(options.ConnectionString))
+            using (var db = new DbAccess(options.Database.ConnectionString))
             {
-                db.AddStatement($"DROP TABLE IF EXISTS {options.WaitDependsOnTableName}");
+                db.AddStatement($"DROP TABLE IF EXISTS {options.Database.WaitDependsOnTableName}");
+                db.AddStatement($"DROP TABLE IF EXISTS {options.Database.DeploymentDetailTableName}");
                 await db.ExecuteNonQueryAsync();
             }
         }
 
         public async Task CreateIfNotExistsAsync(bool recreate)
         {
-            if (recreate) await DeleteCommunicationAsync();
-            using (var db = new DbAccess(options.ConnectionString))
+            if (recreate) await DeleteARMOrchestrationTableAsync();
+            using (var db = new DbAccess(options.Database.ConnectionString))
             {
                 db.AddStatement($@"IF(SCHEMA_ID(@schema) IS NULL)
                     BEGIN
-                        EXEC sp_executesql N'CREATE SCHEMA [{options.SchemaName}]'
-                    END", new { schema = options.SchemaName });
+                        EXEC sp_executesql N'CREATE SCHEMA [{options.Database.SchemaName}]'
+                    END", new { schema = options.Database.SchemaName });
 
                 db.AddStatement($@"
 IF(OBJECT_ID(@table) IS NULL)
 BEGIN
-    CREATE TABLE {options.WaitDependsOnTableName} (
+    CREATE TABLE {options.Database.WaitDependsOnTableName} (
         [InstanceId] [nvarchar](50) NOT NULL,
 	    [ExecutionId] [nvarchar](50) NOT NULL,
-        [ResourceId] [nvarchar](50) NOT NULL,
-        [ResourceStatus] [nvarchar](50) NOT NULL,
+        [DependsOnName] [nvarchar](500) NOT NULL,
+        [DependsOnStatus] [nvarchar](50) NOT NULL,
 	    [CompletedTime] [datetime2](7) NULL,
-	    [CreateTime] [datetime2](7) NULL,
-    CONSTRAINT [PK_{options.SchemaName}_{options.HubName}{WaitDependsOnWorkerOptions.WaitDependsOnTable}] PRIMARY KEY CLUSTERED
-    (
-	    [InstanceId] ASC,
-	    [ExecutionId] ASC,
-    )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-    ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-END", new { table = options.WaitDependsOnTableName });
-
+	    [CreateTime] [datetime2](7) NULL
+    ) END", new { table = options.Database.WaitDependsOnTableName });
+                db.AddStatement($@"
+IF(OBJECT_ID(@table) IS NULL)
+BEGIN
+    create table {options.Database.DeploymentDetailTableName}(
+        [DeploymentId] [nvarchar](50) NOT NULL,
+	    [Resource] [nvarchar](50) NOT NULL,
+	    [Type] [nvarchar](100) NULL,
+	    [Status] [nvarchar](20) NULL,
+	    [ResourceId] [nvarchar](500) NULL,
+	    [ParentId] [nvarchar](500) NULL,
+	    [BeginTimeUtc] [datetime2](7) NULL,
+	    [EndTimeUtc] [datetime2](7) NULL,
+	    [InstanceId] [nvarchar](50) NULL,
+	    [ExecutionId] [nvarchar](50) NULL,
+        [Result] [nvarchar](500) NULL
+    ) END", new { table = options.Database.DeploymentDetailTableName });
                 await db.ExecuteNonQueryAsync();
             }
         }

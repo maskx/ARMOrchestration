@@ -140,7 +140,7 @@ namespace ARMCreatorTest
         public static void FunctionTest(string filename, Dictionary<string, string> result)
         {
             var templateString = TestHelper.GetFunctionInputContent(filename);
-            var options = new ResourceOrchestrationOptions()
+            var options = new TemplateOrchestrationOptions()
             {
                 GetCreateResourceRequestInput = (input) =>
                 {
@@ -148,8 +148,7 @@ namespace ARMCreatorTest
                 }
             };
             TemplateOrchestration orchestration = new TemplateOrchestration(
-                Options.Create(TestHelper.ARMOrchestrationOptions),
-                Options.Create(options));
+                 Options.Create(options));
             var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
             {
                 Template = templateString,

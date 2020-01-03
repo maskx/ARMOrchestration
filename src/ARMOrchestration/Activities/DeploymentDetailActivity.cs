@@ -8,12 +8,14 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class SaveDeploymentResultActivity : TaskActivity<TaskResult, TaskResult>
+    public class DeploymentDetailActivity : TaskActivity<TaskResult, TaskResult>
     {
         private readonly TemplateOrchestrationOptions options;
-        private readonly string commandText;
 
-        public SaveDeploymentResultActivity(IOptions<TemplateOrchestrationOptions> options)
+        private const string CommandText = @"
+";
+
+        public DeploymentDetailActivity(IOptions<TemplateOrchestrationOptions> options)
         {
             this.options = options.Value;
         }
@@ -26,9 +28,9 @@ namespace maskx.ARMOrchestration.Activities
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, TaskResult input)
         {
             Dictionary<string, object> pars = new Dictionary<string, object>();
-            using (var db = new DbAccess(this.options.ConnectionString))
+            using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
-                db.AddStatement(this.commandText, pars);
+                db.AddStatement(CommandText, pars);
                 await db.ExecuteNonQueryAsync();
             }
             return new TaskResult() { Code = 200 };

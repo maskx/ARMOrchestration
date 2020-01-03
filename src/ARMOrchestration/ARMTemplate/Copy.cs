@@ -9,6 +9,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// </summary>
     public class Copy
     {
+        public const string SerialMode = "serial";
+        public const string ParallelMode = "parallel";
+
         /// <summary>
         /// name-of-loop
         /// </summary>
@@ -48,9 +51,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (root.TryGetProperty("mode", out JsonElement mode))
                 {
-                    return mode.GetString();
+                    return mode.GetString().ToLower();
                 }
-                return "parallel";
+                return ParallelMode;
             }
         }
 

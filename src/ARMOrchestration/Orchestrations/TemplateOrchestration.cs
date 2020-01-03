@@ -9,15 +9,12 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class TemplateOrchestration : TaskOrchestration<TaskResult, string>
     {
-        private ResourceOrchestrationOptions resourceOptions;
         private TemplateOrchestrationOptions options;
 
         public TemplateOrchestration(
-            IOptions<TemplateOrchestrationOptions> options,
-            IOptions<ResourceOrchestrationOptions> resourceOptions)
+            IOptions<TemplateOrchestrationOptions> options)
         {
             this.options = options?.Value;
-            this.resourceOptions = resourceOptions?.Value;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
@@ -35,7 +32,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 #region ResourceGroup ReadOnly Lock Check
 
-                if (resourceOptions.GetLockCheckRequestInput != null)
+                if (options.GetLockCheckRequestInput != null)
                 {
                     TaskResult readonlyLockCheckResult;
 
@@ -43,7 +40,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                        typeof(AsyncRequestOrchestration),
-                                       resourceOptions.GetLockCheckRequestInput(
+                                       options.GetLockCheckRequestInput(
                                            ARMFunctions.Evaluate($"[subscriptionresourceid('{options.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString(),
                                            "readonly"));
                     }
@@ -51,7 +48,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                       typeof(AsyncRequestOrchestration),
-                                      resourceOptions.GetLockCheckRequestInput(
+                                      options.GetLockCheckRequestInput(
                                           ARMFunctions.Evaluate($"[tenantresourceid('{options.BuitinServiceTypes.Subscription}','{input.SubscriptionId}')]", armContext).ToString(),
                                           "readonly"));
                     }
@@ -70,41 +67,19 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 foreach (var resource in template.Resources)
                 {
+                    var p = new ResourceOrchestrationInput()
+                    {
+                        Resource = resource.ToString(),
+                        OrchestrationContext = armContext,
+                        DeploymentId = context.OrchestrationInstance.InstanceId
+                    };
                     if (null == resource.Copy)
                     {
-                        var p = new ResourceOrchestrationInput()
-                        {
-                            Resource = resource.ToString(),
-                            OrchestrationContext = armContext
-                        };
                         tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
                     }
                     else
                     {
-                        var copy = resource.Copy;
-                        var loopName = copy.Name;
-                        var loopCount = copy.Count;
-                        var copyindex = new Dictionary<string, int>() { { loopName, 0 } };
-                        var loopTask = new List<Task>();
-                        Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                        copyContext.Add("armcontext", input);
-                        copyContext.Add("copyindex", copyindex);
-                        copyContext.Add("currentloopname", loopName);
-                        for (int i = 0; i < loopCount; i++)
-                        {
-                            copyindex[loopName] = i;
-                            var par = new ResourceOrchestrationInput()
-                            {
-                                Resource = resource.ToString(),
-                                OrchestrationContext = copyContext
-                            };
-                            loopTask.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
-                        }
-                        tasks.Add(Task.WhenAll(loopTask.ToArray())
-                            .ContinueWith((t) =>
-                            {
-                                // TODO: save loop complete, so dependsOn can continue
-                            }));
+                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(GroupOrchestration), p));
                     }
                 }
                 await Task.WhenAll(tasks.ToArray());
