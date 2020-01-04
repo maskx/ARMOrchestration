@@ -1,12 +1,14 @@
 ﻿using DurableTask.Core;
 using DurableTask.Core.Common;
 using DurableTask.Core.Serializing;
+using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Orchestrations;
+using maskx.ARMOrchestration.Workers;
 using maskx.DurableTask.SQLServer;
 using maskx.DurableTask.SQLServer.Settings;
 using maskx.DurableTask.SQLServer.Tracking;
-using maskx.ARMOrchestration;
-using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Orchestration;
@@ -27,16 +29,6 @@ namespace ARMCreatorTest
 {
     public class TestHelper
     {
-        public static TemplateOrchestrationOptions ARMOrchestrationOptions
-        {
-            get
-            {
-                return new TemplateOrchestrationOptions()
-                {
-                };
-            }
-        }
-
         public static AsyncRequestInput CreateAsyncRequestInput(string processorName, ResourceOrchestrationInput input)
         {
             var resource = new Resource(input.Resource, input.OrchestrationContext);
@@ -230,6 +222,8 @@ namespace ARMCreatorTest
 
                  activityTypes.Add(typeof(AsyncRequestActivity));
                  activityTypes.Add(typeof(HttpRequestActivity));
+                 activityTypes.Add(typeof(DeploymentOperationsActivity));
+
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
                      options.GetBuildInOrchestrators = () => orchestrationTypes;
@@ -260,6 +254,13 @@ namespace ARMCreatorTest
                  services.AddHostedService<CommunicationWorker>();
 
                  #endregion CommunicationWorker
+
+                 #region WaitDependsOnWorker
+
+                 services.AddSingleton<WaitDependsOnWorker>();
+                 services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker>());
+
+                 #endregion WaitDependsOnWorker
              });
         }
 
@@ -279,7 +280,11 @@ namespace ARMCreatorTest
                 Input = TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
                 {
                     Template = TestHelper.GetTemplateContent(filename),
-                    Parameters = string.Empty
+                    Parameters = string.Empty,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Name = filename.Replace('/', '-'),
+                    SubscriptionId = TestHelper.SubscriptionId,
+                    ResourceGroup = TestHelper.ResourceGroup
                 })
             }).Result;
             TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();

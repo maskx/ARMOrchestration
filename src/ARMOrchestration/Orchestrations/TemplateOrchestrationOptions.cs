@@ -9,17 +9,17 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public DatabaseConfig Database { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCheckPolicyRequestInput { get; set; }
-        public Func<ResourceOrchestrationInput, AsyncRequestInput> GetBeginCreateResourceRequestInput { get; set; }
+        public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCheckResourceRequestInput { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCheckQoutaRequestInput { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCreateResourceRequestInput { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCommitQoutaRequestInput { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCommitResourceRequestInput { get; set; }
-        public Func<string, string, AsyncRequestInput> GetLockCheckRequestInput { get; set; }
+        public Func<string, string, AsyncRequestInput> GetCheckLockRequestInput { get; set; }
 
         public class DatabaseConfig
         {
             internal const string WaitDependsOnTable = "_WaitDependsOn";
-            internal const string DeploymentDetailTable = "_DeploymentDetail";
+            internal const string DeploymentOperationsTable = "_DeploymentOperations";
 
             public string ConnectionString { get; set; }
 
@@ -33,7 +33,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             public string SchemaName { get; set; } = "dbo";
 
             public string WaitDependsOnTableName => $"[{SchemaName}].[{HubName}{WaitDependsOnTable}]";
-            public string DeploymentDetailTableName => $"[{SchemaName}].[{HubName}{DeploymentDetailTable}]";
+            public string DeploymentOperationsTableName => $"[{SchemaName}].[{HubName}{DeploymentOperationsTable}]";
         }
     }
 

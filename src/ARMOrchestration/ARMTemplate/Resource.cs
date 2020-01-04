@@ -220,6 +220,26 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        public string ResouceId
+        {
+            get
+            {
+                var p = context["armcontext"] as TemplateOrchestrationInput;
+                var t = new Template(p.Template, context);
+                if (t.DeployLevel == Template.ResourceGroupDeploymentLevel)
+                    return ARMFunctions.resourceId(
+                        p,
+                        this.SubscriptionId,
+                        this.ResourceGroup,
+                        this.Type,
+                        this.Name);
+                else if (t.DeployLevel == Template.SubscriptionDeploymentLevel)
+                    return ARMFunctions.subscriptionResourceId(p, this, SubscriptionId, this.Type, this.Name);
+                else
+                    return ARMFunctions.tenantResourceId(this.Type, this.Name);
+            }
+        }
+
         private string jsonString;
         private JsonDocument jsonDoc;
 

@@ -32,7 +32,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 #region ResourceGroup ReadOnly Lock Check
 
-                if (options.GetLockCheckRequestInput != null)
+                if (options.GetCheckLockRequestInput != null)
                 {
                     TaskResult readonlyLockCheckResult;
 
@@ -40,7 +40,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                        typeof(AsyncRequestOrchestration),
-                                       options.GetLockCheckRequestInput(
+                                       options.GetCheckLockRequestInput(
                                            ARMFunctions.Evaluate($"[subscriptionresourceid('{options.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString(),
                                            "readonly"));
                     }
@@ -48,7 +48,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                       typeof(AsyncRequestOrchestration),
-                                      options.GetLockCheckRequestInput(
+                                      options.GetCheckLockRequestInput(
                                           ARMFunctions.Evaluate($"[tenantresourceid('{options.BuitinServiceTypes.Subscription}','{input.SubscriptionId}')]", armContext).ToString(),
                                           "readonly"));
                     }
@@ -71,7 +71,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         Resource = resource.ToString(),
                         OrchestrationContext = armContext,
-                        DeploymentId = context.OrchestrationInstance.InstanceId
+                        DeploymentId = context.OrchestrationInstance.InstanceId,
+                        CorrelationId = input.CorrelationId
                     };
                     if (null == resource.Copy)
                     {

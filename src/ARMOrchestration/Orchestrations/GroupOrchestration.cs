@@ -29,7 +29,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Resource = resource.ToString(),
                         OrchestrationContext = copyContext,
                         DeploymentId = input.DeploymentId,
-                        ParentResource = (loopName, "copy", $"deployment/{input.DeploymentId}/copy/{loopName}")
+                        Parent = new ResourceOrchestrationInput.ParentResource()
+                        {
+                            Resource = loopName,
+                            Type = "copy",
+                            ResourceId = $"deployment/{input.DeploymentId}/copy/{loopName}"
+                        }
                     };
                     await context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par);
                 }
@@ -37,20 +42,30 @@ namespace maskx.ARMOrchestration.Orchestrations
             else // TODO: support batchSize
             {
                 var loopTask = new List<Task>();
+
                 for (int i = 0; i < loopCount; i++)
                 {
                     copyindex[loopName] = i;
+
                     var par = new ResourceOrchestrationInput()
                     {
                         Resource = resource.ToString(),
                         OrchestrationContext = copyContext,
                         DeploymentId = input.DeploymentId,
-                        ParentResource = (loopName, "copy", $"deployment/{input.DeploymentId}/copy/{loopName}")
+                        Parent = new ResourceOrchestrationInput.ParentResource()
+                        {
+                            Resource = loopName,
+                            Type = "copy",
+                            ResourceId = $"deployment/{input.DeploymentId}/copy/{loopName}"
+                        }
                     };
+
                     loopTask.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
                 }
+
                 await Task.WhenAll(loopTask.ToArray());
             }
+
             return new TaskResult() { Code = 200 };
         }
     }

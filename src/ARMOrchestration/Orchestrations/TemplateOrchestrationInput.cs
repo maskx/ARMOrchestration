@@ -18,5 +18,6 @@
 
         public string ResourceGroup { get; set; }
         public string SubscriptionId { get; set; }
+        public string CorrelationId { get; set; }
     }
 }

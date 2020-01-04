@@ -650,9 +650,9 @@ namespace maskx.ARMOrchestration
                 var input = cxt["armcontext"] as TemplateOrchestrationInput;
                 var t = new ARMTemplate.Template(input.Template, cxt);
                 if (t.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
-                    args.Result = resourceId(pars, input);
+                    args.Result = resourceId(input, pars);
                 else if (t.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
-                    args.Result = subscriptionResourceId(pars, input);
+                    args.Result = subscriptionResourceId(input, pars);
                 else
                     args.Result = tenantResourceId(pars);
             });
@@ -660,7 +660,7 @@ namespace maskx.ARMOrchestration
             {
                 var pars = args.EvaluateParameters(cxt);
                 var input = cxt["armcontext"] as TemplateOrchestrationInput;
-                args.Result = subscriptionResourceId(pars, input);
+                args.Result = subscriptionResourceId(input, pars);
             });
             Functions.Add("tenantresourceid", (args, cxt) =>
             {
@@ -670,7 +670,7 @@ namespace maskx.ARMOrchestration
             #endregion Resource
         }
 
-        public static string resourceId(object[] pars, TemplateOrchestrationInput input)
+        public static string resourceId(TemplateOrchestrationInput input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string resourceGroupName = input.ResourceGroup;
@@ -717,7 +717,7 @@ namespace maskx.ARMOrchestration
             return $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        private static string subscriptionResourceId(object[] pars, TemplateOrchestrationInput input)
+        public static string subscriptionResourceId(TemplateOrchestrationInput input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string[] fullnames;
@@ -746,7 +746,7 @@ namespace maskx.ARMOrchestration
             return $"/subscriptions/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        private static string tenantResourceId(object[] pars)
+        public static string tenantResourceId(params object[] pars)
         {
             string[] fullnames;
             IEnumerable<object> nestResources;

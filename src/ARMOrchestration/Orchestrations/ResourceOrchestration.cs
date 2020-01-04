@@ -1,4 +1,5 @@
 ﻿using DurableTask.Core;
+using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Activity;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.OrchestrationService;
@@ -21,11 +22,33 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             var resourceDeploy = new Resource(input.Resource, input.OrchestrationContext);
+            var operationArgs = new DeploymentOperationsActivityInput()
+            {
+                DeploymentId = input.DeploymentId,
+                InstanceId = context.OrchestrationInstance.InstanceId,
+                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                CorrelationId = input.CorrelationId,
+                Resource = resourceDeploy.Name,
+                Type = resourceDeploy.Type,
+                ResourceId = resourceDeploy.ResouceId,
+                ParentId = input.Parent?.ResourceId,
+                Stage = DeploymentOperationsActivityInput.ProvisioningStage.StartProcessing
+            };
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
             #region Condition
 
-            if (!resourceDeploy.Condition)
+            if (resourceDeploy.Condition)
+            {
+                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ConditionCheckSuccessed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            }
+            else
+            {
+                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ConditionCheckFailed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return new TaskResult() { Code = 200, Content = "condition is false" };
+            }
 
             #endregion Condition
 
@@ -33,7 +56,11 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (!string.IsNullOrEmpty(resourceDeploy.DependsOn))
             {
+                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.DependsOnWaited;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 await context.ScheduleTask<string>(typeof(WaitDependsOnOrchestration), (resourceDeploy.DependsOn, input.OrchestrationContext));
+                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.DependsOnSuccessed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
 
             #endregion DependsOn
@@ -45,67 +72,113 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var checkPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                 typeof(AsyncRequestOrchestration),
                                 options.GetCheckPolicyRequestInput(input));
-                if (checkPolicyResult.Code != 200)
+                if (checkPolicyResult.Code == 200)
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.PolicyCheckSuccessed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.PolicyCheckFailed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return checkPolicyResult;
+                }
             }
 
             #endregion check policy
 
             TaskResult beginCreateResourceResult = null;
 
-            #region Begin Create Resource
+            #region Check Resource
 
-            if (options.GetBeginCreateResourceRequestInput != null)
+            if (options.GetCheckResourceRequestInput != null)
             {
                 beginCreateResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                 typeof(AsyncRequestOrchestration),
-                options.GetBeginCreateResourceRequestInput(input));
-                if (!(beginCreateResourceResult.Code == 200 || beginCreateResourceResult.Code == 204))
+                options.GetCheckResourceRequestInput(input));
+                if (beginCreateResourceResult.Code == 200 || beginCreateResourceResult.Code == 204)
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCheckSuccessed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCheckFailed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return beginCreateResourceResult;
+                }
             }
 
-            #endregion Begin Create Resource
+            #endregion Check Resource
 
             #region Resource ReadOnly Lock Check
 
             // code=200 update; code=204 create
             if (beginCreateResourceResult != null && beginCreateResourceResult.Code == 200)
             {
-                if (options.GetLockCheckRequestInput != null)
+                if (options.GetCheckLockRequestInput != null)
                 {
                     TaskResult readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                        typeof(AsyncRequestOrchestration),
-                                       options.GetLockCheckRequestInput(
+                                       options.GetCheckLockRequestInput(
                                            ARMFunctions.Evaluate($"[resourceid('{resourceDeploy.Type}','{resourceDeploy.Name}')]", input.OrchestrationContext).ToString(),
                                            "readonly"));
-                    if (readonlyLockCheckResult.Code != 404)
+                    if (readonlyLockCheckResult.Code == 404)// lock not exist
+                    {
+                        operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.LockCheckSuccessed;
+                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    }
+                    else
+                    {
+                        operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.LockCheckFailed;
+                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                         return readonlyLockCheckResult;
+                    }
                 }
             }
 
             #endregion Resource ReadOnly Lock Check
 
-            #region Begin Quota
+            #region Check Quota
 
             if (options.GetCheckQoutaRequestInput != null)
             {
                 var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                  typeof(AsyncRequestOrchestration),
                  options.GetCheckQoutaRequestInput(input));
-                if (checkQoutaResult.Code != 200)
+                if (checkQoutaResult.Code == 200)
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCheckSuccessed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCheckFailed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return checkQoutaResult;
+                }
             }
 
-            #endregion Begin Quota
+            #endregion Check Quota
 
             #region Create or Update Resource
+
             // TODO: support property-iteration
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#property-iteration
             var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                  typeof(AsyncRequestOrchestration),
                  options.GetCreateResourceRequestInput(input));
-            if (createResourceResult.Code != 200)
+            if (createResourceResult.Code == 200)
+            {
+                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCreateSuccessed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            }
+            else
+            {
+                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCreateFailed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return createResourceResult;
+            }
 
             #endregion Create or Update Resource
 
@@ -116,8 +189,17 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var commitQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                 typeof(AsyncRequestOrchestration),
                 options.GetCommitQoutaRequestInput(input));
-                if (commitQoutaResult.Code != 200)
+                if (commitQoutaResult.Code == 200)
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCommitSuccesed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCommitFailed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return commitQoutaResult;
+                }
             }
 
             #endregion Commit Quota
@@ -129,23 +211,52 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var commitResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                 typeof(AsyncRequestOrchestration),
                 options.GetCommitResourceRequestInput(input));
-                if (commitResourceResult.Code != 200)
+                if (commitResourceResult.Code == 200)
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCommitSuccessed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCommitFailed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return commitResourceResult;
+                }
             }
 
             #endregion Commit Resource
 
-            // TODO: save deployment status to resolve dependson resource
-
             #region extension resource
 
             // TODO: extension resource.such as tags
+            //if (.Code == 200)
+            //{
+            //    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ExtensionResourceSuccessed;
+            //    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            //}
+            //else
+            //{
+            //    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ExtensionResourceFailed;
+            //    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            //    return commitResourceResult;
+            //}
 
             #endregion extension resource
 
             #region Apply Policy
 
             // TODO: should start a orchestration
+            //if (.Code == 200)
+            //{
+            //    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.PolicyApplySuccessed;
+            //    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            //}
+            //else
+            //{
+            //    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.PolicyApplyFailed;
+            //    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            //    return commitResourceResult;
+            //}
 
             #endregion Apply Policy
 
@@ -153,7 +264,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (resourceDeploy.Resources != null)
             {
-                List<Task> tasks = new List<Task>();
+                List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
                 foreach (var r in resourceDeploy.Resources)
                 {
                     var p = new ResourceOrchestrationInput()
@@ -174,13 +285,33 @@ namespace maskx.ARMOrchestration.Orchestrations
                     //}
                 }
                 await Task.WhenAll(tasks.ToArray());
+                int successed = 0;
+                int failed = 0;
+                foreach (var t in tasks)
+                {
+                    if (t.Result.Code == 200) successed++;
+                    else failed++;
+                }
+                if (failed > 0)
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ChildResourceFailed;
+                }
+                else
+                {
+                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ChildResourceSuccessed;
+                }
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
 
             #endregion Create Or Update child resource
 
-            #region
-            // TODO: save deployment result
-            #endregion
+            #region save deployment result
+
+            operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.Successed;
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+
+            #endregion save deployment result
+
             return new TaskResult() { Code = 200 };
         }
     }
