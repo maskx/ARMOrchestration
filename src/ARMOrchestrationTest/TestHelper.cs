@@ -3,6 +3,7 @@ using DurableTask.Core.Common;
 using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.Activity;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.Workers;
@@ -219,11 +220,11 @@ namespace ARMCreatorTest
                  orchestrationTypes.Add(typeof(AsyncRequestOrchestration));
                  orchestrationTypes.Add(typeof(ResourceOrchestration));
                  orchestrationTypes.Add(typeof(TemplateOrchestration));
-
+                 orchestrationTypes.Add(typeof(WaitDependsOnOrchestration));
                  activityTypes.Add(typeof(AsyncRequestActivity));
                  activityTypes.Add(typeof(HttpRequestActivity));
                  activityTypes.Add(typeof(DeploymentOperationsActivity));
-
+                 activityTypes.Add(typeof(WaitDependsOnActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
                      options.GetBuildInOrchestrators = () => orchestrationTypes;
@@ -264,7 +265,7 @@ namespace ARMCreatorTest
              });
         }
 
-        public static void OrchestrationTest(OrchestrationWorker worker,
+        public static OrchestrationInstance OrchestrationTest(OrchestrationWorker worker,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
             Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
@@ -294,7 +295,8 @@ namespace ARMCreatorTest
                 {
                     if (isValidateOrchestration(instance, args))
                     {
-                        t.SetResult(args);
+                        if (t.Task.Status == TaskStatus.WaitingForActivation)
+                            t.SetResult(args);
                     }
                 });
                 var r = t.Task.Result;
@@ -311,6 +313,7 @@ namespace ARMCreatorTest
                     break;
                 }
             }
+            return instance;
         }
     }
 }

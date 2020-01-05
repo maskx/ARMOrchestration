@@ -7,6 +7,7 @@ using maskx.OrchestrationService.Orchestration;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using static maskx.ARMOrchestration.Activities.DeploymentOperationsActivityInput;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -32,7 +33,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Type = resourceDeploy.Type,
                 ResourceId = resourceDeploy.ResouceId,
                 ParentId = input.Parent?.ResourceId,
-                Stage = DeploymentOperationsActivityInput.ProvisioningStage.StartProcessing
+                Stage = ProvisioningStage.StartProcessing
             };
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
@@ -40,12 +41,12 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (resourceDeploy.Condition)
             {
-                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ConditionCheckSuccessed;
+                operationArgs.Stage = ProvisioningStage.ConditionCheckSuccessed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
             else
             {
-                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ConditionCheckFailed;
+                operationArgs.Stage = ProvisioningStage.ConditionCheckFailed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return new TaskResult() { Code = 200, Content = "condition is false" };
             }
@@ -56,10 +57,12 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (!string.IsNullOrEmpty(resourceDeploy.DependsOn))
             {
-                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.DependsOnWaited;
+                operationArgs.Stage = ProvisioningStage.DependsOnWaited;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                await context.ScheduleTask<string>(typeof(WaitDependsOnOrchestration), (resourceDeploy.DependsOn, input.OrchestrationContext));
-                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.DependsOnSuccessed;
+                await context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(WaitDependsOnOrchestration),
+                    (input.DeploymentId, resourceDeploy.DependsOn, input.OrchestrationContext));
+                operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
 
@@ -74,12 +77,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                                 options.GetCheckPolicyRequestInput(input));
                 if (checkPolicyResult.Code == 200)
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.PolicyCheckSuccessed;
+                    operationArgs.Stage = ProvisioningStage.PolicyCheckSuccessed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.PolicyCheckFailed;
+                    operationArgs.Stage = ProvisioningStage.PolicyCheckFailed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return checkPolicyResult;
                 }
@@ -98,12 +101,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 options.GetCheckResourceRequestInput(input));
                 if (beginCreateResourceResult.Code == 200 || beginCreateResourceResult.Code == 204)
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCheckSuccessed;
+                    operationArgs.Stage = ProvisioningStage.ResourceCheckSuccessed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCheckFailed;
+                    operationArgs.Stage = ProvisioningStage.ResourceCheckFailed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return beginCreateResourceResult;
                 }
@@ -125,12 +128,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                                            "readonly"));
                     if (readonlyLockCheckResult.Code == 404)// lock not exist
                     {
-                        operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.LockCheckSuccessed;
+                        operationArgs.Stage = ProvisioningStage.LockCheckSuccessed;
                         await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     }
                     else
                     {
-                        operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.LockCheckFailed;
+                        operationArgs.Stage = ProvisioningStage.LockCheckFailed;
                         await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                         return readonlyLockCheckResult;
                     }
@@ -148,12 +151,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                  options.GetCheckQoutaRequestInput(input));
                 if (checkQoutaResult.Code == 200)
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCheckSuccessed;
+                    operationArgs.Stage = ProvisioningStage.QuotaCheckSuccessed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCheckFailed;
+                    operationArgs.Stage = ProvisioningStage.QuotaCheckFailed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return checkQoutaResult;
                 }
@@ -170,12 +173,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                  options.GetCreateResourceRequestInput(input));
             if (createResourceResult.Code == 200)
             {
-                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCreateSuccessed;
+                operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
             else
             {
-                operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCreateFailed;
+                operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return createResourceResult;
             }
@@ -191,12 +194,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 options.GetCommitQoutaRequestInput(input));
                 if (commitQoutaResult.Code == 200)
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCommitSuccesed;
+                    operationArgs.Stage = ProvisioningStage.QuotaCommitSuccesed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.QuotaCommitFailed;
+                    operationArgs.Stage = ProvisioningStage.QuotaCommitFailed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return commitQoutaResult;
                 }
@@ -213,12 +216,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 options.GetCommitResourceRequestInput(input));
                 if (commitResourceResult.Code == 200)
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCommitSuccessed;
+                    operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ResourceCommitFailed;
+                    operationArgs.Stage = ProvisioningStage.ResourceCommitFailed;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return commitResourceResult;
                 }
@@ -294,11 +297,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 if (failed > 0)
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ChildResourceFailed;
+                    operationArgs.Stage = ProvisioningStage.ChildResourceFailed;
                 }
                 else
                 {
-                    operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.ChildResourceSuccessed;
+                    operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
                 }
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
@@ -307,7 +310,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region save deployment result
 
-            operationArgs.Stage = DeploymentOperationsActivityInput.ProvisioningStage.Successed;
+            operationArgs.Stage = ProvisioningStage.Successed;
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
             #endregion save deployment result

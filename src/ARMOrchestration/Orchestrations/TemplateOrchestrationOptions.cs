@@ -7,6 +7,11 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public BuitinServiceTypes BuitinServiceTypes { get; set; }
 
+        /// <summary>
+        /// Idel time when no dependsOn resource completed
+        /// </summary>
+        public int DependsOnIdelMilliseconds { get; set; } = 500;
+
         public DatabaseConfig Database { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCheckPolicyRequestInput { get; set; }
         public Func<ResourceOrchestrationInput, AsyncRequestInput> GetCheckResourceRequestInput { get; set; }

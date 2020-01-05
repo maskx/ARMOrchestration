@@ -16,11 +16,10 @@ namespace ARMCreatorTest
 
         public ARMOrchestartionFixture()
         {
-            CommunicationWorkerOptions options = new CommunicationWorkerOptions();
             List<Type> orchestrationTypes = new List<Type>();
             List<Type> activityTypes = new List<Type>();
             Dictionary<Type, object> interfaceActivitys = new Dictionary<Type, object>();
-            workerHost = TestHelper.CreateHostBuilder(options,
+            workerHost = TestHelper.CreateHostBuilder(null,
                orchestrationTypes,
                activityTypes,
                interfaceActivitys,

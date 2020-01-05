@@ -70,12 +70,15 @@ namespace ARMCreatorTest.TestResourceOrchestration
                 "Condition/FunctionConditionFalse",
                 (instance, args) =>
                 {
-                    return args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId;
+                    return args.IsSubOrchestration
+                    && args.ParentExecutionId == instance.ExecutionId
+                    && args.Id == "0";
                 },
                 (instance, args) =>
                 {
                     var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
                     Assert.Equal(200, r.Code);
+                    Assert.Equal("condition is false", r.Content);
                 });
         }
     }
