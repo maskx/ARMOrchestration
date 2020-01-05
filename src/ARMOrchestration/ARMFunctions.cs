@@ -52,10 +52,10 @@ namespace maskx.ARMOrchestration
             Functions.Add("concat", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                if (pars[0] is string)
-                    args.Result = string.Join("", pars);
-                else
+                if (pars[0] is JsonValue)
                     args.Result = new JsonValue($"[{string.Join(",", pars)}]");
+                else
+                    args.Result = string.Join("", pars);
             });
             Functions.Add("contains", (args, cxt) =>
             {

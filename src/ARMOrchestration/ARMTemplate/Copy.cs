@@ -9,8 +9,14 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// </summary>
     public class Copy
     {
+        public const string ServiceType = "Copy";
         public const string SerialMode = "serial";
         public const string ParallelMode = "parallel";
+
+        public string GetId(string deploymentId)
+        {
+            return $"deployment/{deploymentId}/copy/{this.Name}";
+        }
 
         /// <summary>
         /// name-of-loop
@@ -36,7 +42,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (root.TryGetProperty("count", out JsonElement count))
                 {
-                    return (int)ARMFunctions.Evaluate(count.GetString(), this.context);
+                    if (count.ValueKind == JsonValueKind.Number)
+                        return count.GetInt32();
+                    if (count.ValueKind == JsonValueKind.String)
+                        return (int)ARMFunctions.Evaluate(count.GetString(), this.context);
                 }
                 return 0;
             }

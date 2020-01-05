@@ -80,7 +80,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                     else
                     {
-                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(GroupOrchestration), p));
+                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(CopyOrchestration), p));
                     }
                 }
                 await Task.WhenAll(tasks.ToArray());

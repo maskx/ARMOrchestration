@@ -221,6 +221,7 @@ namespace ARMCreatorTest
                  orchestrationTypes.Add(typeof(ResourceOrchestration));
                  orchestrationTypes.Add(typeof(TemplateOrchestration));
                  orchestrationTypes.Add(typeof(WaitDependsOnOrchestration));
+                 orchestrationTypes.Add(typeof(CopyOrchestration));
                  activityTypes.Add(typeof(AsyncRequestActivity));
                  activityTypes.Add(typeof(HttpRequestActivity));
                  activityTypes.Add(typeof(DeploymentOperationsActivity));

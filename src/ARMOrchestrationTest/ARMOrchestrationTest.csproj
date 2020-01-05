@@ -27,6 +27,9 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Templates\CopyIndex\ResourceIteration.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Templates\dependsOn\ThreeResourceName.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -195,10 +198,6 @@
     <None Update="Templates\Condition\TrueCondition.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Templates\CopyIndex\" />
   </ItemGroup>
 
   <ItemGroup>
