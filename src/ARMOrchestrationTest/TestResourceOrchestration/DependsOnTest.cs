@@ -28,5 +28,12 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                 "dependsOn/ThreeResourceName");
         }
+
+        [Fact(DisplayName = "CopyLoop")]
+        public void CopyLoop()
+        {
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+                "dependsOn/copyloop");
+        }
     }
 }
