@@ -19,67 +19,31 @@ namespace ARMCreatorTest.TestResourceOrchestration
         public void TrueCondition()
         {
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
-                "Condition/TrueCondition",
-                (instance, args) =>
-                {
-                    return args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId;
-                },
-                (instance, args) =>
-                {
-                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
-                    Assert.Equal(200, r.Code);
-                });
+                "Condition/TrueCondition");
         }
 
         [Fact(DisplayName = "NoCondition")]
         public void NoCondition()
         {
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
-                "Condition/NoCondition",
-                (instance, args) =>
-                {
-                    return args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId;
-                },
-                (instance, args) =>
-                {
-                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
-                    Assert.Equal(200, r.Code);
-                });
+                "Condition/NoCondition");
         }
 
         [Fact(DisplayName = "FunctionConditionTrue")]
         public void FunctionConditionTrue()
         {
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
-                "Condition/FunctionConditionTrue",
-                (instance, args) =>
-                {
-                    return args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId;
-                },
-                (instance, args) =>
-                {
-                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
-                    Assert.Equal(200, r.Code);
-                });
+                "Condition/FunctionConditionTrue");
         }
 
         [Fact(DisplayName = "FunctionConditionFalse")]
         public void FunctionConditionFalse()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
-                "Condition/FunctionConditionFalse",
-                (instance, args) =>
-                {
-                    return args.IsSubOrchestration
-                    && args.ParentExecutionId == instance.ExecutionId
-                    && args.Id == "0";
-                },
-                (instance, args) =>
-                {
-                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
-                    Assert.Equal(200, r.Code);
-                    Assert.Equal("condition is false", r.Content);
-                });
+            var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+                       "Condition/FunctionConditionFalse");
+            var r = TestHelper.GetDeploymentOpetions(instance.InstanceId).Result;
+            var a = TestHelper.DataConverter.Deserialize<TaskResult>(r[0].Result);
+            Assert.Equal("condition is false", a.Content);
         }
     }
 }

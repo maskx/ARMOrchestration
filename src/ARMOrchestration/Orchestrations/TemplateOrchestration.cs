@@ -1,4 +1,5 @@
 ﻿using DurableTask.Core;
+using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Orchestration;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,10 @@ namespace maskx.ARMOrchestration.Orchestrations
             string rtv = string.Empty;
             Dictionary<string, object> armContext = new Dictionary<string, object>();
             armContext.Add("armcontext", input);
+            var r = await context.ScheduleTask<TaskResult>(typeof(PrepareTemplateActivity), input);
+            if (r.Code == 400)
+                return r;
+            input.Template = r.Content;
             var template = new ARMTemplate.Template(input.Template, armContext);
 
             if (input.Mode.ToLower() == "complete")

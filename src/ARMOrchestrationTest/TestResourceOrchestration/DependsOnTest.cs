@@ -35,5 +35,12 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                 "dependsOn/copyloop");
         }
+
+        [Fact(DisplayName = "ConditionFalse")]
+        public void ConditionFalse()
+        {
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+                "dependsOn/ConditionFalse");
+        }
     }
 }

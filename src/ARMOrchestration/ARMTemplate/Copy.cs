@@ -93,7 +93,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (root.TryGetProperty("input", out JsonElement input))
                 {
-                    return input.GetString();
+                    return input.GetRawText();
                 }
                 return string.Empty;
             }

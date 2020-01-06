@@ -3,9 +3,17 @@ using Xunit;
 
 namespace ARMCreatorTest.TestARMFunctions
 {
+    [Collection("WebHost ARMOrchestartion")]
     [Trait("C", "ARMFunctions")]
     public class UserDefinedFunctionTest
     {
+        private ARMOrchestartionFixture fixture;
+
+        public UserDefinedFunctionTest(ARMOrchestartionFixture fixture)
+        {
+            this.fixture = fixture;
+        }
+
         [Trait("ARMFunctions", "UserDefinedFunction")]
         [Fact(DisplayName = "UserDefinedFunction")]
         public void UserDefinedFunction()
@@ -14,7 +22,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"addResult","abc-123"}
             };
-            TestHelper.FunctionTest("UserDefinedFunction", result);
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "UserDefinedFunction", result);
         }
     }
 }

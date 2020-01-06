@@ -12,7 +12,7 @@ namespace maskx.ARMOrchestration
         public string RawString { get; set; }
         private JsonDocument json = null;
 
-        private JsonElement RootElement
+        internal JsonElement RootElement
         {
             get
             {

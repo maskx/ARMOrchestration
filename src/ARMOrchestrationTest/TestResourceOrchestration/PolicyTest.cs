@@ -21,7 +21,7 @@ namespace ARMCreatorTest.TestResourceOrchestration
             List<Type> orchestrationTypes = new List<Type>();
             List<Type> activityTypes = new List<Type>();
             Dictionary<Type, object> interfaceActivitys = new Dictionary<Type, object>();
-            workerHost = TestHelper.CreateHostBuilder(options, orchestrationTypes, activityTypes, interfaceActivitys).Build();
+            workerHost = TestHelper.CreateHostBuilder(null, orchestrationTypes, activityTypes, interfaceActivitys).Build();
             workerHost.RunAsync();
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();
         }

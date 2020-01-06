@@ -9,6 +9,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.Workers;
 using maskx.DurableTask.SQLServer;
 using maskx.DurableTask.SQLServer.Settings;
+using maskx.DurableTask.SQLServer.SQL;
 using maskx.DurableTask.SQLServer.Tracking;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
@@ -130,24 +131,36 @@ namespace ARMCreatorTest
             return new JsonValue(templatString).GetNodeStringValue(path);
         }
 
-        public static void FunctionTest(string filename, Dictionary<string, string> result)
+        public static void FunctionTest(OrchestrationWorker worker, string filename, Dictionary<string, string> result)
         {
             var templateString = TestHelper.GetFunctionInputContent(filename);
-            var options = new TemplateOrchestrationOptions()
+            var instance = worker.JumpStartOrchestrationAsync(new Job()
             {
-                GetCreateResourceRequestInput = (input) =>
+                InstanceId = Guid.NewGuid().ToString("N"),
+                Orchestration = new Orchestration()
                 {
-                    return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
-                }
-            };
-            TemplateOrchestration orchestration = new TemplateOrchestration(
-                 Options.Create(options));
-            var outputString = orchestration.RunTask(null, TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
+                    Creator = "DICreator",
+                    Uri = typeof(TemplateOrchestration).FullName + "_"
+                },
+                Input = TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
+                {
+                    Template = templateString,
+                    Parameters = string.Empty,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Name = filename.Replace('/', '-'),
+                    SubscriptionId = TestHelper.SubscriptionId,
+                    ResourceGroup = TestHelper.ResourceGroup
+                })
+            }).Result;
+            TaskCompletionSource<string> t = new TaskCompletionSource<string>();
+
+            worker.RegistOrchestrationCompletedAction((args) =>
             {
-                Template = templateString,
-                ResourceGroup = TestHelper.ResourceGroup,
-                SubscriptionId = TestHelper.SubscriptionId
-            })).Result.Content;
+                if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
+                    t.SetResult(args.Result);
+            });
+            var outputString = DataConverter.Deserialize<TaskResult>(t.Task.Result).Content;
+
             using var templateDoc = JsonDocument.Parse(templateString);
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement;
@@ -226,6 +239,7 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(HttpRequestActivity));
                  activityTypes.Add(typeof(DeploymentOperationsActivity));
                  activityTypes.Add(typeof(WaitDependsOnActivity));
+                 activityTypes.Add(typeof(PrepareTemplateActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
                      options.GetBuildInOrchestrators = () => orchestrationTypes;
@@ -296,8 +310,7 @@ namespace ARMCreatorTest
                 {
                     if (isValidateOrchestration(instance, args))
                     {
-                        if (t.Task.Status == TaskStatus.WaitingForActivation)
-                            t.SetResult(args);
+                        t.SetResult(args);
                     }
                 });
                 var r = t.Task.Result;
@@ -315,6 +328,25 @@ namespace ARMCreatorTest
                 }
             }
             return instance;
+        }
+
+        public static async Task<List<DeploymentOperationsActivityInput>> GetDeploymentOpetions(string deploymentId)
+        {
+            List<DeploymentOperationsActivityInput> r = new List<DeploymentOperationsActivityInput>();
+            using (var db = new DbAccess(TestHelper.ConnectionString))
+            {
+                db.AddStatement($"select * from arm_DeploymentOperations where deploymentId=N'{deploymentId}'");
+                await db.ExecuteReaderAsync((reader, index) =>
+                  {
+                      r.Add(new DeploymentOperationsActivityInput()
+                      {
+                          Resource = reader["Resource"].ToString(),
+                          ResourceId = reader["ResourceId"].ToString(),
+                          Result = reader["Result"]?.ToString()
+                      });
+                  });
+            }
+            return r;
         }
     }
 }

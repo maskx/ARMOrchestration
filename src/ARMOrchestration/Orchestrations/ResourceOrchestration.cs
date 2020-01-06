@@ -46,9 +46,11 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             else
             {
+                var conditionFail = new TaskResult() { Code = 200, Content = "condition is false" };
                 operationArgs.Stage = ProvisioningStage.ConditionCheckFailed;
+                operationArgs.Result = this.DataConverter.Serialize(conditionFail);
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                return new TaskResult() { Code = 200, Content = "condition is false" };
+                return conditionFail;
             }
 
             #endregion Condition
