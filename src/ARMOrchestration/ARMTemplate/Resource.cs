@@ -58,7 +58,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (root.TryGetProperty("name", out JsonElement name))
                 {
-                    return ARMFunctions.Evaluate(name.GetString(), this.context).ToString();
+                    return name.GetString();
                 }
                 return string.Empty;
             }
@@ -70,7 +70,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (root.TryGetProperty("location", out JsonElement location))
                 {
-                    return ARMFunctions.Evaluate(location.GetString(), this.context).ToString();
+                    return location.GetString();
                 }
                 return string.Empty;
             }

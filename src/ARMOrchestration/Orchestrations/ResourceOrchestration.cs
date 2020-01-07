@@ -22,6 +22,8 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
+            var pre = await context.ScheduleTask<TaskResult>(typeof(PrepareResourceActivity), input);
+            input.Resource = pre.Content;
             var resourceDeploy = new Resource(input.Resource, input.OrchestrationContext);
             var operationArgs = new DeploymentOperationsActivityInput()
             {

@@ -240,6 +240,7 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(DeploymentOperationsActivity));
                  activityTypes.Add(typeof(WaitDependsOnActivity));
                  activityTypes.Add(typeof(PrepareTemplateActivity));
+                 activityTypes.Add(typeof(PrepareResourceActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
                      options.GetBuildInOrchestrators = () => orchestrationTypes;

@@ -66,21 +66,9 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var str = TestHelper.GetTemplateContent("CopyIndex/PropertyIteration");
-            JObject jObject = JObject.Parse(str);
-            var properties = jObject["resources"][0]["properties"] as JObject;
-            foreach (var p in properties)
-            {
-                var b = p.Value as JObject;
-                if (b.TryGetValue("copy", out JToken c))
-                {
-                    b.Add("qqq", 123);
-                    b.Remove("copy");
-                }
-            }
+            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+                "CopyIndex/PropertyIteration");
             var d = "";
-            //TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
-            //    "CopyIndex/PropertyIteration");
         }
     }
 }
