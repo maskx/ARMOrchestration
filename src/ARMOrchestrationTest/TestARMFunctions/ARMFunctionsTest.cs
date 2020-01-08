@@ -709,6 +709,17 @@ namespace ARMCreatorTest.TestARMFunctions
         #region Resource
 
         [Trait("ARMFunctions", "Resource")]
+        [Fact(DisplayName = "extensionResourceId")]
+        public void extensionResourceId()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"lockResourceId",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Authorization/locks/lockname1/"}
+            };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "extensionResourceId", result);
+        }
+
+        [Trait("ARMFunctions", "Resource")]
         [Fact(DisplayName = "resourceid")]
         public void resourceid()
         {

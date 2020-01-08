@@ -1,7 +1,5 @@
 ﻿using DurableTask.Core;
 using DurableTask.Core.Serializing;
-using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.Activity;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;

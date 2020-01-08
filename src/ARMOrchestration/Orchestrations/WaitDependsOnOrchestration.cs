@@ -1,14 +1,10 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.Orchestrations;
-using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
-using Microsoft.Extensions.Options;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace maskx.ARMOrchestration.Activity
+namespace maskx.ARMOrchestration.Orchestrations
 {
     public class WaitDependsOnOrchestration : TaskOrchestration<TaskResult, (string DeploymentId, string DependsOn, Dictionary<string, object> Context)>
     {

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "lockName": {
+      "type": "string",
+      "defaultValue": "lockname1"
+    }
+  },
+  "variables": {},
+  "resources": [],
+  "outputs": {
+    "lockResourceId": {
+      "type": "string",
+      "value": "[extensionResourceId('/subscriptions/C1FA36C2-4D58-45E8-9C51-498FADB4D8BF/resourceGroups/ResourceGroup1' , 'Microsoft.Authorization/locks', parameters('lockName'))]"
+    }
+  }
+}

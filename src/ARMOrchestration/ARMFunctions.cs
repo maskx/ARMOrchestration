@@ -644,6 +644,20 @@ namespace maskx.ARMOrchestration
 
             #region Resource
 
+            Functions.Add("extensionresourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var fullnames = pars[1].ToString().Split('/');
+                string nestr = "";
+                int typeIndex = 2;
+                IEnumerable<object> nestResources = pars.Skip(3);
+                foreach (var item in nestResources)
+                {
+                    nestr += $"/{fullnames[typeIndex]}/{item}";
+                    typeIndex++;
+                }
+                args.Result = $"{pars[0]}/providers/{fullnames[0]}/{fullnames[1]}/{pars[2]}/{nestr}";
+            });
             Functions.Add("resourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
