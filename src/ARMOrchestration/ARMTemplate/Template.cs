@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Linq;
-using System.Text;
-using System.IO;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -62,8 +59,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        // TODO: support variable-iteration
-        //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#variable-iteration
         public string Variables
         {
             get

@@ -13,7 +13,6 @@ using maskx.DurableTask.SQLServer.Tracking;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Orchestration;
-using maskx.OrchestrationService.OrchestrationCreator;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -135,7 +134,7 @@ namespace ARMCreatorTest
             var instance = worker.JumpStartOrchestrationAsync(new Job()
             {
                 InstanceId = Guid.NewGuid().ToString("N"),
-                Orchestration = new Orchestration()
+                Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",
                     Uri = typeof(TemplateOrchestration).FullName + "_"
@@ -213,6 +212,17 @@ namespace ARMCreatorTest
                  {
                      return CreateOrchestrationService();
                  });
+                 services.Configure<ARMOrchestrationOptions>((opt) =>
+                 {
+                     opt.ExtensionResources = new Dictionary<string, Func<ResourceOrchestrationInput, string, string, AsyncRequestInput>>() {
+                         {"tags",(input,name,property)=>{return new AsyncRequestInput(){
+                             Processor = "MockCommunicationProcessor",
+                             RequestOperation = "Create",
+                             RequestTo = name,
+                             RequsetContent=property
+                         }; } }
+                     };
+                 });
 
                  #region OrchestrationWorker
 
@@ -257,6 +267,7 @@ namespace ARMCreatorTest
                  services.Configure<CommunicationWorkerOptions>((options) =>
                {
                    TestHelper.Configuration.GetSection("CommunicationWorker").Bind(options);
+                   options.AutoCreate = true;
                    if (communicationWorkerOptions != null)
                    {
                        options.GetFetchRules = communicationWorkerOptions.GetFetchRules;
@@ -287,7 +298,7 @@ namespace ARMCreatorTest
             var instance = worker.JumpStartOrchestrationAsync(new Job()
             {
                 InstanceId = Guid.NewGuid().ToString("N"),
-                Orchestration = new Orchestration()
+                Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",
                     Uri = typeof(TemplateOrchestration).FullName + "_"

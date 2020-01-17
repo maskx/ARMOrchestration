@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "createdBy": {
+      "defaultValue": "maskx"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "storageAccountName",
+      "location": "location",
+      "kind": "Storage",
+      "tags": {
+        "Department": "departmentName",
+        "Application": "applicationName",
+        "Created By": "[parameters('createdBy')]"
+      }
+    }
+  ]
+}

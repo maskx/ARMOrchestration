@@ -1,5 +1,4 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -12,6 +11,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public Dictionary<string, object> OrchestrationContext { get; set; }
 
         /// <summary>
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/child-resource-name-type
         /// when a resource in a copy loop,the parent resource is the loop.
         /// Resource={loopname}
         /// Type= copy

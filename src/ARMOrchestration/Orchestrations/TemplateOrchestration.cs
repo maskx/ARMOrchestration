@@ -24,10 +24,16 @@ namespace maskx.ARMOrchestration.Orchestrations
             string rtv = string.Empty;
             Dictionary<string, object> armContext = new Dictionary<string, object>();
             armContext.Add("armcontext", input);
+
+            #region prepare ARM Template
+
             var r = await context.ScheduleTask<TaskResult>(typeof(PrepareTemplateActivity), input);
             if (r.Code == 400)
                 return r;
             input.Template = r.Content;
+
+            #endregion prepare ARM Template
+
             var template = new ARMTemplate.Template(input.Template, armContext);
 
             if (input.Mode.ToLower() == "complete")
@@ -68,6 +74,8 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 #endregion ResourceGroup ReadOnly Lock Check
 
+                #region Provisioning resources
+
                 List<Task> tasks = new List<Task>();
 
                 foreach (var resource in template.Resources)
@@ -90,11 +98,18 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 await Task.WhenAll(tasks.ToArray());
 
-                if (!string.IsNullOrEmpty(template.Outputs))
-                {
-                    rtv = ARMFunctions.GetOutputs(template.Outputs, armContext);
-                }
+                #endregion Provisioning resources
             }
+
+            #region get template outputs
+
+            if (!string.IsNullOrEmpty(template.Outputs))
+            {
+                rtv = ARMFunctions.GetOutputs(template.Outputs, armContext);
+            }
+
+            #endregion get template outputs
+
             return new TaskResult() { Code = 200, Content = rtv };
         }
     }

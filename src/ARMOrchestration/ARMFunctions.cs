@@ -331,7 +331,7 @@ namespace maskx.ARMOrchestration
             {
                 // TODO: support securestring
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
-
+                // may be need implement at Resource Provider
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 if (cxt.TryGetValue("parameters", out object parameters))
                 {
@@ -389,7 +389,7 @@ namespace maskx.ARMOrchestration
                 properties.Add("parameters", JObject.Parse(input.Parameters));
                 properties.Add("mode", input.Mode);
                 // TODO: Set provisioningState
-                properties.Add("provisioningState", null);
+                properties.Add("provisioningState", "Accepted");
                 properties.Add("templateLink", new JObject("uri", input.TemplateLink));
                 obj.Add("properties", properties);
                 args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));

@@ -17,7 +17,7 @@ namespace maskx.ARMOrchestration.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection UsingARMOrchestration(this IServiceCollection services, ARMOrchestrationOptions options)
+        public static IServiceCollection UsingARMOrchestration(this IServiceCollection services, ARMOrchestrationConfig options)
         {
             services.AddSingleton<IOrchestrationService>(
                 new SQLServerOrchestrationService(

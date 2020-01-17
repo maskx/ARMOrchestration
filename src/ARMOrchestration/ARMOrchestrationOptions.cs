@@ -1,13 +1,12 @@
-﻿using maskx.DurableTask.SQLServer.Settings;
+﻿using maskx.ARMOrchestration.Orchestrations;
+using maskx.OrchestrationService.Activity;
+using System;
 using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration
 {
     public class ARMOrchestrationOptions
     {
-        public string ConnectionString { get; set; }
-        public string HubName { get; set; } = "ARM";
-        public SQLServerOrchestrationServiceSettings OrchestrationServiceSettings { get; set; } = new SQLServerOrchestrationServiceSettings();
-        public Dictionary<string, string> ExtensionResources { get; set; }
+        public Dictionary<string, Func<ResourceOrchestrationInput, string, string, AsyncRequestInput>> ExtensionResources { get; set; }
     }
 }

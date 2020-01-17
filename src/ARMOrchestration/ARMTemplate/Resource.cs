@@ -276,5 +276,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
             this.context = context;
             this.armInput = context["armcontext"] as TemplateOrchestrationInput;
         }
+
+        public bool TryGetExtensionResource(string name, out string resource)
+        {
+            resource = null;
+            if (root.TryGetProperty(name, out JsonElement r))
+            {
+                resource = r.GetRawText();
+                return true;
+            }
+
+            return false;
+        }
     }
 }

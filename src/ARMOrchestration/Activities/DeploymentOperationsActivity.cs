@@ -1,10 +1,13 @@
 ﻿using DurableTask.Core;
+using DurableTask.Core.Tracing;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Activity;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
@@ -40,6 +43,15 @@ WHEN MATCHED THEN
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, DeploymentOperationsActivityInput input)
         {
+            TraceActivityEventSource.Log.TraceEvent(
+                TraceEventType.Information,
+                "DeploymentOperationsActivity",
+                context.OrchestrationInstance.InstanceId,
+                context.OrchestrationInstance.ExecutionId,
+                $"{input.ResourceId}-{input.Stage}",
+                DataConverter.Serialize(input),
+                input.Stage.ToString());
+
             Dictionary<string, object> pars = new Dictionary<string, object>() {
                 { "InstanceId",input.InstanceId },
                 { "ExecutionId",input.ExecutionId},

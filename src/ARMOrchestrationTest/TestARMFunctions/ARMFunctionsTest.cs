@@ -1,9 +1,7 @@
 ﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.OrchestrationCreator;
 using maskx.OrchestrationService.Worker;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -550,7 +548,7 @@ namespace ARMCreatorTest.TestARMFunctions
             var instance = fixture.OrchestrationWorker.JumpStartOrchestrationAsync(new Job()
             {
                 InstanceId = Guid.NewGuid().ToString("N"),
-                Orchestration = new Orchestration()
+                Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",
                     Uri = typeof(TemplateOrchestration).FullName + "_"

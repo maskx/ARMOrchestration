@@ -16,6 +16,7 @@ namespace ARMCreatorTest.Mock
             {
                 job.ResponseCode = 200;
                 job.ResponseContent = "MockCommunicationProcessor";
+                job.Status = CommunicationJob.JobStatus.Completed;
                 rtv.Add(job);
             }
 

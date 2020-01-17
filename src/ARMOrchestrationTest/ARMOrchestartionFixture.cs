@@ -13,6 +13,7 @@ namespace ARMCreatorTest
     {
         private IHost workerHost = null;
         public OrchestrationWorker OrchestrationWorker { get; private set; }
+        public OrchestrationWorkerClient OrchestrationWorkerClient { get; private set; }
 
         public ARMOrchestartionFixture()
         {
@@ -33,18 +34,15 @@ namespace ARMCreatorTest
                            HubName = TestHelper.HubName,
                            ConnectionString = TestHelper.ConnectionString
                        };
-                       // options.GetCheckPolicyRequestInput = (input) =>
-                       //{
-                       //    return CreateAsyncRequestInput("MockCommunicationProcessor", input);
-                       //};
                        options.GetCreateResourceRequestInput = (input) =>
-                      {
-                          return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
-                      };
+                       {
+                           return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
+                       };
                    });
                }).Build();
             workerHost.RunAsync();
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();
+            OrchestrationWorkerClient = workerHost.Services.GetService<OrchestrationWorkerClient>();
         }
 
         public void Dispose()

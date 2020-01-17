@@ -1,5 +1,6 @@
 ﻿using DurableTask.Core;
 using DurableTask.Core.Serializing;
+using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using static maskx.ARMOrchestration.Activities.DeploymentOperationsActivityInput;
 
 namespace maskx.ARMOrchestration.Workers
 {
@@ -163,7 +163,7 @@ delete {0} where InstanceId=@InstanceId and ExecutionId=@ExecutionId
         private readonly string fetchCommandString;
 
         /// <summary>
-        /// {0}: WaitDependsOn
+        /// {0}: WaitDependsOn table name
         /// {1}: DeploymentOperations
         /// {2}: ResourceCommitSuccessed
         /// {3}: ConditionCheckFailed
@@ -179,7 +179,7 @@ from(
 	from {0} as w
 		left join {1} as d
 			on w.DeploymentId=d.DeploymentId
-                and (d.Stage>{2} or d.stage=-10)
+                and (d.Stage>{2} or d.stage={3})
                 and d.ResourceId like N'%'+w.DependsOnName
 ) as t
 where t.count1=t.count2
