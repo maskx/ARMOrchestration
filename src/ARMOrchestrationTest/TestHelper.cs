@@ -251,10 +251,10 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(PrepareResourceActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
-                     options.GetBuildInOrchestrators = () => orchestrationTypes;
-                     options.GetBuildInTaskActivities = () => activityTypes;
+                     options.GetBuildInOrchestrators = (sp) => orchestrationTypes;
+                     options.GetBuildInTaskActivities = (sp) => activityTypes;
                      if (interfaceActivitys != null)
-                         options.GetBuildInTaskActivitiesFromInterface = () => interfaceActivitys;
+                         options.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
                  });
 
                  services.AddSingleton<OrchestrationWorker>();
