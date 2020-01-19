@@ -4,11 +4,11 @@ using maskx.OrchestrationService;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class PrepareDeploymentActivity : TaskActivity<TemplateOrchestrationInput, TaskResult>
+    public class ValidateTemplateActivity : TaskActivity<TemplateOrchestrationInput, TaskResult>
     {
         protected override TaskResult Execute(TaskContext context, TemplateOrchestrationInput input)
         {
-            var r = Helper.ValidateTemplate(input);
+            var r = new ARMTemplateHelper(null).ValidateTemplate(input);
             if (r.Result)
                 return new TaskResult(200, DataConverter.Serialize(new DeploymentContext()
                 {

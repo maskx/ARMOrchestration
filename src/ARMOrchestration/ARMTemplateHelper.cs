@@ -2,16 +2,21 @@
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration
 {
-    public static class Helper
+    public class ARMTemplateHelper
     {
-        public static (bool Result, string Message, Template Template) ValidateTemplate(TemplateOrchestrationInput input)
+        private readonly IListFunction listFunction;
+
+        public ARMTemplateHelper(IListFunction listFunction)
+        {
+            this.listFunction = listFunction;
+        }
+
+        public (bool Result, string Message, Template Template) ValidateTemplate(TemplateOrchestrationInput input)
         {
             Template template = new Template();
             DeploymentContext deploymentContext = new DeploymentContext()
@@ -46,7 +51,12 @@ namespace maskx.ARMOrchestration
             if (root.TryGetProperty("outputs", out JsonElement outputs))
                 template.Outputs = outputs.GetRawText();
             if (root.TryGetProperty("variables", out JsonElement variables))
+            {
+                // cos var can reference var
+                template.Variables = variables.GetRawText();
                 template.Variables = variables.ExpandObject(armContext);
+            }
+
             if (root.TryGetProperty("functions", out JsonElement functions))
             {
                 var fr = Functions.Parse(functions.GetRawText());
@@ -59,9 +69,10 @@ namespace maskx.ARMOrchestration
             {
                 if (resource.TryGetProperty("copy", out JsonElement copy))
                 {
-                    var copyResult = resource.ExpandCopyResource(armContext);
+                    var c = Copy.Parse(copy.GetRawText(), armContext);
+                    var copyResult = resource.ExpandCopyResource(c.Copy, armContext);
                     if (copyResult.Result)
-                        template.Copys.Add(copyResult.Message, copyResult.Resources);
+                        template.Copys.Add(c.Copy.Name, c.Copy);
                     else
                         return (false, copyResult.Message, null);
                 }
@@ -69,7 +80,7 @@ namespace maskx.ARMOrchestration
                 {
                     var resResult = Resource.Parse(resource.GetRawText(), armContext);
                     if (resResult.Result)
-                        template.Resources.Add(resResult.resource);
+                        template.Resources.Add(resResult.resource.ResouceId, resResult.resource);
                     else
                         return (false, resResult.Message, null);
                 }
@@ -77,7 +88,7 @@ namespace maskx.ARMOrchestration
             return (true, string.Empty, template);
         }
 
-        public static WhatIfOperationResult WhatIf(PredictTemplateOrchestrationInput input)
+        public WhatIfOperationResult WhatIf(PredictTemplateOrchestrationInput input)
         {
             var result = new WhatIfOperationResult();
             var valid = ValidateTemplate(new TemplateOrchestrationInput()
@@ -94,7 +105,19 @@ namespace maskx.ARMOrchestration
                 result.Status = "failed";
                 result.Error = new ErrorResponse() { Code = "400", Message = valid.Message };
             }
-
+            string queryScope;
+            if (input.ScopeType == ScopeTypeEnum.ResourceGroup)
+                queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}/resources";
+            else
+                queryScope = $"subscriptions/{input.SubscriptionId}/resources";
+            var str = this.listFunction.Query(queryScope, valid.Template.ApiProfile);
+            using var doc = JsonDocument.Parse(str);
+            foreach (var r in doc.RootElement.EnumerateArray())
+            {
+                if (!r.TryGetProperty("id", out JsonElement id))
+                    break;
+                id.GetString();
+            }
             result.Status = "succeeded";
             return result;
         }

@@ -57,13 +57,17 @@ namespace maskx.ARMOrchestration.Extensions
             }
         }
 
-        public static void WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context)
+        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context)
         {
             if ("copy".Equals(property.Name, StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var item in property.Value.EnumerateArray())
                 {
-                    var copy = new Copy(item.GetRawText(), context);
+                    // TODO: add validate
+                    var copyResult = Copy.Parse(item.GetRawText(), context);
+                    if (!copyResult.Result)
+                        return (false, copyResult.Message);
+                    var copy = copyResult.Copy;
                     using JsonDocument doc = JsonDocument.Parse(copy.Input);
                     var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
                     Dictionary<string, object> copyContext = new Dictionary<string, object>();
@@ -85,6 +89,7 @@ namespace maskx.ARMOrchestration.Extensions
                 writer.WritePropertyName(property.Name);
                 writer.WriteElement(property.Value, context);
             }
+            return (true, string.Empty);
         }
     }
 }

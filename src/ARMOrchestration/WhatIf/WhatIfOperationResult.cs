@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.WhatIf
     public class WhatIfOperationResult
     {
         public ErrorResponse Error { get; set; }
-        public List<WhatIfChange> Changes { get; set; }
+        public List<WhatIfChange> Changes { get; set; } = new List<WhatIfChange>();
         public string Status { get; set; }
     }
 }

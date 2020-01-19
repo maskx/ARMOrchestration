@@ -349,7 +349,7 @@ namespace maskx.ARMOrchestration
                 }
                 if (!args.HasResult && cxt.TryGetValue("armcontext", out object armcxt))
                 {
-                    var pds = new ARMTemplate.Template((armcxt as TemplateOrchestrationInput).Template, cxt).Parameters;
+                    var pds = (armcxt as DeploymentContext).Template.Parameters;
                     using var defineDoc = JsonDocument.Parse(pds.ToString());
                     if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
                     {
@@ -367,7 +367,7 @@ namespace maskx.ARMOrchestration
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))
                     return;
-                string vars = new ARMTemplate.Template((armcxt as TemplateOrchestrationInput).Template, cxt).Variables;
+                string vars = (armcxt as DeploymentContext).Template.Variables;
 
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 using var defineDoc = JsonDocument.Parse(vars);
@@ -379,18 +379,19 @@ namespace maskx.ARMOrchestration
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
+            // TODO: deployment Functions
             Functions.Add("deployment", (args, cxt) =>
             {
-                TemplateOrchestrationInput input = cxt["armcontext"] as TemplateOrchestrationInput;
+                var input = cxt["armcontext"] as DeploymentContext;
                 JObject obj = new JObject();
-                obj.Add("name", input.Name);
+                obj.Add("name", input.DeploymentId);
                 JObject properties = new JObject();
-                properties.Add("template", JObject.Parse(input.Template));
-                properties.Add("parameters", JObject.Parse(input.Parameters));
-                properties.Add("mode", input.Mode);
-                // TODO: Set provisioningState
-                properties.Add("provisioningState", "Accepted");
-                properties.Add("templateLink", new JObject("uri", input.TemplateLink));
+                //properties.Add("template", JObject.Parse(input.Template));
+                //properties.Add("parameters", JObject.Parse(input.Parameters));
+                //properties.Add("mode", input.Mode);
+                //// TODO: Set provisioningState
+                //properties.Add("provisioningState", "Accepted");
+                //properties.Add("templateLink", new JObject("uri", input.TemplateLink));
                 obj.Add("properties", properties);
                 args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));
             });
@@ -661,8 +662,8 @@ namespace maskx.ARMOrchestration
             Functions.Add("resourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt["armcontext"] as TemplateOrchestrationInput;
-                var t = new ARMTemplate.Template(input.Template, cxt);
+                var input = cxt["armcontext"] as DeploymentContext;
+                var t = input.Template;
                 if (t.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
                     args.Result = resourceId(input, pars);
                 else if (t.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
@@ -673,7 +674,7 @@ namespace maskx.ARMOrchestration
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt["armcontext"] as TemplateOrchestrationInput;
+                var input = cxt["armcontext"] as DeploymentContext;
                 args.Result = subscriptionResourceId(input, pars);
             });
             Functions.Add("tenantresourceid", (args, cxt) =>
@@ -684,7 +685,7 @@ namespace maskx.ARMOrchestration
             #endregion Resource
         }
 
-        public static string resourceId(TemplateOrchestrationInput input, params object[] pars)
+        public static string resourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string resourceGroupName = input.ResourceGroup;
@@ -731,7 +732,7 @@ namespace maskx.ARMOrchestration
             return $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public static string subscriptionResourceId(TemplateOrchestrationInput input, params object[] pars)
+        public static string subscriptionResourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string[] fullnames;
@@ -807,7 +808,7 @@ namespace maskx.ARMOrchestration
                         }
                         if (!cxt.TryGetValue("armcontext", out object armcxt))
                             return;
-                        var udfs = new ARMTemplate.Template((armcxt as TemplateOrchestrationInput).Template, cxt).Functions;
+                        var udfs = (armcxt as DeploymentContext).Template.Functions;
                         if (udfs == null)
                             return;
                         var names = name.Split('.');

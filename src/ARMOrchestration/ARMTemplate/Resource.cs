@@ -27,18 +27,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string Comments { get; set; }
 
-        public Copy Copy
-        {
-            get
-            {
-                if (root.TryGetProperty("copy", out JsonElement copy))
-                {
-                    return new Copy(copy.GetRawText(), this.context);
-                }
-                return null;
-            }
-        }
-
         /// <summary>
         /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
@@ -71,8 +59,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                var p = context["armcontext"] as TemplateOrchestrationInput;
-                var t = new Template(p.Template, context);
+                var p = context["armcontext"] as DeploymentContext;
+                var t = p.Template;
                 if (t.DeployLevel == Template.ResourceGroupDeploymentLevel)
                     return ARMFunctions.resourceId(
                         p,

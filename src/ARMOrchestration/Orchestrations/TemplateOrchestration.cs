@@ -5,6 +5,7 @@ using maskx.OrchestrationService.Orchestration;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -21,19 +22,13 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             TemplateOrchestrationInput input = this.DataConverter.Deserialize<TemplateOrchestrationInput>(arg);
             string rtv = string.Empty;
+            var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity), input);
+            if (valid.Code != 200)
+                return valid;
+            var deploymentContext = DataConverter.Deserialize<DeploymentContext>(valid.Content);
+
             Dictionary<string, object> armContext = new Dictionary<string, object>();
-            armContext.Add("armcontext", input);
-
-            #region prepare ARM Template
-
-            var r = await context.ScheduleTask<TaskResult>(typeof(PrepareTemplateActivity), input);
-            if (r.Code == 400)
-                return r;
-            input.Template = r.Content;
-
-            #endregion prepare ARM Template
-
-            var template = new ARMTemplate.Template(input.Template, armContext);
+            armContext.Add("armcontext", deploymentContext);
 
             if (input.Mode.ToLower() == "complete")
             {
@@ -46,7 +41,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     TaskResult readonlyLockCheckResult;
 
-                    if (template.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
+                    if (deploymentContext.Template.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
                     {
                         readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                        typeof(AsyncRequestOrchestration),
@@ -54,7 +49,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                            ARMFunctions.Evaluate($"[subscriptionresourceid('{options.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString(),
                                            "readonly"));
                     }
-                    else if (template.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
+                    else if (deploymentContext.Template.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
                     {
                         readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                       typeof(AsyncRequestOrchestration),
@@ -77,7 +72,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 List<Task> tasks = new List<Task>();
 
-                foreach (var resource in template.Resources)
+                foreach (var resource in deploymentContext.Template.Resources)
                 {
                     var p = new ResourceOrchestrationInput()
                     {
@@ -86,25 +81,29 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DeploymentId = context.OrchestrationInstance.InstanceId,
                         CorrelationId = input.CorrelationId
                     };
-                    if (null == resource.Copy)
-                    {
-                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
-                    }
-                    else
-                    {
-                        tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(CopyOrchestration), p));
-                    }
+
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
+                }
+                foreach (var item in deploymentContext.Template.Copys)
+                {
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                        typeof(CopyOrchestration),
+                        new CopyOrchestrationInput()
+                        {
+                            Copy = item.Value,
+                            Context = deploymentContext
+                        }));
                 }
                 await Task.WhenAll(tasks.ToArray());
-
-                #endregion Provisioning resources
             }
+
+            #endregion Provisioning resources
 
             #region get template outputs
 
-            if (!string.IsNullOrEmpty(template.Outputs))
+            if (!string.IsNullOrEmpty(deploymentContext.Template.Outputs))
             {
-                rtv = ARMFunctions.GetOutputs(template.Outputs, armContext);
+                rtv = ARMFunctions.GetOutputs(deploymentContext.Template.Outputs, armContext);
             }
 
             #endregion get template outputs

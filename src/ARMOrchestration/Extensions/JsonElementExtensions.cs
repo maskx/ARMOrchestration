@@ -102,13 +102,9 @@ namespace maskx.ARMOrchestration.Extensions
             return Encoding.UTF8.GetString(ms.ToArray());
         }
 
-        public static (bool Result, string Message, List<Resource> Resources) ExpandCopyResource(this JsonElement resource, Dictionary<string, object> context)
+        public static (bool Result, string Message, Dictionary<string, Resource> Resources) ExpandCopyResource(this JsonElement resource, Copy copy, Dictionary<string, object> context)
         {
-            if (!resource.TryGetProperty("copy", out JsonElement item))
-                return (false, "not find copy in resource node", null);
-            List<Resource> resources = new List<Resource>();
-
-            var copy = new Copy(item.GetRawText(), context);
+            Dictionary<string, Resource> resources = new Dictionary<string, Resource>();
             var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
             Dictionary<string, object> copyContext = new Dictionary<string, object>();
             copyContext.Add("armcontext", context["armcontext"]);
@@ -119,7 +115,7 @@ namespace maskx.ARMOrchestration.Extensions
                 copyindex[copy.Name] = i;
                 var r = Resource.Parse(resource.GetRawText(), copyContext);
                 if (r.Result)
-                    resources.Add(r.resource);
+                    resources.Add(r.resource.ResouceId, r.resource);
                 else
                     return (false, r.Message, null);
             }

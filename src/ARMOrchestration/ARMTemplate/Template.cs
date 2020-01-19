@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class Template : IDisposable
+    public class Template
     {
         public const string ResourceGroupDeploymentLevel = "resourcegroup";
         public const string SubscriptionDeploymentLevel = "subscription";
@@ -21,8 +21,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string Variables { get; set; }
 
-        public List<Resource> Resources { get; set; } = new List<Resource>();
-        public Dictionary<string, List<Resource>> Copys = new Dictionary<string, List<Resource>>();
+        public Dictionary<string, Resource> Resources { get; set; } = new Dictionary<string, Resource>();
+        public Dictionary<string, Copy> Copys = new Dictionary<string, Copy>();
 
         public Functions Functions { get; set; }
 
@@ -48,44 +48,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _DeployLevel = TenantDeploymentLevel;
                 }
                 return _DeployLevel;
-            }
-        }
-
-        private string jsonString;
-        private JsonDocument jsonDoc;
-
-        private JsonElement root
-        {
-            get
-            {
-                if (jsonDoc == null)
-                    jsonDoc = JsonDocument.Parse(jsonString);
-                return jsonDoc.RootElement;
-            }
-        }
-
-        private Dictionary<string, object> context;
-
-        public Template()
-        {
-        }
-
-        public Template(string jsonString, Dictionary<string, object> context)
-        {
-            this.jsonString = jsonString;
-            this.context = context;
-        }
-
-        public override string ToString()
-        {
-            return this.jsonString;
-        }
-
-        public void Dispose()
-        {
-            if (this.jsonDoc != null)
-            {
-                jsonDoc.Dispose();
             }
         }
     }

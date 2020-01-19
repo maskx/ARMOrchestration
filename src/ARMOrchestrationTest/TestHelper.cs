@@ -162,6 +162,7 @@ namespace ARMCreatorTest
                 if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
                     t.SetResult(args.Result);
             });
+
             var outputString = DataConverter.Deserialize<TaskResult>(t.Task.Result).Content;
 
             using var templateDoc = JsonDocument.Parse(templateString);
@@ -255,6 +256,7 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(WaitDependsOnActivity));
                  activityTypes.Add(typeof(PrepareTemplateActivity));
                  activityTypes.Add(typeof(PrepareResourceActivity));
+                 activityTypes.Add(typeof(ValidateTemplateActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
                      options.GetBuildInOrchestrators = (sp) => orchestrationTypes;

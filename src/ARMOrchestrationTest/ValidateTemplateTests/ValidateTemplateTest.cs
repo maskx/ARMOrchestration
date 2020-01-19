@@ -3,6 +3,7 @@ using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using System.Text.Json;
 using Xunit;
+using System.Linq;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
@@ -17,7 +18,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "EmptyTemplate")]
         public void EmptyTemplate()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("Empty")
             });
@@ -27,7 +28,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoSchema")]
         public void NoSchema()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("NoSchema")
             });
@@ -38,7 +39,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoContentVersion")]
         public void NoContentVersion()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("NoContentVersion")
             });
@@ -49,7 +50,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoResources")]
         public void NoResources()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("NoResources")
             });
@@ -60,7 +61,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "VariableIteration")]
         public void VariableIteration()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration")
             });
@@ -83,15 +84,15 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/ResourceIteration")
             });
             Assert.True(r.Result);
             Assert.Single(r.Template.Copys);
             Assert.True(r.Template.Copys.ContainsKey("storagecopy"));
-            Assert.Equal(3, r.Template.Copys["storagecopy"].Count);
-            var resource = r.Template.Copys["storagecopy"][0];
+            Assert.Equal(3, r.Template.Copys["storagecopy"].Resources.Count);
+            var resource = r.Template.Copys["storagecopy"].Resources.Values.First();
             Assert.Equal("0storage", resource.Name);
             Assert.Equal("Microsoft.Storage/storageAccounts", resource.Type);
         }
@@ -99,13 +100,13 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/PropertyIteration")
             });
             Assert.True(r.Result);
             Assert.Single(r.Template.Resources);
-            var resource = r.Template.Resources[0];
+            var resource = r.Template.Resources.Values.First();
             using var doc = JsonDocument.Parse(resource.Properties);
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("storageProfile", out JsonElement storageProfile));
@@ -123,13 +124,13 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ChildResource")]
         public void ChildResource()
         {
-            var r = Helper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("ChildResource")
             });
             Assert.True(r.Result);
             Assert.Single(r.Template.Resources);
-            var childResources = r.Template.Resources[0].Resources;
+            var childResources = r.Template.Resources.Values.First().Resources;
             Assert.Single(childResources);
             var childres = childResources[0];
             Assert.Equal("subnets", childres.Type);

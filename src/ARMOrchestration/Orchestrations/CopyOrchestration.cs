@@ -8,77 +8,44 @@ using static maskx.ARMOrchestration.Activities.DeploymentOperationsActivityInput
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class CopyOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+    public class CopyOrchestration : TaskOrchestration<TaskResult, CopyOrchestrationInput>
     {
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, CopyOrchestrationInput input)
         {
-            var resource = new Resource(input.Resource, input.OrchestrationContext);
-            var copy = resource.Copy;
-            var loopName = copy.Name;
-            var loopCount = copy.Count;
             var operationArgs = new DeploymentOperationsActivityInput()
             {
-                DeploymentId = input.DeploymentId,
-                InstanceId = context.OrchestrationInstance.InstanceId,
-                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                CorrelationId = input.CorrelationId,
-                Resource = loopName,
-                Type = Copy.ServiceType,
-                ResourceId = copy.GetId(input.DeploymentId),
-                ParentId = input.Parent?.ResourceId,
+                //DeploymentId = input.DeploymentId,
+                //InstanceId = context.OrchestrationInstance.InstanceId,
+                //ExecutionId = context.OrchestrationInstance.ExecutionId,
+                //CorrelationId = input.CorrelationId,
+                //Resource = resourceDeploy.Name,
+                //Type = resourceDeploy.Type,
+                //ResourceId = resourceDeploy.ResouceId,
+                //ParentId = input.Parent?.ResourceId,
                 Stage = ProvisioningStage.StartProcessing
             };
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-
-            var copyindex = new Dictionary<string, int>() { { loopName, 0 } };
-            Dictionary<string, object> copyContext = new Dictionary<string, object>();
-            copyContext.Add("armcontext", input.OrchestrationContext["armcontext"]);
-            copyContext.Add("copyindex", copyindex);
-            copyContext.Add("currentloopname", loopName);
-            if (copy.Mode == Copy.SerialMode)
+            if (input.Copy.Mode == Copy.SerialMode)
             {
-                for (int i = 0; i < loopCount; i++)
+                foreach (var item in input.Copy.Resources)
                 {
-                    copyindex[loopName] = i;
-                    var par = new ResourceOrchestrationInput()
-                    {
-                        Resource = resource.ToString(),
-                        OrchestrationContext = copyContext,
-                        DeploymentId = input.DeploymentId,
-                        CorrelationId = input.CorrelationId,
-                        Parent = new ResourceOrchestrationInput.ParentResource()
+                    await context.CreateSubOrchestrationInstance<TaskResult>(
+                        typeof(ResourceOrchestration),
+                        new ResourceOrchestrationInput()
                         {
-                            Resource = loopName,
-                            Type = Copy.ServiceType,
-                            ResourceId = copy.GetId(input.DeploymentId)
-                        }
-                    };
-                    await context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par);
+                        });
                 }
             }
             else // TODO: support batchSize
             {
                 var loopTask = new List<Task>();
 
-                for (int i = 0; i < loopCount; i++)
+                foreach (var item in input.Copy.Resources)
                 {
-                    copyindex[loopName] = i;
-
-                    var par = new ResourceOrchestrationInput()
-                    {
-                        Resource = resource.ToString(),
-                        OrchestrationContext = copyContext,
-                        DeploymentId = input.DeploymentId,
-                        CorrelationId = input.CorrelationId,
-                        Parent = new ResourceOrchestrationInput.ParentResource()
+                    loopTask.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                        typeof(ResourceOrchestration),
+                        new ResourceOrchestrationInput()
                         {
-                            Resource = loopName,
-                            Type = Copy.ServiceType,
-                            ResourceId = copy.GetId(input.DeploymentId)
-                        }
-                    };
-
-                    loopTask.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), par));
+                        }));
                 }
 
                 await Task.WhenAll(loopTask.ToArray());

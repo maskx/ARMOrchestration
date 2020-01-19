@@ -2,6 +2,6 @@
 {
     public interface IListFunction
     {
-        string Query(string resourceName, string apiVersion, string functionValues);
+        string Query(string resourceId, string apiVersion, string functionValues = "", string value = "");
     }
 }

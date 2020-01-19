@@ -68,7 +68,7 @@ namespace maskx.ARMOrchestration.Activities
                 writer.WriteStartObject();
                 foreach (var property in properties.EnumerateObject())
                 {
-                    writer.WriteProperty(property, input.OrchestrationContext);
+                    var r = writer.WriteProperty(property, input.OrchestrationContext);
                 }
                 writer.WriteEndObject();
             }
