@@ -1,5 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Orchestrations;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.Extensions
@@ -82,6 +86,44 @@ namespace maskx.ARMOrchestration.Extensions
                 self.EnumerateObject().Intersect(target.EnumerateObject(), new JsonPropertyEqualityComparer());
             }
             return null;
+        }
+
+        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context)
+        {
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartObject();
+            foreach (var item in self.EnumerateObject())
+            {
+                writer.WriteProperty(item, context);
+            }
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
+        }
+
+        public static (bool Result, string Message, List<Resource> Resources) ExpandCopyResource(this JsonElement resource, Dictionary<string, object> context)
+        {
+            if (!resource.TryGetProperty("copy", out JsonElement item))
+                return (false, "not find copy in resource node", null);
+            List<Resource> resources = new List<Resource>();
+
+            var copy = new Copy(item.GetRawText(), context);
+            var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
+            Dictionary<string, object> copyContext = new Dictionary<string, object>();
+            copyContext.Add("armcontext", context["armcontext"]);
+            copyContext.Add("copyindex", copyindex);
+            copyContext.Add("currentloopname", copy.Name);
+            for (int i = 0; i < copy.Count; i++)
+            {
+                copyindex[copy.Name] = i;
+                var r = Resource.Parse(resource.GetRawText(), copyContext);
+                if (r.Result)
+                    resources.Add(r.resource);
+                else
+                    return (false, r.Message, null);
+            }
+            return (true, copy.Name, resources);
         }
     }
 }

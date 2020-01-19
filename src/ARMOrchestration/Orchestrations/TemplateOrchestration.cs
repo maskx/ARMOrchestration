@@ -12,8 +12,7 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         private TemplateOrchestrationOptions options;
 
-        public TemplateOrchestration(
-            IOptions<TemplateOrchestrationOptions> options)
+        public TemplateOrchestration(IOptions<TemplateOrchestrationOptions> options)
         {
             this.options = options?.Value;
         }

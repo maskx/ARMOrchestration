@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Linq;
 using maskx.ARMOrchestration.Orchestrations;
+using maskx.ARMOrchestration.Extensions;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -12,93 +13,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// </summary>
     public class Resource : IDisposable
     {
-        public bool Condition
-        {
-            get
-            {
-                if (!root.TryGetProperty("condition", out JsonElement condition))
-                    return true;
-                if (condition.ValueKind == JsonValueKind.True)
-                    return true;
-                if (condition.ValueKind == JsonValueKind.False)
-                    return false;
-                if (condition.ValueKind == JsonValueKind.String)
-                    return (bool)ARMFunctions.Evaluate(condition.GetString(), context);
-                return true;
-            }
-        }
+        public bool Condition { get; set; } = true;
 
-        public string ApiVersion
-        {
-            get
-            {
-                if (root.TryGetProperty("apiVersion", out JsonElement apiVersion))
-                {
-                    return apiVersion.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string ApiVersion { get; set; }
 
-        public string Type
-        {
-            get
-            {
-                if (root.TryGetProperty("type", out JsonElement type))
-                {
-                    return type.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Type { get; set; }
 
-        public string Name
-        {
-            get
-            {
-                if (root.TryGetProperty("name", out JsonElement name))
-                {
-                    return name.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Name { get; set; }
 
-        public string Location
-        {
-            get
-            {
-                if (root.TryGetProperty("location", out JsonElement location))
-                {
-                    return location.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Location { get; set; }
 
-        public string Tags
-        {
-            get
-            {
-                if (root.TryGetProperty("tags", out JsonElement tags))
-                {
-                    return tags.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Tags { get; set; }
 
-        public string Comments
-        {
-            get
-            {
-                if (root.TryGetProperty("comments", out JsonElement comments))
-                {
-                    return comments.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Comments { get; set; }
 
         public Copy Copy
         {
@@ -124,101 +51,21 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
         ///
         /// </summary>
-        public string DependsOn
-        {
-            get
-            {
-                if (root.TryGetProperty("dependsOn", out JsonElement dependsOn))
-                {
-                    return dependsOn.GetRawText();
-                }
-                return string.Empty;
-            }
-        }
+        public string DependsOn { get; set; }
 
-        public string Properties
-        {
-            get
-            {
-                if (root.TryGetProperty("properties", out JsonElement properties))
-                {
-                    return properties.GetRawText();
-                }
-                return string.Empty;
-            }
-        }
+        public string Properties { get; set; }
 
-        public string SKU
-        {
-            get
-            {
-                if (root.TryGetProperty("sku", out JsonElement sku))
-                {
-                    return sku.GetRawText();
-                }
-                return string.Empty;
-            }
-        }
+        public string SKU { get; set; }
 
-        public string Kind
-        {
-            get
-            {
-                if (root.TryGetProperty("kind", out JsonElement kind))
-                {
-                    return kind.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Kind { get; set; }
 
-        public string Plan
-        {
-            get
-            {
-                if (root.TryGetProperty("plan", out JsonElement plan))
-                {
-                    return plan.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Plan { get; set; }
 
-        public IEnumerable<Resource> Resources
-        {
-            get
-            {
-                if (root.TryGetProperty("resources", out JsonElement resources))
-                {
-                    return resources.EnumerateArray().Select((e) => new Resource(e.GetRawText(), this.context));
-                }
-                return null;
-            }
-        }
+        public List<Resource> Resources { get; set; } = new List<Resource>();
 
-        public string ResourceGroup
-        {
-            get
-            {
-                if (root.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
-                {
-                    return ARMFunctions.Evaluate(resourceGroup.GetString(), this.context).ToString();
-                }
-                return armInput.ResourceGroup;
-            }
-        }
+        public string ResourceGroup { get; set; }
 
-        public string SubscriptionId
-        {
-            get
-            {
-                if (root.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
-                {
-                    return ARMFunctions.Evaluate(subscriptionId.GetString(), this.context).ToString();
-                }
-                return this.armInput.SubscriptionId; ;
-            }
-        }
+        public string SubscriptionId { get; set; }
 
         public string ResouceId
         {
@@ -269,6 +116,75 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
 
         private Dictionary<string, object> context;
+
+        public Resource()
+        {
+        }
+
+        public static (bool Result, string Message, Resource resource) Parse(string jsonString, Dictionary<string, object> context)
+        {
+            DeploymentContext deploymentContext = context["armcontext"] as DeploymentContext;
+            Resource r = new Resource();
+            using var jsonDoc = JsonDocument.Parse(jsonString);
+            var root = jsonDoc.RootElement;
+            if (root.TryGetProperty("condition", out JsonElement condition))
+            {
+                if (condition.ValueKind == JsonValueKind.False)
+                    r.Condition = false;
+                else if (condition.ValueKind == JsonValueKind.String)
+                    r.Condition = (bool)ARMFunctions.Evaluate(condition.GetString(), context);
+            }
+            if (!r.Condition)
+                return (true, string.Empty, r);
+            if (root.TryGetProperty("apiVersion", out JsonElement apiVersion))
+                r.ApiVersion = apiVersion.GetString();
+            else
+                return (false, "not find apiVersion in resource node", null);
+            if (root.TryGetProperty("type", out JsonElement type))
+                r.Type = ARMFunctions.Evaluate(type.GetString(), context).ToString();
+            else
+                return (false, "not find type in resource node", null);
+            if (root.TryGetProperty("name", out JsonElement name))
+                r.Name = ARMFunctions.Evaluate(name.GetString(), context).ToString();
+            else
+                return (false, "not find name in resource node", null);
+            if (root.TryGetProperty("location", out JsonElement location))
+                r.Location = ARMFunctions.Evaluate(location.GetString(), context).ToString();
+            if (root.TryGetProperty("tags", out JsonElement tags))
+                r.Tags = tags.GetRawText();
+            if (root.TryGetProperty("comments", out JsonElement comments))
+                r.Comments = comments.GetString();
+            if (root.TryGetProperty("dependsOn", out JsonElement dependsOn))
+                r.DependsOn = dependsOn.GetRawText();
+            if (root.TryGetProperty("properties", out JsonElement properties))
+                r.Properties = properties.ExpandObject(context);
+            if (root.TryGetProperty("sku", out JsonElement sku))
+                r.SKU = sku.GetString();
+            if (root.TryGetProperty("kind", out JsonElement kind))
+                r.Kind = kind.GetString();
+            if (root.TryGetProperty("plan", out JsonElement plan))
+                r.Plan = plan.GetString();
+            if (root.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
+                r.ResourceGroup = ARMFunctions.Evaluate(resourceGroup.GetString(), context).ToString();
+            else
+                r.ResourceGroup = deploymentContext.ResourceGroup;
+            if (root.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
+                r.SubscriptionId = ARMFunctions.Evaluate(subscriptionId.GetString(), context).ToString();
+            else
+                r.SubscriptionId = deploymentContext.SubscriptionId;
+            if (root.TryGetProperty("resources", out JsonElement resources))
+            {
+                foreach (var childres in resources.EnumerateArray())
+                {
+                    var childResult = Resource.Parse(childres.GetRawText(), context);
+                    if (childResult.Result)
+                        r.Resources.Add(childResult.resource);
+                    else
+                        return (false, childResult.Message, null);
+                }
+            }
+            return (true, string.Empty, r);
+        }
 
         public Resource(string jsonString, Dictionary<string, object> context)
         {

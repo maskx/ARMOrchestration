@@ -195,7 +195,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Create or Update Resource
 
-            #region c
+            #region Extension Resources
 
             List<Task<TaskResult>> extenstionTasks = new List<Task<TaskResult>>();
             foreach (var item in ARMOptions.ExtensionResources)
@@ -232,7 +232,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
             }
 
-            #endregion c
+            #endregion Extension Resources
 
             #region Create Or Update child resource
 

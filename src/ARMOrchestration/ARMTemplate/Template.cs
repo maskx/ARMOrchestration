@@ -11,101 +11,22 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public const string SubscriptionDeploymentLevel = "subscription";
         public const string TenantDeploymentLevel = "tenant";
 
-        public string Schema
-        {
-            get
-            {
-                if (root.TryGetProperty("$schema", out JsonElement schema))
-                {
-                    return schema.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string Schema { get; set; }
 
-        public string ContentVersion
-        {
-            get
-            {
-                if (root.TryGetProperty("contentVersion", out JsonElement contentVersion))
-                {
-                    return contentVersion.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string ContentVersion { get; set; }
 
-        public string ApiProfile
-        {
-            get
-            {
-                if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
-                {
-                    return apiProfile.GetString();
-                }
-                return string.Empty;
-            }
-        }
+        public string ApiProfile { get; set; }
 
-        public string Parameters
-        {
-            get
-            {
-                if (root.TryGetProperty("parameters", out JsonElement parameters))
-                {
-                    return parameters.GetRawText();
-                }
-                return string.Empty;
-            }
-        }
+        public string Parameters { get; set; }
 
-        public string Variables
-        {
-            get
-            {
-                if (root.TryGetProperty("variables", out JsonElement variables))
-                {
-                    return variables.GetRawText();
-                }
-                return string.Empty;
-            }
-        }
+        public string Variables { get; set; }
 
-        public IEnumerable<Resource> Resources
-        {
-            get
-            {
-                if (root.TryGetProperty("resources", out JsonElement resources))
-                {
-                    return resources.EnumerateArray().Select((e) => new Resource(e.GetRawText(), this.context));
-                }
-                return null;
-            }
-        }
+        public List<Resource> Resources { get; set; } = new List<Resource>();
+        public Dictionary<string, List<Resource>> Copys = new Dictionary<string, List<Resource>>();
 
-        public Functions Functions
-        {
-            get
-            {
-                if (root.TryGetProperty("functions", out JsonElement functions))
-                {
-                    return new Functions(functions.GetRawText());
-                }
-                return null;
-            }
-        }
+        public Functions Functions { get; set; }
 
-        public string Outputs
-        {
-            get
-            {
-                if (root.TryGetProperty("outputs", out JsonElement outputs))
-                {
-                    return outputs.GetRawText();
-                }
-                return string.Empty;
-            }
-        }
+        public string Outputs { get; set; }
 
         private string _DeployLevel = string.Empty;
 
@@ -144,6 +65,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
 
         private Dictionary<string, object> context;
+
+        public Template()
+        {
+        }
 
         public Template(string jsonString, Dictionary<string, object> context)
         {

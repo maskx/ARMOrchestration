@@ -1,0 +1,28 @@
+﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.WhatIf;
+
+namespace maskx.ARMOrchestration.Orchestrations
+{
+    /// <summary>
+    ///
+    /// </summary>
+    /// <seealso cref="https://docs.microsoft.com/en-us/rest/api/resources/deployments/whatif#uri-parameters"/>
+    /// <seealso cref="https://docs.microsoft.com/en-us/rest/api/resources/deployments/whatif#request-body"/>
+    /// <seealso cref="https://docs.microsoft.com/en-us/rest/api/resources/deployments/whatif#deploymentwhatifproperties"/>
+    public class PredictTemplateOrchestrationInput
+    {
+        public string Location { get; set; }
+        public string DeploymentName { get; set; }
+        public DeploymentModeEnum Mode { get; set; }
+        public string SubscriptionId { get; set; }
+        public string ResourceGroupName { get; set; }
+        public TemplateLink TemplateLink { get; set; }
+        public ParametersLink ParametersLink { get; set; }
+        public string Template { get; set; }
+        public string Parameters { get; set; }
+        public WhatIfResultFormat ResultFormat { get; set; }
+        public ScopeTypeEnum ScopeType { get; set; }
+        public string TenantId { get; set; }
+        public string CorrelationId { get; set; }
+    }
+}

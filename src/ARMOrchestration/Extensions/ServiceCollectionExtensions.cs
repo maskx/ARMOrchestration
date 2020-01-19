@@ -67,8 +67,8 @@ namespace maskx.ARMOrchestration.Extensions
             activityTypes.Add(typeof(PrepareResourceActivity));
             services.Configure<OrchestrationWorkerOptions>(opt =>
             {
-                opt.GetBuildInOrchestrators = () => orchestrationTypes;
-                opt.GetBuildInTaskActivities = () => activityTypes;
+                opt.GetBuildInOrchestrators = (sp) => orchestrationTypes;
+                opt.GetBuildInTaskActivities = (sp) => activityTypes;
             });
 
             services.AddSingleton<OrchestrationWorker>();

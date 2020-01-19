@@ -1,4 +1,6 @@
-﻿namespace maskx.ARMOrchestration.Orchestrations
+﻿using maskx.ARMOrchestration.ARMTemplate;
+
+namespace maskx.ARMOrchestration.Orchestrations
 {
     public class TemplateOrchestrationInput
     {
@@ -20,5 +22,7 @@
         public string SubscriptionId { get; set; }
         public string CorrelationId { get; set; }
         public string TenantId { get; set; }
+        public string DeploymentId { get; set; }
+        // public Template Template { get; set; }
     }
 }

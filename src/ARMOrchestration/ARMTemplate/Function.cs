@@ -1,23 +1,41 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class Functions : IDisposable
     {
-        public Members this[string ns]
+        public Functions()
+        {
+        }
+
+        public static (bool Result, string Message, Functions Functions) Parse(string jsonString)
+        {
+            using var doc = JsonDocument.Parse(jsonString);
+            var root = doc.RootElement;
+            Functions functions = new Functions();
+            foreach (var funcDef in root.EnumerateArray())
+            {
+                if (funcDef.TryGetProperty("namespace", out JsonElement nsEle))
+                {
+                    var mr = Members.Parse(funcDef.GetProperty("members").GetRawText());
+                    if (mr.Result)
+                        functions.innerMembers.Add(nsEle.GetString(), mr.Members);
+                    else
+                        return (false, mr.Message, null);
+                }
+            }
+            return (true, string.Empty, functions);
+        }
+
+        private Dictionary<string, Members> innerMembers { get; set; } = new Dictionary<string, Members>();
+
+        public Members this[string name]
         {
             get
             {
-                foreach (var funcDef in root.EnumerateArray())
-                {
-                    if (funcDef.TryGetProperty("namespace", out JsonElement nsEle) && nsEle.GetString() == ns)
-                    {
-                        return new Members(funcDef.GetProperty("members").GetRawText());
-                    }
-                }
-
-                return null;
+                return this.innerMembers[name];
             }
         }
 
@@ -49,21 +67,24 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
     public class Member : IDisposable
     {
-        public string Parameters
+        public static (bool Result, string Message, Member Member) Parse(string jsonString)
         {
-            get
+            using var doc = JsonDocument.Parse(jsonString);
+            var root = doc.RootElement;
+            return (true, string.Empty, new Member()
             {
-                return root.GetProperty("parameters").GetRawText();
-            }
+                Parameters = root.GetProperty("parameters").GetRawText(),
+                Output = root.GetProperty("output").GetRawText()
+            });
         }
 
-        public string Output
+        public Member()
         {
-            get
-            {
-                return root.GetProperty("output").GetRawText();
-            }
         }
+
+        public string Parameters { get; set; }
+
+        public string Output { get; set; }
 
         private string jsonString;
         private JsonDocument jsonDoc;
@@ -92,6 +113,28 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
     public class Members : IDisposable
     {
+        public Members()
+        {
+        }
+
+        public static (bool Result, string Message, Members Members) Parse(string jsonString)
+        {
+            Members members = new Members();
+            using var doc = JsonDocument.Parse(jsonString);
+            var root = doc.RootElement;
+            foreach (var m in root.EnumerateObject())
+            {
+                var mr = Member.Parse(m.Value.GetRawText());
+                if (mr.Result)
+                    members.Memeber.Add(m.Name, mr.Member);
+                else
+                    return (false, mr.Message, null);
+            }
+            return (true, string.Empty, members);
+        }
+
+        private Dictionary<string, Member> Memeber = new Dictionary<string, Member>();
+
         public Member this[string name]
         {
             get
