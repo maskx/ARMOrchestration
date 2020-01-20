@@ -27,6 +27,8 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             TemplateOrchestrationInput input = this.DataConverter.Deserialize<TemplateOrchestrationInput>(arg);
+            if (string.IsNullOrEmpty(input.DeploymentId))
+                input.DeploymentId = context.OrchestrationInstance.InstanceId;
             string rtv = string.Empty;
             if (string.IsNullOrEmpty(input.DeploymentId))
                 input.DeploymentId = context.OrchestrationInstance.InstanceId;
