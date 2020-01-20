@@ -1,5 +1,4 @@
 ﻿using DurableTask.Core;
-using DurableTask.Core.Tracing;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
@@ -14,7 +13,7 @@ namespace maskx.ARMOrchestration.Activities
 {
     public class DeploymentOperationsActivity : TaskActivity<DeploymentOperationsActivityInput, TaskResult>
     {
-        private readonly TemplateOrchestrationOptions options;
+        private readonly ARMOrchestrationOptions options;
         private readonly string commandString;
 
         private const string commandTemplate = @"
@@ -30,7 +29,7 @@ WHEN MATCHED THEN
 	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=@Result;
 ";
 
-        public DeploymentOperationsActivity(IOptions<TemplateOrchestrationOptions> options)
+        public DeploymentOperationsActivity(IOptions<ARMOrchestrationOptions> options)
         {
             this.options = options.Value;
             this.commandString = string.Format(commandTemplate, this.options.Database.DeploymentOperationsTableName);

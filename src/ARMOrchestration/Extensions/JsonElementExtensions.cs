@@ -102,7 +102,7 @@ namespace maskx.ARMOrchestration.Extensions
             return Encoding.UTF8.GetString(ms.ToArray());
         }
 
-        public static (bool Result, string Message, Dictionary<string, Resource> Resources) ExpandCopyResource(this JsonElement resource, Copy copy, Dictionary<string, object> context)
+        public static (bool Result, string Message, Dictionary<string, Resource> Resources) ExpandCopyResource(this JsonElement resource, Copy copy, Dictionary<string, object> context, ARMOrchestrationOptions options)
         {
             Dictionary<string, Resource> resources = new Dictionary<string, Resource>();
             var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
@@ -113,7 +113,7 @@ namespace maskx.ARMOrchestration.Extensions
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var r = Resource.Parse(resource.GetRawText(), copyContext);
+                var r = Resource.Parse(resource.GetRawText(), copyContext, options);
                 if (r.Result)
                     resources.Add(r.resource.ResouceId, r.resource);
                 else

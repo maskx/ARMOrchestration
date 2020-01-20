@@ -14,13 +14,13 @@ namespace maskx.ARMOrchestration.Workers
 {
     public class WaitDependsOnWorker : BackgroundService
     {
-        private TemplateOrchestrationOptions options;
+        private ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
         private DataConverter dataConverter = new JsonDataConverter();
 
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
-            IOptions<TemplateOrchestrationOptions> options)
+            IOptions<ARMOrchestrationOptions> options)
         {
             this.options = options?.Value;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
@@ -143,7 +143,7 @@ BEGIN
 	    [CreateTimeUtc] [datetime2](7) NOT NULL,
 	    [UpdateTimeUtc] [datetime2](7) NOT NULL,
 	    [Result] [nvarchar](500) NULL,
-     CONSTRAINT [PK_{options.Database.SchemaName}_{options.Database.HubName}_{TemplateOrchestrationOptions.DatabaseConfig.DeploymentOperationsTable}] PRIMARY KEY CLUSTERED
+     CONSTRAINT [PK_{options.Database.SchemaName}_{options.Database.HubName}_{DatabaseConfig.DeploymentOperationsTable}] PRIMARY KEY CLUSTERED
     (
 	    [InstanceId] ASC,
 	    [ExecutionId] ASC

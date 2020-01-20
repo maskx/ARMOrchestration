@@ -35,17 +35,6 @@ namespace ARMCreatorTest.TestResourceOrchestration
         [Fact(DisplayName = "NoPolicy")]
         public void NoPolicy()
         {
-            TestHelper.OrchestrationTest(this.OrchestrationWorker,
-                "Condition/TrueCondition",
-                (instance, args) =>
-                {
-                    return args.IsSubOrchestration && args.ParentExecutionId == instance.ExecutionId;
-                },
-                (instance, args) =>
-                {
-                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
-                    Assert.Equal(200, r.Code);
-                });
         }
     }
 }

@@ -13,7 +13,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public const string SerialMode = "serial";
         public const string ParallelMode = "parallel";
 
-        public Dictionary<string, Resource> Resources { get; set; } = new Dictionary<string, Resource>();
+        public Dictionary<string, Resource> Resources { get; set; }
 
         public static (bool Result, string Message, Copy Copy) Parse(string jsonString, Dictionary<string, object> context)
         {
@@ -24,6 +24,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 copy.Name = name.GetString();
             else
                 return (false, "not find name in copy node", null);
+
             if (root.TryGetProperty("count", out JsonElement count))
             {
                 if (count.ValueKind == JsonValueKind.Number)
@@ -50,13 +51,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 copy.Input = input.GetRawText();
             }
+            copy.Id = $"deployment/{(context["armcontext"] as DeploymentContext).DeploymentId}/copy/{copy.Name}";
             return (true, string.Empty, copy);
         }
 
-        public string GetId(string deploymentId)
-        {
-            return $"deployment/{deploymentId}/copy/{this.Name}";
-        }
+        public string Id { get; set; }
 
         /// <summary>
         /// name-of-loop

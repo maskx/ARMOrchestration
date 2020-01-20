@@ -6,22 +6,30 @@ using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using System;
+using maskx.OrchestrationService.Activity;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
     public class TemplateOrchestration : TaskOrchestration<TaskResult, string>
     {
-        private TemplateOrchestrationOptions options;
+        private ARMOrchestrationOptions ARMOptions;
+        private IServiceProvider serviceProvider;
 
-        public TemplateOrchestration(IOptions<TemplateOrchestrationOptions> options)
+        public TemplateOrchestration(
+            IOptions<ARMOrchestrationOptions> options,
+            IServiceProvider serviceProvider)
         {
-            this.options = options?.Value;
+            this.ARMOptions = options?.Value;
+            this.serviceProvider = serviceProvider;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             TemplateOrchestrationInput input = this.DataConverter.Deserialize<TemplateOrchestrationInput>(arg);
             string rtv = string.Empty;
+            if (string.IsNullOrEmpty(input.DeploymentId))
+                input.DeploymentId = context.OrchestrationInstance.InstanceId;
             var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity), input);
             if (valid.Code != 200)
                 return valid;
@@ -37,34 +45,32 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 #region ResourceGroup ReadOnly Lock Check
 
-                if (options.GetCheckLockRequestInput != null)
-                {
-                    TaskResult readonlyLockCheckResult;
+                AsyncRequestInput lockResult;
 
-                    if (deploymentContext.Template.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
-                    {
-                        readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                TaskResult readonlyLockCheckResult;
+
+                if (deploymentContext.Template.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
+                {
+                    lockResult = ARMOptions.GetRequestInput(
+                        serviceProvider,
+                        deploymentContext,
+                        new ARMTemplate.Resource()
+                        {
+                            ResouceId = ARMFunctions.Evaluate($"[subscriptionresourceid('{ARMOptions.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString()
+                        },
+                        "locks", "readonly");
+                    readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                                        typeof(AsyncRequestOrchestration),
-                                       options.GetCheckLockRequestInput(
-                                           ARMFunctions.Evaluate($"[subscriptionresourceid('{options.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString(),
-                                           "readonly"));
-                    }
-                    else if (deploymentContext.Template.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
-                    {
-                        readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                      typeof(AsyncRequestOrchestration),
-                                      options.GetCheckLockRequestInput(
-                                          ARMFunctions.Evaluate($"[tenantresourceid('{options.BuitinServiceTypes.Subscription}','{input.SubscriptionId}')]", armContext).ToString(),
-                                          "readonly"));
-                    }
-                    else
-                    {
-                        //there no Tenant level lock
-                        readonlyLockCheckResult = new TaskResult() { Code = 404 };
-                    }
-                    if (readonlyLockCheckResult.Code != 404)
-                        return readonlyLockCheckResult;
+                                       lockResult);
                 }
+                else
+                {
+                    //there are only resource group level lock
+                    readonlyLockCheckResult = new TaskResult() { Code = 404 };
+                }
+
+                if (readonlyLockCheckResult.Code != 404)
+                    return readonlyLockCheckResult;
 
                 #endregion ResourceGroup ReadOnly Lock Check
 
@@ -76,10 +82,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var p = new ResourceOrchestrationInput()
                     {
-                        Resource = resource.ToString(),
-                        OrchestrationContext = armContext,
-                        DeploymentId = context.OrchestrationInstance.InstanceId,
-                        CorrelationId = input.CorrelationId
+                        Resource = resource.Value,
+                        Context = deploymentContext,
                     };
 
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));

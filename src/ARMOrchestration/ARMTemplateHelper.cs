@@ -2,6 +2,7 @@
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
+using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Text.Json;
 
@@ -9,11 +10,11 @@ namespace maskx.ARMOrchestration
 {
     public class ARMTemplateHelper
     {
-        private readonly IListFunction listFunction;
+        private readonly ARMOrchestrationOptions options;
 
-        public ARMTemplateHelper(IListFunction listFunction)
+        public ARMTemplateHelper(IOptions<ARMOrchestrationOptions> options)
         {
-            this.listFunction = listFunction;
+            this.options = options?.Value;
         }
 
         public (bool Result, string Message, Template Template) ValidateTemplate(TemplateOrchestrationInput input)
@@ -70,15 +71,18 @@ namespace maskx.ARMOrchestration
                 if (resource.TryGetProperty("copy", out JsonElement copy))
                 {
                     var c = Copy.Parse(copy.GetRawText(), armContext);
-                    var copyResult = resource.ExpandCopyResource(c.Copy, armContext);
+                    var copyResult = resource.ExpandCopyResource(c.Copy, armContext, options);
                     if (copyResult.Result)
+                    {
+                        c.Copy.Resources = copyResult.Resources;
                         template.Copys.Add(c.Copy.Name, c.Copy);
+                    }
                     else
                         return (false, copyResult.Message, null);
                 }
                 else
                 {
-                    var resResult = Resource.Parse(resource.GetRawText(), armContext);
+                    var resResult = Resource.Parse(resource.GetRawText(), armContext, this.options);
                     if (resResult.Result)
                         template.Resources.Add(resResult.resource.ResouceId, resResult.resource);
                     else
@@ -110,8 +114,8 @@ namespace maskx.ARMOrchestration
                 queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}/resources";
             else
                 queryScope = $"subscriptions/{input.SubscriptionId}/resources";
-            var str = this.listFunction.Query(queryScope, valid.Template.ApiProfile);
-            using var doc = JsonDocument.Parse(str);
+            var str = this.options.ListFunction(queryScope, valid.Template.ApiProfile);
+            using var doc = JsonDocument.Parse(str.Content);
             foreach (var r in doc.RootElement.EnumerateArray())
             {
                 if (!r.TryGetProperty("id", out JsonElement id))

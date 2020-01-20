@@ -64,7 +64,6 @@ namespace maskx.ARMOrchestration.Extensions
             activityTypes.Add(typeof(DeploymentOperationsActivity));
             activityTypes.Add(typeof(WaitDependsOnActivity));
             activityTypes.Add(typeof(PrepareTemplateActivity));
-            activityTypes.Add(typeof(PrepareResourceActivity));
             activityTypes.Add(typeof(ValidateTemplateActivity));
             services.Configure<OrchestrationWorkerOptions>(opt =>
             {

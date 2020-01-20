@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class WaitDependsOnOrchestration : TaskOrchestration<TaskResult, (string DeploymentId, string DependsOn, Dictionary<string, object> Context)>
+    public class WaitDependsOnOrchestration : TaskOrchestration<TaskResult, (string DeploymentId, List<string> DependsOn)>
     {
         internal const string eventName = "WaitDependsOn";
         private TaskCompletionSource<string> waitHandler = null;
 
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, (string DeploymentId, string DependsOn, Dictionary<string, object> Context) input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, (string DeploymentId, List<string> DependsOn) input)
         {
             waitHandler = new TaskCompletionSource<string>();
             await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity), input);

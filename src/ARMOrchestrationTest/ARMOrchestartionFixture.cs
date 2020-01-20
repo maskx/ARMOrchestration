@@ -1,4 +1,5 @@
 ﻿using ARMCreatorTest.Mock;
+using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,16 +28,16 @@ namespace ARMCreatorTest
                (hostContext, services) =>
                {
                    services.AddSingleton<ICommunicationProcessor>(new MockCommunicationProcessor());
-                   services.Configure<TemplateOrchestrationOptions>((options) =>
+                   services.Configure<ARMOrchestrationOptions>((options) =>
                    {
-                       options.Database = new TemplateOrchestrationOptions.DatabaseConfig()
+                       options.Database = new DatabaseConfig()
                        {
                            HubName = TestHelper.HubName,
                            ConnectionString = TestHelper.ConnectionString
                        };
-                       options.GetCreateResourceRequestInput = (input) =>
+                       options.GetRequestInput = (sp, cxt, res, name, property) =>
                        {
-                           return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input);
+                           return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", res);
                        };
                    });
                }).Build();

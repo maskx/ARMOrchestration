@@ -14,7 +14,7 @@ namespace ARMCreatorTest.Mock
             List<CommunicationJob> rtv = new List<CommunicationJob>();
             foreach (var job in jobs)
             {
-                job.ResponseCode = 200;
+                job.ResponseCode = job.RequestTo == "locks" ? 404 : 200;
                 job.ResponseContent = "MockCommunicationProcessor";
                 job.Status = CommunicationJob.JobStatus.Completed;
                 rtv.Add(job);

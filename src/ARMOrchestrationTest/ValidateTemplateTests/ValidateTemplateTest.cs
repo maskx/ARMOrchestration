@@ -4,12 +4,19 @@ using maskx.ARMOrchestration.Orchestrations;
 using System.Text.Json;
 using Xunit;
 using System.Linq;
+using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
     [Trait("c", "ValidateTemplate")]
     public class ValidateTemplateTest
     {
+        private ARMTemplateHelper templateHelper = new ARMTemplateHelper(Options.Create(new ARMOrchestrationOptions()
+        {
+            ExtensionResources = new List<string>()
+        }));
+
         private string GetTemplate(string filename)
         {
             return TestHelper.GetJsonFileContent("ValidateTemplateTests/Template/" + filename);
@@ -18,7 +25,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "EmptyTemplate")]
         public void EmptyTemplate()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("Empty")
             });
@@ -28,7 +35,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoSchema")]
         public void NoSchema()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("NoSchema")
             });
@@ -39,7 +46,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoContentVersion")]
         public void NoContentVersion()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("NoContentVersion")
             });
@@ -50,7 +57,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoResources")]
         public void NoResources()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = GetTemplate("NoResources")
             });
@@ -61,7 +68,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "VariableIteration")]
         public void VariableIteration()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration")
             });
@@ -84,8 +91,10 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/ResourceIteration")
             });
             Assert.True(r.Result);
@@ -100,8 +109,10 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/PropertyIteration")
             });
             Assert.True(r.Result);
@@ -124,8 +135,10 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ChildResource")]
         public void ChildResource()
         {
-            var r = new ARMTemplateHelper(null).ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
             {
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
                 Template = GetTemplate("ChildResource")
             });
             Assert.True(r.Result);
@@ -133,7 +146,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var childResources = r.Template.Resources.Values.First().Resources;
             Assert.Single(childResources);
             var childres = childResources[0];
-            Assert.Equal("subnets", childres.Type);
+            Assert.Equal("Microsoft.Network/virtualNetworks/subnets", childres.Type);
         }
     }
 }

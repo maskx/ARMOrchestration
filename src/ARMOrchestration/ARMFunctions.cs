@@ -793,6 +793,8 @@ namespace maskx.ARMOrchestration
         /// <returns></returns>
         public static object Evaluate(string function, Dictionary<string, object> context)
         {
+            if (string.IsNullOrEmpty(function))
+                return string.Empty;
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#escape-characters
             if (function.StartsWith("[") && function.EndsWith("]") && !function.StartsWith("[["))
             {

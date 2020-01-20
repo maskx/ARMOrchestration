@@ -19,8 +19,8 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             this.fixture = fixture;
         }
 
-        [Fact(DisplayName = "Run")]
-        public void Run()
+        [Fact(DisplayName = "CreateExtensionResource")]
+        public void CreateExtensionResource()
         {
             bool tagsAdded = false;
             var _ = new TraceActivityEventListener((args) =>

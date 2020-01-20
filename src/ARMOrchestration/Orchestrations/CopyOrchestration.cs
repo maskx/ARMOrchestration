@@ -4,7 +4,6 @@ using maskx.ARMOrchestration.ARMTemplate;
 using maskx.OrchestrationService;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using static maskx.ARMOrchestration.Activities.DeploymentOperationsActivityInput;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -14,25 +13,29 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             var operationArgs = new DeploymentOperationsActivityInput()
             {
-                //DeploymentId = input.DeploymentId,
-                //InstanceId = context.OrchestrationInstance.InstanceId,
-                //ExecutionId = context.OrchestrationInstance.ExecutionId,
-                //CorrelationId = input.CorrelationId,
-                //Resource = resourceDeploy.Name,
-                //Type = resourceDeploy.Type,
-                //ResourceId = resourceDeploy.ResouceId,
-                //ParentId = input.Parent?.ResourceId,
+                DeploymentId = input.Context.DeploymentId,
+                InstanceId = context.OrchestrationInstance.InstanceId,
+                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                CorrelationId = input.Context.CorrelationId,
+                Resource = input.Copy.Name,
+                Type = Copy.ServiceType,
+                ResourceId = input.Copy.Id,
                 Stage = ProvisioningStage.StartProcessing
             };
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             if (input.Copy.Mode == Copy.SerialMode)
             {
                 foreach (var item in input.Copy.Resources)
                 {
+                    var par = new ResourceOrchestrationInput()
+                    {
+                        ParentId = input.Copy.Id,
+                        Resource = item.Value,
+                        Context = input.Context
+                    };
                     await context.CreateSubOrchestrationInstance<TaskResult>(
                         typeof(ResourceOrchestration),
-                        new ResourceOrchestrationInput()
-                        {
-                        });
+                        par);
                 }
             }
             else // TODO: support batchSize
@@ -45,6 +48,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                         typeof(ResourceOrchestration),
                         new ResourceOrchestrationInput()
                         {
+                            ParentId = input.Copy.Id,
+                            Resource = item.Value,
+                            Context = input.Context
                         }));
                 }
 

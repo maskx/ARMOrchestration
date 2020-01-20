@@ -28,16 +28,15 @@ namespace ARMCreatorTest
 {
     public class TestHelper
     {
-        public static AsyncRequestInput CreateAsyncRequestInput(string processorName, ResourceOrchestrationInput input)
+        public static AsyncRequestInput CreateAsyncRequestInput(string processorName, Resource resource)
         {
-            var resource = new Resource(input.Resource, input.OrchestrationContext);
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
-            ruleField.Add("ApiVersion", ARMFunctions.Evaluate(resource.ApiVersion, input.OrchestrationContext));
-            ruleField.Add("Type", ARMFunctions.Evaluate(resource.Type, input.OrchestrationContext));
-            ruleField.Add("Name", ARMFunctions.Evaluate(resource.Name, input.OrchestrationContext));
-            ruleField.Add("Location", ARMFunctions.Evaluate(resource.Location, input.OrchestrationContext));
+            ruleField.Add("ApiVersion", resource.ApiVersion);
+            ruleField.Add("Type", resource.Type);
+            ruleField.Add("Name", resource.Name);
+            ruleField.Add("Location", resource.Location);
             ruleField.Add("SKU", resource.SKU);
-            ruleField.Add("Kind", ARMFunctions.Evaluate(resource.Kind, input.OrchestrationContext));
+            ruleField.Add("Kind", resource.Kind);
             ruleField.Add("Plan", resource.Plan);
             return new AsyncRequestInput()
             {
@@ -221,14 +220,23 @@ namespace ARMCreatorTest
                  });
                  services.Configure<ARMOrchestrationOptions>((opt) =>
                  {
-                     opt.ExtensionResources = new Dictionary<string, Func<ResourceOrchestrationInput, string, string, AsyncRequestInput>>() {
-                         {"tags",(input,name,property)=>{return new AsyncRequestInput(){
-                             Processor = "MockCommunicationProcessor",
-                             RequestOperation = "Create",
-                             RequestTo = name,
-                             RequsetContent=property
-                         }; } }
+                     opt.Database = new DatabaseConfig()
+                     {
+                         ConnectionString = TestHelper.ConnectionString
                      };
+                     opt.GetRequestInput = (sp, cxt, res, name, property) =>
+                     {
+                         return new AsyncRequestInput()
+                         {
+                             RequestTo = name,
+                             RequestOperation = "PUT",
+                             RequsetContent = property,
+                             //   RuleField = ruleField,
+                             Processor = "MockCommunicationProcessor"
+                         };
+                     };
+                     opt.ExtensionResources = new List<string>() {
+                         "tags" };
                  });
 
                  #region OrchestrationWorker
@@ -255,7 +263,6 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(DeploymentOperationsActivity));
                  activityTypes.Add(typeof(WaitDependsOnActivity));
                  activityTypes.Add(typeof(PrepareTemplateActivity));
-                 activityTypes.Add(typeof(PrepareResourceActivity));
                  activityTypes.Add(typeof(ValidateTemplateActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
@@ -295,6 +302,9 @@ namespace ARMCreatorTest
                  services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker>());
 
                  #endregion WaitDependsOnWorker
+
+                 services.AddSingleton<OrchestrationWorkerClient>();
+                 services.AddSingleton<ARMTemplateHelper>();
              });
         }
 

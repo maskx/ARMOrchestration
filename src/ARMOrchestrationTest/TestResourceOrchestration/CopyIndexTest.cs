@@ -37,9 +37,11 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             };
 
             var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
-                "CopyIndex/VariableIteration", (instance, args) =>
+                "CopyIndex/VariableIteration",
+                (instance, args) =>
                 {
-                    return !args.IsSubOrchestration && instance.InstanceId == args.InstanceId;
+                    return !args.IsSubOrchestration
+                    && instance.InstanceId == args.InstanceId;
                 }, (instance, cxt) =>
                 {
                     var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content;
