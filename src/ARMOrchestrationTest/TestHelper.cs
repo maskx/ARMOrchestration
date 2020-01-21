@@ -142,9 +142,9 @@ namespace ARMCreatorTest
                 Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",
-                    Uri = typeof(TemplateOrchestration).FullName + "_"
+                    Uri = typeof(DeploymentOrchestration).FullName + "_"
                 },
-                Input = TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
+                Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
                     Template = templateString,
                     Parameters = string.Empty,
@@ -255,7 +255,7 @@ namespace ARMCreatorTest
 
                  orchestrationTypes.Add(typeof(AsyncRequestOrchestration));
                  orchestrationTypes.Add(typeof(ResourceOrchestration));
-                 orchestrationTypes.Add(typeof(TemplateOrchestration));
+                 orchestrationTypes.Add(typeof(DeploymentOrchestration));
                  orchestrationTypes.Add(typeof(WaitDependsOnOrchestration));
                  orchestrationTypes.Add(typeof(CopyOrchestration));
                  activityTypes.Add(typeof(AsyncRequestActivity));
@@ -319,9 +319,9 @@ namespace ARMCreatorTest
                 Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",
-                    Uri = typeof(TemplateOrchestration).FullName + "_"
+                    Uri = typeof(DeploymentOrchestration).FullName + "_"
                 },
-                Input = TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
+                Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
                     Template = TestHelper.GetTemplateContent(filename),
                     Parameters = string.Empty,

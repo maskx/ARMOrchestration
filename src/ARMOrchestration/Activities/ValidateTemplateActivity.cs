@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class ValidateTemplateActivity : TaskActivity<TemplateOrchestrationInput, TaskResult>
+    public class ValidateTemplateActivity : TaskActivity<DeploymentOrchestrationInput, TaskResult>
     {
         private ARMOrchestrationOptions ARMOptions;
         private ARMTemplateHelper templateHelper;
@@ -18,7 +18,7 @@ namespace maskx.ARMOrchestration.Activities
             this.templateHelper = templateHelper;
         }
 
-        protected override TaskResult Execute(TaskContext context, TemplateOrchestrationInput input)
+        protected override TaskResult Execute(TaskContext context, DeploymentOrchestrationInput input)
         {
             var r = templateHelper.ValidateTemplate(input);
             if (r.Result)

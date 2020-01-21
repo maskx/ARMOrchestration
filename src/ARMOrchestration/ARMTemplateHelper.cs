@@ -17,7 +17,7 @@ namespace maskx.ARMOrchestration
             this.options = options?.Value;
         }
 
-        public (bool Result, string Message, Template Template) ValidateTemplate(TemplateOrchestrationInput input)
+        public (bool Result, string Message, Template Template) ValidateTemplate(DeploymentOrchestrationInput input)
         {
             Template template = new Template();
             DeploymentContext deploymentContext = new DeploymentContext()
@@ -95,7 +95,7 @@ namespace maskx.ARMOrchestration
         public WhatIfOperationResult WhatIf(PredictTemplateOrchestrationInput input)
         {
             var result = new WhatIfOperationResult();
-            var valid = ValidateTemplate(new TemplateOrchestrationInput()
+            var valid = ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 CorrelationId = input.CorrelationId,
                 Parameters = input.Parameters,
@@ -110,7 +110,7 @@ namespace maskx.ARMOrchestration
                 result.Error = new ErrorResponse() { Code = "400", Message = valid.Message };
             }
             string queryScope;
-            if (input.ScopeType == ScopeTypeEnum.ResourceGroup)
+            if (input.ScopeType == ScopeType.ResourceGroup)
                 queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}/resources";
             else
                 queryScope = $"subscriptions/{input.SubscriptionId}/resources";

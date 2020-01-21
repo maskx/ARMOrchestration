@@ -9,9 +9,9 @@ using System.Text.Json;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class PrepareTemplateActivity : TaskActivity<TemplateOrchestrationInput, TaskResult>
+    public class PrepareTemplateActivity : TaskActivity<DeploymentOrchestrationInput, TaskResult>
     {
-        protected override TaskResult Execute(TaskContext context, TemplateOrchestrationInput input)
+        protected override TaskResult Execute(TaskContext context, DeploymentOrchestrationInput input)
         {
             using JsonDocument doc = JsonDocument.Parse(input.Template);
             var root = doc.RootElement;

@@ -60,7 +60,7 @@ namespace ARMOrchestrationTest
 
             var client = webHost.Services.GetService<OrchestrationWorkerClient>();
             var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
-                new TemplateOrchestrationInput()
+                new DeploymentOrchestrationInput()
                 {
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),

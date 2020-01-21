@@ -13,7 +13,7 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public string Location { get; set; }
         public string DeploymentName { get; set; }
-        public DeploymentModeEnum Mode { get; set; }
+        public DeploymentMode Mode { get; set; }
         public string SubscriptionId { get; set; }
         public string ResourceGroupName { get; set; }
         public TemplateLink TemplateLink { get; set; }
@@ -21,7 +21,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public string Template { get; set; }
         public string Parameters { get; set; }
         public WhatIfResultFormat ResultFormat { get; set; }
-        public ScopeTypeEnum ScopeType { get; set; }
+        public ScopeType ScopeType { get; set; }
         public string TenantId { get; set; }
         public string CorrelationId { get; set; }
     }

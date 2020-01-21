@@ -1,9 +1,9 @@
-﻿namespace maskx.ARMOrchestration.Orchestrations
+﻿namespace maskx.ARMOrchestration.WhatIf
 {
     /// <summary>
     ///
     /// </summary>
-    public enum ScopeTypeEnum
+    public enum ScopeType
     {
         Subscription,
         ResourceGroup

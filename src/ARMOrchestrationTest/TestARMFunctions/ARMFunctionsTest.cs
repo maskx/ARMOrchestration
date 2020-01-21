@@ -551,9 +551,9 @@ namespace ARMCreatorTest.TestARMFunctions
                 Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",
-                    Uri = typeof(TemplateOrchestration).FullName + "_"
+                    Uri = typeof(DeploymentOrchestration).FullName + "_"
                 },
-                Input = TestHelper.DataConverter.Serialize(new TemplateOrchestrationInput()
+                Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
                     Template = templateString,
                     Parameters = string.Empty,

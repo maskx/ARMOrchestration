@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration
     public class ARMOrchestrationClient
     {
         private readonly OrchestrationWorkerClient orchestrationWorkerClient;
-        private readonly string TemplateOrchestrationUri = typeof(TemplateOrchestration).FullName + "_";
+        private readonly string TemplateOrchestrationUri = typeof(DeploymentOrchestration).FullName + "_";
         private readonly DataConverter DataConverter = new JsonDataConverter();
 
         public ARMOrchestrationClient(OrchestrationWorkerClient orchestrationWorkerClient)
@@ -18,7 +18,7 @@ namespace maskx.ARMOrchestration
             this.orchestrationWorkerClient = orchestrationWorkerClient;
         }
 
-        public async Task<OrchestrationInstance> Run(TemplateOrchestrationInput args)
+        public async Task<OrchestrationInstance> Run(DeploymentOrchestrationInput args)
         {
             return await orchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {

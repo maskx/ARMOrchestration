@@ -1,8 +1,6 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
-
-namespace maskx.ARMOrchestration.Orchestrations
+﻿namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class TemplateOrchestrationInput
+    public class DeploymentOrchestrationInput
     {
         public string DeploymentId { get; set; }
         public string CorrelationId { get; set; }
@@ -13,7 +11,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// <summary>
         /// Complete  or Incremental
         /// </summary>
-        public string Mode { get; set; } = "Incremental";
+        public DeploymentMode Mode { get; set; } = DeploymentMode.Incremental;
 
         /// <summary>
         /// Deployment Name
@@ -23,7 +21,5 @@ namespace maskx.ARMOrchestration.Orchestrations
         public string ResourceGroup { get; set; }
         public string SubscriptionId { get; set; }
         public string TenantId { get; set; }
-
-        // public Template Template { get; set; }
     }
 }

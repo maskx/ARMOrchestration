@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.WhatIf
     {
         public string After { get; set; }
         public string Before { get; set; }
-        public ChangeTypeEnum ChangeType { get; set; }
+        public ChangeType ChangeType { get; set; }
         public List<WhatIfPropertyChange> Delta { get; set; }
         public string ResourceId { get; set; }
     }

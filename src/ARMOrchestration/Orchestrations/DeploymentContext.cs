@@ -9,7 +9,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public string ResourceGroup { get; set; }
         public string SubscriptionId { get; set; }
         public string TenantId { get; set; }
-        public string Mode { get; set; } = "Incremental";
+        public DeploymentMode Mode { get; set; } = DeploymentMode.Incremental;
         public Template Template { get; set; }
         public string Parameters { get; set; }
     }

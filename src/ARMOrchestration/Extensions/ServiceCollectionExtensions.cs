@@ -32,7 +32,7 @@ namespace maskx.ARMOrchestration.Extensions
                 else
                     orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
                 orchList.Add(typeof(ResourceOrchestration));
-                orchList.Add(typeof(TemplateOrchestration));
+                orchList.Add(typeof(DeploymentOrchestration));
                 orchList.Add(typeof(WaitDependsOnOrchestration));
                 orchList.Add(typeof(CopyOrchestration));
                 return orchList;

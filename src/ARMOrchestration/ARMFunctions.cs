@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using maskx.ARMOrchestration.Orchestrations;
+using maskx.ARMOrchestration.ARMTemplate;
 
 namespace maskx.ARMOrchestration
 {
@@ -806,44 +807,62 @@ namespace maskx.ARMOrchestration
                         if (Functions.TryGetValue(name.ToLower(), out Action<FunctionArgs, Dictionary<string, object>> func))
                         {
                             func(args, cxt);
-                            return;
                         }
-                        if (!cxt.TryGetValue("armcontext", out object armcxt))
-                            return;
-                        var udfs = (armcxt as DeploymentContext).Template.Functions;
-                        if (udfs == null)
-                            return;
-                        var names = name.Split('.');
-                        var ns = udfs[names[0]];
-                        if (ns == null)
-                            return;
-
-                        var member = ns[names[1]];
-                        Expression.Expression expression1 = new Expression.Expression(member.Output);
-                        Dictionary<string, object> udfContext = new Dictionary<string, object>();
-                        using JsonDocument udfPar = JsonDocument.Parse(member.Parameters);
-                        var rootEle = udfPar.RootElement;
-                        var pars = args.EvaluateParameters(cxt);
-                        JObject jObject = new JObject();
-                        for (int i = 0; i < pars.Length; i++)
+                        else if (TryGetCustomFunction(name, context, out ARMTemplate.Member member))
                         {
-                            var t = rootEle[i].GetProperty("type").GetString();
-                            JProperty p = null;
-                            if ("object" == t)
-                                p = new JProperty("value", JObject.Parse(pars[i].ToString()));
-                            else if ("array" == t)
-                                p = new JProperty("value", JArray.Parse(pars[i].ToString()));
-                            else
-                                p = new JProperty("value", pars[i]);
-                            jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
+                            EvaluateCustomFunc(args, cxt, member);
                         }
-                        udfContext.Add("parameters", jObject.ToString(Newtonsoft.Json.Formatting.None));
-                        args.Result = GetOutput(member.Output, udfContext);
+                        else if (function.StartsWith("list", StringComparison.OrdinalIgnoreCase))
+                        {
+                        }
                     }
                 };
                 return expression.Evaluate(context);
             }
             return function;
+        }
+
+        private static void EvaluateCustomFunc(FunctionArgs args, Dictionary<string, object> cxt, Member member)
+        {
+            Dictionary<string, object> udfContext = new Dictionary<string, object>();
+            using JsonDocument udfPar = JsonDocument.Parse(member.Parameters);
+            var rootEle = udfPar.RootElement;
+            var pars = args.EvaluateParameters(cxt);
+            JObject jObject = new JObject();
+            for (int i = 0; i < pars.Length; i++)
+            {
+                var t = rootEle[i].GetProperty("type").GetString();
+                JProperty p;
+                if ("object" == t)
+                    p = new JProperty("value", JObject.Parse(pars[i].ToString()));
+                else if ("array" == t)
+                    p = new JProperty("value", JArray.Parse(pars[i].ToString()));
+                else
+                    p = new JProperty("value", pars[i]);
+                jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
+            }
+            udfContext.Add("parameters", jObject.ToString(Newtonsoft.Json.Formatting.None));
+            args.Result = GetOutput(member.Output, udfContext);
+        }
+
+        private static bool TryGetCustomFunction(string function, Dictionary<string, object> context, out ARMTemplate.Member member)
+        {
+            member = null;
+            if (!context.TryGetValue("armcontext", out object armcxt))
+                return false;
+            var udfs = (armcxt as DeploymentContext).Template.Functions;
+            if (udfs == null)
+                return false;
+            var names = function.Split('.');
+            if (names.Length != 2)
+                return false;
+            var ns = udfs[names[0]];
+            if (ns == null)
+                return false;
+            member = ns[names[1]];
+            if (member == null)
+                return false;
+            return true;
         }
 
         public static void SetFunction(string name, Action<FunctionArgs, Dictionary<string, object>> func)

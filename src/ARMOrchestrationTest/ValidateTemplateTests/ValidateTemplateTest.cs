@@ -25,7 +25,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "EmptyTemplate")]
         public void EmptyTemplate()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 Template = GetTemplate("Empty")
             });
@@ -35,7 +35,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoSchema")]
         public void NoSchema()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 Template = GetTemplate("NoSchema")
             });
@@ -46,7 +46,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoContentVersion")]
         public void NoContentVersion()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 Template = GetTemplate("NoContentVersion")
             });
@@ -57,7 +57,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoResources")]
         public void NoResources()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 Template = GetTemplate("NoResources")
             });
@@ -68,7 +68,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "VariableIteration")]
         public void VariableIteration()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration")
             });
@@ -91,7 +91,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
@@ -109,7 +109,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
@@ -135,7 +135,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ChildResource")]
         public void ChildResource()
         {
-            var r = templateHelper.ValidateTemplate(new TemplateOrchestrationInput()
+            var r = templateHelper.ValidateTemplate(new DeploymentOrchestrationInput()
             {
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,

@@ -1,4 +1,4 @@
-﻿namespace maskx.ARMOrchestration.Orchestrations
+﻿namespace maskx.ARMOrchestration
 {
     /// <summary>
     ///
