@@ -1,25 +1,25 @@
-﻿using DurableTask.Core;
+﻿using ARMCreatorTest;
+using ARMCreatorTest.Mock;
+using DurableTask.Core;
+using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Xunit;
-using maskx.ARMOrchestration.Extensions;
-using ARMCreatorTest;
-using Microsoft.Extensions.DependencyInjection;
-using maskx.ARMOrchestration.Orchestrations;
-using maskx.ARMOrchestration;
 
 namespace ARMOrchestrationTest
 {
     [Trait("c", "ServiceCollectionExtensions")]
     public class ServiceCollectionExtensionsTest
     {
-        [Fact]
-        private void RunHost()
+        [Fact(DisplayName = "UsingARMOrchestration")]
+        public void UsingARMOrchestration()
         {
             var webHost = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((hostingContext, config) =>
@@ -32,26 +32,50 @@ namespace ARMOrchestrationTest
                 {
                     var sqlConfig = new ARMOrchestrationSqlServerConfig()
                     {
-                        ConnectionString = TestHelper.ConnectionString,
-                        AutoCreate = true
+                        Database = new DatabaseConfig()
+                        {
+                            ConnectionString = TestHelper.ConnectionString,
+                            AutoCreate = true
+                        },
+                        GetRequestInput = (sp, cxt, res, name, property) =>
+                         {
+                             return new AsyncRequestInput()
+                             {
+                                 RequestTo = name,
+                                 RequestOperation = "PUT",
+                                 RequsetContent = property,
+                                 //   RuleField = ruleField,
+                                 Processor = "MockCommunicationProcessor"
+                             };
+                         }
                     };
                     services.UsingARMOrchestration(sqlConfig);
+                    services.AddSingleton<ICommunicationProcessor>((sp) =>
+                    {
+                        return new MockCommunicationProcessor();
+                    });
                 })
                 .Build();
             webHost.RunAsync();
 
             var client = webHost.Services.GetService<OrchestrationWorkerClient>();
-            var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(new TemplateOrchestrationInput()
-            {
-                DeploymentId = Guid.NewGuid().ToString("N")
-            }).Result;
+            var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
+                new TemplateOrchestrationInput()
+                {
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
+                    SubscriptionId = TestHelper.SubscriptionId,
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    CorrelationId = Guid.NewGuid().ToString("N")
+                }).Result;
             while (true)
             {
                 var result = client.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
-                    Assert.Equal("1", result.Output);
+                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
+                    Assert.Equal(200, r.Code);
                     break;
                 }
             }

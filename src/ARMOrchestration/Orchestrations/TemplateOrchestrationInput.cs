@@ -23,7 +23,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public string ResourceGroup { get; set; }
         public string SubscriptionId { get; set; }
         public string TenantId { get; set; }
-        public string DeploymentId { get; set; }
+
         // public Template Template { get; set; }
     }
 }

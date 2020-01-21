@@ -68,7 +68,6 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                 "CopyIndex/PropertyIteration");
-            var d = "";
         }
     }
 }

@@ -20,6 +20,7 @@ namespace maskx.ARMOrchestration
 
     public class DatabaseConfig
     {
+        public bool AutoCreate { get; set; } = false;
         internal const string WaitDependsOnTable = "_WaitDependsOn";
         internal const string DeploymentOperationsTable = "_DeploymentOperations";
 
@@ -48,7 +49,7 @@ namespace maskx.ARMOrchestration
         public DatabaseConfig Database { get; set; }
         public ListFunction ListFunction { get; set; }
         public GetRequestInput GetRequestInput { get; set; }
-        public List<string> ExtensionResources { get; set; }
+        public List<string> ExtensionResources { get; set; } = new List<string>();
         public BuitinServiceTypes BuitinServiceTypes { get; set; } = new BuitinServiceTypes();
     }
 }

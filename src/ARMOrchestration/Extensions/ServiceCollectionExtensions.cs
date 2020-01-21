@@ -4,6 +4,8 @@ using maskx.ARMOrchestration.Workers;
 using maskx.OrchestrationService.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Extensions
 {
@@ -13,17 +15,22 @@ namespace maskx.ARMOrchestration.Extensions
         {
             SqlServerConfiguration sqlServerConfiguration = new SqlServerConfiguration()
             {
-                AutoCreate = config.AutoCreate,
-                ConnectionString = config.ConnectionString,
-                HubName = config.HubName,
-                SchemaName = config.SchemaName,
+                AutoCreate = config.Database.AutoCreate,
+                ConnectionString = config.Database.ConnectionString,
+                HubName = config.Database.HubName,
+                SchemaName = config.Database.SchemaName,
                 CommunicationWorkerOptions = config.CommunicationWorkerOptions,
-                OrchestrationServiceSettings = config.OrchestrationServiceSettings,
-                OrchestrationWorkerOptions = config.OrchestrationWorkerOptions
+                OrchestrationServiceSettings = config.OrchestrationServiceSettings
             };
+            sqlServerConfiguration.OrchestrationWorkerOptions.FetchJobCount = config.OrchestrationWorkerOptions.FetchJobCount;
+            sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = config.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface;
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInOrchestrators = (sp) =>
             {
-                var orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
+                IList<Type> orchList;
+                if (config.OrchestrationWorkerOptions.GetBuildInOrchestrators == null)
+                    orchList = new List<Type>();
+                else
+                    orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
                 orchList.Add(typeof(ResourceOrchestration));
                 orchList.Add(typeof(TemplateOrchestration));
                 orchList.Add(typeof(WaitDependsOnOrchestration));
@@ -32,11 +39,15 @@ namespace maskx.ARMOrchestration.Extensions
             };
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>
             {
-                var activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
+                IList<Type> activityTypes;
+                if (config.OrchestrationWorkerOptions.GetBuildInTaskActivities == null)
+                    activityTypes = new List<Type>();
+                else
+                    activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
                 activityTypes.Add(typeof(DeploymentOperationsActivity));
                 activityTypes.Add(typeof(WaitDependsOnActivity));
                 activityTypes.Add(typeof(PrepareTemplateActivity));
-                activityTypes.Add(typeof(PrepareResourceActivity));
+                activityTypes.Add(typeof(ValidateTemplateActivity));
                 return activityTypes;
             };
             services.UsingOrchestration(sqlServerConfiguration);
@@ -49,6 +60,13 @@ namespace maskx.ARMOrchestration.Extensions
             #endregion WaitDependsOnWorker
 
             services.AddSingleton<ARMOrchestrationClient>();
+            services.AddSingleton<ARMTemplateHelper>();
+            services.Configure<ARMOrchestrationOptions>((opt) =>
+            {
+                opt.Database = config.Database;
+                opt.GetRequestInput = config.GetRequestInput;
+                opt.ExtensionResources = config.ExtensionResources;
+            });
             return services;
         }
     }

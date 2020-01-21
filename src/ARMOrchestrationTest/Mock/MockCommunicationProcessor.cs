@@ -9,7 +9,7 @@ namespace ARMCreatorTest.Mock
         public string Name { get; set; } = "MockCommunicationProcessor";
         public int MaxBatchCount { get; set; } = 1;
 
-        public async Task<CommunicationJob[]> ProcessAsync(params CommunicationJob[] jobs)
+        public Task<CommunicationJob[]> ProcessAsync(params CommunicationJob[] jobs)
         {
             List<CommunicationJob> rtv = new List<CommunicationJob>();
             foreach (var job in jobs)
@@ -20,7 +20,7 @@ namespace ARMCreatorTest.Mock
                 rtv.Add(job);
             }
 
-            return rtv.ToArray();
+            return Task.FromResult(rtv.ToArray());
         }
     }
 }

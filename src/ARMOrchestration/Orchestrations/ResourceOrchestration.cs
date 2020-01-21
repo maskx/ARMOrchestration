@@ -12,14 +12,15 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
-        private ARMOrchestrationOptions ARMOptions;
-        private IServiceProvider serviceProvider;
+        private readonly ARMOrchestrationOptions ARMOptions;
+        private readonly IServiceProvider serviceProvider;
 
         public ResourceOrchestration(
             IServiceProvider serviceProvider,
             IOptions<ARMOrchestrationOptions> armOptions)
         {
             this.ARMOptions = armOptions?.Value;
+            this.serviceProvider = serviceProvider;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)

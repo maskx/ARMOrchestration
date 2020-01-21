@@ -1,16 +1,17 @@
 ﻿using maskx.DurableTask.SQLServer.Settings;
 using maskx.OrchestrationService.Extensions;
+using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Extensions
 {
     public class ARMOrchestrationSqlServerConfig
     {
-        public bool AutoCreate { get; set; } = false;
-        public string ConnectionString { get; set; }
-        public string HubName { get; set; } = "ARM";
-        public string SchemaName { get; set; } = "dbo";
+        public DatabaseConfig Database { get; set; }
         public SQLServerOrchestrationServiceSettings OrchestrationServiceSettings { get; set; } = new SQLServerOrchestrationServiceSettings();
-        public OrchestrationWorkerOptions OrchestrationWorkerOptions { get; set; }
-        public CommunicationWorkerOptions CommunicationWorkerOptions { get; set; }
+        public OrchestrationWorkerOptions OrchestrationWorkerOptions { get; set; } = new OrchestrationWorkerOptions();
+        public CommunicationWorkerOptions CommunicationWorkerOptions { get; set; } = new CommunicationWorkerOptions();
+        public GetRequestInput GetRequestInput { get; set; }
+        public List<string> ExtensionResources { get; set; } = new List<string>();
+        public BuitinServiceTypes BuitinServiceTypes { get; set; } = new BuitinServiceTypes();
     }
 }
