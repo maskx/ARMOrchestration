@@ -220,6 +220,10 @@ namespace ARMCreatorTest
                  });
                  services.Configure<ARMOrchestrationOptions>((opt) =>
                  {
+                     opt.ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                     {
+                         return new TaskResult() { Content = value };
+                     };
                      opt.Database = new DatabaseConfig()
                      {
                          ConnectionString = TestHelper.ConnectionString
@@ -262,7 +266,7 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(HttpRequestActivity));
                  activityTypes.Add(typeof(DeploymentOperationsActivity));
                  activityTypes.Add(typeof(WaitDependsOnActivity));
-                 activityTypes.Add(typeof(PrepareTemplateActivity));
+
                  activityTypes.Add(typeof(ValidateTemplateActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
@@ -305,6 +309,7 @@ namespace ARMCreatorTest
 
                  services.AddSingleton<OrchestrationWorkerClient>();
                  services.AddSingleton<ARMTemplateHelper>();
+                 services.AddSingleton<ARMFunctions>();
              });
         }
 

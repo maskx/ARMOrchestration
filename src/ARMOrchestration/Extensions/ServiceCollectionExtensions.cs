@@ -46,7 +46,7 @@ namespace maskx.ARMOrchestration.Extensions
                     activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
                 activityTypes.Add(typeof(DeploymentOperationsActivity));
                 activityTypes.Add(typeof(WaitDependsOnActivity));
-                activityTypes.Add(typeof(PrepareTemplateActivity));
+
                 activityTypes.Add(typeof(ValidateTemplateActivity));
                 return activityTypes;
             };
@@ -61,6 +61,7 @@ namespace maskx.ARMOrchestration.Extensions
 
             services.AddSingleton<ARMOrchestrationClient>();
             services.AddSingleton<ARMTemplateHelper>();
+            services.AddSingleton<ARMFunctions>();
             services.Configure<ARMOrchestrationOptions>((opt) =>
             {
                 opt.Database = config.Database;

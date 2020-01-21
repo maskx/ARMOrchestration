@@ -6,16 +6,25 @@ using Xunit;
 using System.Linq;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
+using maskx.OrchestrationService;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
     [Trait("c", "ValidateTemplate")]
     public class ValidateTemplateTest
     {
-        private ARMTemplateHelper templateHelper = new ARMTemplateHelper(Options.Create(new ARMOrchestrationOptions()
-        {
-            ExtensionResources = new List<string>()
-        }));
+        private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
+            Options.Create(new ARMOrchestrationOptions()
+            {
+                ExtensionResources = new List<string>()
+            }),
+            new ARMFunctions(Options.Create(new ARMOrchestrationOptions()
+            {
+                ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                {
+                    return new TaskResult() { };
+                }
+            }), null), null);
 
         private string GetTemplate(string filename)
         {

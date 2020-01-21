@@ -1,5 +1,7 @@
 ﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
+using maskx.OrchestrationService;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace ARMCreatorTest.TestARMFunctions
@@ -8,7 +10,15 @@ namespace ARMCreatorTest.TestARMFunctions
     {
         public void resourcegroup()
         {
-            ARMFunctions.SetFunction("resourcegroup", (args, cxt) =>
+            ARMFunctions functions = new ARMFunctions(
+                Options.Create(new ARMOrchestrationOptions()
+                {
+                    ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                    {
+                        return new TaskResult() { Content = value };
+                    }
+                }), null);
+            functions.SetFunction("resourcegroup", (args, cxt) =>
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))
                     return;

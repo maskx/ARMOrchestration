@@ -14,13 +14,16 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         private ARMOrchestrationOptions ARMOptions;
         private IServiceProvider serviceProvider;
+        private readonly ARMFunctions functions;
 
         public DeploymentOrchestration(
             IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            ARMFunctions functions)
         {
             this.ARMOptions = options?.Value;
             this.serviceProvider = serviceProvider;
+            this.functions = functions;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
@@ -50,7 +53,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     deploymentContext,
                     new ARMTemplate.Resource()
                     {
-                        ResouceId = ARMFunctions.Evaluate($"[subscriptionresourceid('{ARMOptions.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString()
+                        ResouceId = functions.Evaluate($"[subscriptionresourceid('{ARMOptions.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString()
                     },
                     "locks", "readonly");
                 var readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
@@ -99,7 +102,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (!string.IsNullOrEmpty(deploymentContext.Template.Outputs))
             {
-                rtv = ARMFunctions.GetOutputs(deploymentContext.Template.Outputs, armContext);
+                rtv = this.functions.GetOutputs(deploymentContext.Template.Outputs, armContext);
             }
 
             #endregion get template outputs

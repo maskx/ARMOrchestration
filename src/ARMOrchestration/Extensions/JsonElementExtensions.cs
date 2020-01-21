@@ -88,21 +88,21 @@ namespace maskx.ARMOrchestration.Extensions
             return null;
         }
 
-        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context)
+        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context, ARMTemplateHelper helper)
         {
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
             writer.WriteStartObject();
             foreach (var item in self.EnumerateObject())
             {
-                writer.WriteProperty(item, context);
+                writer.WriteProperty(item, context, helper);
             }
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());
         }
 
-        public static (bool Result, string Message, Dictionary<string, Resource> Resources) ExpandCopyResource(this JsonElement resource, Copy copy, Dictionary<string, object> context, ARMOrchestrationOptions options)
+        public static (bool Result, string Message, Dictionary<string, Resource> Resources) ExpandCopyResource(this JsonElement resource, Copy copy, Dictionary<string, object> context, ARMOrchestrationOptions options, ARMTemplateHelper helper)
         {
             Dictionary<string, Resource> resources = new Dictionary<string, Resource>();
             var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
@@ -113,7 +113,7 @@ namespace maskx.ARMOrchestration.Extensions
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var r = Resource.Parse(resource.GetRawText(), copyContext, options);
+                var r = helper.ParseResource(resource.GetRawText(), copyContext);
                 if (r.Result)
                     resources.Add(r.resource.ResouceId, r.resource);
                 else

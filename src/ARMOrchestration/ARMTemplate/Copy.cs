@@ -15,46 +15,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public Dictionary<string, Resource> Resources { get; set; }
 
-        public static (bool Result, string Message, Copy Copy) Parse(string jsonString, Dictionary<string, object> context)
-        {
-            var copy = new Copy();
-            using var doc = JsonDocument.Parse(jsonString);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("name", out JsonElement name))
-                copy.Name = name.GetString();
-            else
-                return (false, "not find name in copy node", null);
-
-            if (root.TryGetProperty("count", out JsonElement count))
-            {
-                if (count.ValueKind == JsonValueKind.Number)
-                    copy.Count = count.GetInt32();
-                else if (count.ValueKind == JsonValueKind.String)
-                    copy.Count = (int)ARMFunctions.Evaluate(count.GetString(), context);
-                else
-                    return (false, "the value of count property should be Number in copy node", null);
-            }
-            else
-                return (false, "not find count in copy node", null);
-            if (root.TryGetProperty("mode", out JsonElement mode))
-            {
-                copy.Mode = mode.GetString().ToLower();
-            }
-            if (root.TryGetProperty("batchSize", out JsonElement batchSize))
-            {
-                if (batchSize.ValueKind == JsonValueKind.Number)
-                    copy.BatchSize = batchSize.GetInt32();
-                else if (batchSize.ValueKind == JsonValueKind.String)
-                    copy.BatchSize = (int)ARMFunctions.Evaluate(batchSize.GetString(), context);
-            }
-            if (root.TryGetProperty("input", out JsonElement input))
-            {
-                copy.Input = input.GetRawText();
-            }
-            copy.Id = $"deployment/{(context["armcontext"] as DeploymentContext).DeploymentId}/copy/{copy.Name}";
-            return (true, string.Empty, copy);
-        }
-
         public string Id { get; set; }
 
         /// <summary>

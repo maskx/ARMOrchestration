@@ -9,7 +9,7 @@ namespace maskx.ARMOrchestration
 {
     public delegate AsyncRequestInput GetRequestInput(IServiceProvider serviceProvider, DeploymentContext context, Resource resource, string name, string property);
 
-    public delegate TaskResult ListFunction(string resourceId, string apiVersion, string functionValues = "", string value = "");
+    public delegate TaskResult ListFunction(IServiceProvider serviceProvider, string resourceId, string apiVersion, string functionValues = "", string value = "");
 
     public class ARMOrchestrationOptions
     {

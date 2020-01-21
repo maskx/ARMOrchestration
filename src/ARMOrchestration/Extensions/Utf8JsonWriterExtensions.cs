@@ -7,7 +7,7 @@ namespace maskx.ARMOrchestration.Extensions
 {
     public static class Utf8JsonWriterExtensions
     {
-        public static void WriteElement(this Utf8JsonWriter writer, JsonElement element, Dictionary<string, object> context)
+        public static void WriteElement(this Utf8JsonWriter writer, JsonElement element, Dictionary<string, object> context, ARMTemplateHelper helper)
         {
             switch (element.ValueKind)
             {
@@ -23,7 +23,7 @@ namespace maskx.ARMOrchestration.Extensions
                     writer.WriteStartObject();
                     foreach (var p in element.EnumerateObject())
                     {
-                        writer.WriteProperty(p, context);
+                        writer.WriteProperty(p, context, helper);
                     }
                     writer.WriteEndObject();
                     break;
@@ -32,13 +32,13 @@ namespace maskx.ARMOrchestration.Extensions
                     writer.WriteStartArray();
                     foreach (var a in element.EnumerateArray())
                     {
-                        writer.WriteElement(a, context);
+                        writer.WriteElement(a, context, helper);
                     }
                     writer.WriteEndArray();
                     break;
 
                 case JsonValueKind.String:
-                    var r = ARMFunctions.Evaluate(element.GetString(), context);
+                    var r = helper.functions.Evaluate(element.GetString(), context);
                     if (r is JsonValue j)
                         j.RootElement.WriteTo(writer);
                     else if (r is bool b)
@@ -56,14 +56,14 @@ namespace maskx.ARMOrchestration.Extensions
             }
         }
 
-        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context)
+        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context, ARMTemplateHelper helper)
         {
             if ("copy".Equals(property.Name, StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var item in property.Value.EnumerateArray())
                 {
                     // TODO: add validate
-                    var copyResult = Copy.Parse(item.GetRawText(), context);
+                    var copyResult = helper.ParseCopy(item.GetRawText(), context);
                     if (!copyResult.Result)
                         return (false, copyResult.Message);
                     var copy = copyResult.Copy;
@@ -78,7 +78,7 @@ namespace maskx.ARMOrchestration.Extensions
                     for (int i = 0; i < copy.Count; i++)
                     {
                         copyindex[copy.Name] = i;
-                        writer.WriteElement(doc.RootElement, copyContext);
+                        writer.WriteElement(doc.RootElement, copyContext, helper);
                     }
                     writer.WriteEndArray();
                 }
@@ -86,7 +86,7 @@ namespace maskx.ARMOrchestration.Extensions
             else
             {
                 writer.WritePropertyName(property.Name);
-                writer.WriteElement(property.Value, context);
+                writer.WriteElement(property.Value, context, helper);
             }
             return (true, string.Empty);
         }

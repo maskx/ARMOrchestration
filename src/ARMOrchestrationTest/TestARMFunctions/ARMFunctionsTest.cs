@@ -2,6 +2,7 @@
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -11,7 +12,7 @@ using Xunit;
 namespace ARMCreatorTest.TestARMFunctions
 {
     [Collection("WebHost ARMOrchestartion")]
-    [Trait("C", "ARMFunctions")]
+    [Trait("c", "ARMFunctions")]
     public class ARMFunctionsTest
     {
         private ARMOrchestartionFixture fixture;
@@ -416,14 +417,21 @@ namespace ARMCreatorTest.TestARMFunctions
                 }
                 }
             };
-
-            object rtv = ARMFunctions.Evaluate("[copyindex()]", cxt);
+            ARMFunctions functions = new ARMFunctions(
+                Options.Create(new ARMOrchestrationOptions()
+                {
+                    ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                    {
+                        return new TaskResult() { };
+                    }
+                }), null);
+            object rtv = functions.Evaluate("[copyindex()]", cxt);
             Assert.Equal(2, (int)rtv);
-            rtv = ARMFunctions.Evaluate("[copyindex(1)]", cxt);
+            rtv = functions.Evaluate("[copyindex(1)]", cxt);
             Assert.Equal(3, (int)rtv);
-            rtv = ARMFunctions.Evaluate("[copyindex('loop2')]", cxt);
+            rtv = functions.Evaluate("[copyindex('loop2')]", cxt);
             Assert.Equal(7, (int)rtv);
-            rtv = ARMFunctions.Evaluate("[copyindex('loop2',2)]", cxt);
+            rtv = functions.Evaluate("[copyindex('loop2',2)]", cxt);
             Assert.Equal(9, (int)rtv);
         }
 
@@ -729,6 +737,22 @@ namespace ARMCreatorTest.TestARMFunctions
                 { "nestedResourceOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceid", result);
+        }
+
+        [Trait("ARMFunctions", "Resource")]
+        [Fact(DisplayName = "list*")]
+        public void ListResource()
+        {
+            ARMFunctions functions = new ARMFunctions(
+                Options.Create(new ARMOrchestrationOptions()
+                {
+                    ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                    {
+                        return new TaskResult() { Content = value };
+                    }
+                }), null);
+            object rtv = functions.Evaluate("[listResource('resourceId','2019-01-02')]", new Dictionary<string, object>());
+            Assert.Equal("Resource", rtv.ToString());
         }
 
         #endregion Resource

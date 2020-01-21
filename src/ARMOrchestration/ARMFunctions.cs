@@ -7,15 +7,22 @@ using System.Text;
 using System.Text.Json;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.ARMTemplate;
+using Microsoft.Extensions.Options;
 
 namespace maskx.ARMOrchestration
 {
-    public static class ARMFunctions
+    public class ARMFunctions
     {
-        private static Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>> Functions = new Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>>();
+        private Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>> Functions = new Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>>();
+        private readonly ARMOrchestrationOptions options;
+        private readonly IServiceProvider serviceProvider;
 
-        static ARMFunctions()
+        public ARMFunctions(IOptions<ARMOrchestrationOptions> options,
+            IServiceProvider serviceProvider)
         {
+            this.options = options?.Value;
+            this.serviceProvider = serviceProvider;
+
             #region Array and object
 
             Functions.Add("array", (args, cxt) =>
@@ -686,7 +693,7 @@ namespace maskx.ARMOrchestration
             #endregion Resource
         }
 
-        public static string resourceId(DeploymentContext input, params object[] pars)
+        public string resourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string resourceGroupName = input.ResourceGroup;
@@ -733,7 +740,7 @@ namespace maskx.ARMOrchestration
             return $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public static string subscriptionResourceId(DeploymentContext input, params object[] pars)
+        public string subscriptionResourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string[] fullnames;
@@ -762,7 +769,7 @@ namespace maskx.ARMOrchestration
             return $"/subscriptions/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public static string tenantResourceId(params object[] pars)
+        public string tenantResourceId(params object[] pars)
         {
             string[] fullnames;
             IEnumerable<object> nestResources;
@@ -792,7 +799,7 @@ namespace maskx.ARMOrchestration
         /// parameters
         /// </param>
         /// <returns></returns>
-        public static object Evaluate(string function, Dictionary<string, object> context)
+        public object Evaluate(string function, Dictionary<string, object> context)
         {
             if (string.IsNullOrEmpty(function))
                 return string.Empty;
@@ -808,12 +815,20 @@ namespace maskx.ARMOrchestration
                         {
                             func(args, cxt);
                         }
-                        else if (TryGetCustomFunction(name, context, out ARMTemplate.Member member))
+                        else if (TryGetCustomFunction(name, context, out Member member))
                         {
                             EvaluateCustomFunc(args, cxt, member);
                         }
-                        else if (function.StartsWith("list", StringComparison.OrdinalIgnoreCase))
+                        else if (name.StartsWith("list", StringComparison.OrdinalIgnoreCase))
                         {
+                            var pars = args.EvaluateParameters(context);
+                            var r = options.ListFunction(
+                                 serviceProvider,
+                                 pars[0].ToString(),
+                                 pars[1].ToString(),
+                                 pars.Length == 3 ? pars[2].ToString() : string.Empty,
+                                 name.Remove(0, 4));
+                            args.Result = r.Content;
                         }
                     }
                 };
@@ -822,7 +837,7 @@ namespace maskx.ARMOrchestration
             return function;
         }
 
-        private static void EvaluateCustomFunc(FunctionArgs args, Dictionary<string, object> cxt, Member member)
+        private void EvaluateCustomFunc(FunctionArgs args, Dictionary<string, object> cxt, Member member)
         {
             Dictionary<string, object> udfContext = new Dictionary<string, object>();
             using JsonDocument udfPar = JsonDocument.Parse(member.Parameters);
@@ -845,7 +860,7 @@ namespace maskx.ARMOrchestration
             args.Result = GetOutput(member.Output, udfContext);
         }
 
-        private static bool TryGetCustomFunction(string function, Dictionary<string, object> context, out ARMTemplate.Member member)
+        private bool TryGetCustomFunction(string function, Dictionary<string, object> context, out ARMTemplate.Member member)
         {
             member = null;
             if (!context.TryGetValue("armcontext", out object armcxt))
@@ -865,22 +880,22 @@ namespace maskx.ARMOrchestration
             return true;
         }
 
-        public static void SetFunction(string name, Action<FunctionArgs, Dictionary<string, object>> func)
+        public void SetFunction(string name, Action<FunctionArgs, Dictionary<string, object>> func)
         {
             Functions[name] = func;
         }
 
-        public static object GetOutput(string output, Dictionary<string, object> context)
+        public object GetOutput(string output, Dictionary<string, object> context)
         {
             using JsonDocument outDoc = JsonDocument.Parse(output);
             var rootEle = outDoc.RootElement;
             var type = rootEle.GetProperty("type").GetString();
             var value = rootEle.GetProperty("value").GetString();
-            var v = ARMFunctions.Evaluate(value, context);
+            var v = this.Evaluate(value, context);
             return v;
         }
 
-        public static string GetOutputs(string outputs, Dictionary<string, object> context)
+        public string GetOutputs(string outputs, Dictionary<string, object> context)
         {
             using JsonDocument outDoc = JsonDocument.Parse(outputs);
             var outputDefineElement = outDoc.RootElement;
@@ -903,7 +918,7 @@ namespace maskx.ARMOrchestration
                         break;
 
                     case JsonValueKind.String:
-                        var r = ARMFunctions.Evaluate(v.GetString(), context);
+                        var r = this.Evaluate(v.GetString(), context);
                         var t = item.Value.GetProperty("type").GetString().ToLower();
                         if ("object" == t)
                             jOutput.Add(item.Name, JObject.Parse(r.ToString()));
