@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using maskx.ARMOrchestration.ARMTemplate;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -29,11 +30,8 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
-            if (string.IsNullOrEmpty(input.DeploymentId))
-                input.DeploymentId = context.OrchestrationInstance.InstanceId;
+
             string rtv = string.Empty;
-            if (string.IsNullOrEmpty(input.DeploymentId))
-                input.DeploymentId = context.OrchestrationInstance.InstanceId;
             var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity), input);
             if (valid.Code != 200)
                 return valid;
@@ -46,7 +44,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region ResourceGroup ReadOnly Lock Check
 
             //there are only resource group level lock
-            if (deploymentContext.Template.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
+            if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
             {
                 AsyncRequestInput lockResult = ARMOptions.GetRequestInput(
                     serviceProvider,

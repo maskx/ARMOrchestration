@@ -25,7 +25,8 @@ namespace maskx.ARMOrchestration.Activities
                 return new TaskResult(200, DataConverter.Serialize(new DeploymentContext()
                 {
                     CorrelationId = input.CorrelationId,
-                    DeploymentId = input.DeploymentId,
+                    RootId = input.InstanceId,
+                    DeploymentName = input.Name,
                     Mode = input.Mode,
                     ResourceGroup = input.ResourceGroup,
                     SubscriptionId = input.SubscriptionId,

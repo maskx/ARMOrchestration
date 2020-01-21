@@ -4,7 +4,7 @@ using Xunit;
 namespace ARMCreatorTest.TestARMFunctions
 {
     [Collection("WebHost ARMOrchestartion")]
-    [Trait("C", "ARMFunctions")]
+    [Trait("c", "ARMFunctions")]
     public class UserDefinedFunctionTest
     {
         private ARMOrchestartionFixture fixture;

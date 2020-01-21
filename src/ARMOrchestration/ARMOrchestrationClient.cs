@@ -22,7 +22,7 @@ namespace maskx.ARMOrchestration
         {
             return await orchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
-                InstanceId = args.DeploymentId,
+                InstanceId = args.InstanceId,
                 Orchestration = new OrchestrationSetting()
                 {
                     Creator = "DICreator",

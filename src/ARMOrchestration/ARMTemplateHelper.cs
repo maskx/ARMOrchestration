@@ -31,7 +31,7 @@ namespace maskx.ARMOrchestration
             DeploymentContext deploymentContext = new DeploymentContext()
             {
                 CorrelationId = input.CorrelationId,
-                DeploymentId = input.DeploymentId,
+                RootId = input.InstanceId,
                 Mode = input.Mode,
                 ResourceGroup = input.ResourceGroup,
                 SubscriptionId = input.SubscriptionId,
@@ -52,7 +52,12 @@ namespace maskx.ARMOrchestration
 
             template.Schema = schema.GetString();
             template.ContentVersion = contentVersion.GetString();
-
+            if (template.Schema.EndsWith("deploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                template.DeployLevel = DeployLevel.ResourceGroup;
+            else if (template.Schema.EndsWith("subscriptionDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                template.DeployLevel = DeployLevel.Subscription;
+            else if (template.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                template.DeployLevel = DeployLevel.ManagemnetGroup;
             if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
                 template.ApiProfile = apiProfile.GetString();
             if (root.TryGetProperty("parameters", out JsonElement parameters))
@@ -119,19 +124,91 @@ namespace maskx.ARMOrchestration
             }
             string queryScope;
             if (input.ScopeType == ScopeType.ResourceGroup)
-                queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}/resources";
+                queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
             else
-                queryScope = $"subscriptions/{input.SubscriptionId}/resources";
-            var str = this.options.ListFunction(serviceProvider, queryScope, valid.Template.ApiProfile);
+                queryScope = $"subscriptions/{input.SubscriptionId}";
+            var str = this.options.ListFunction(serviceProvider, queryScope, valid.Template.ApiProfile, string.Empty, "resources");
             using var doc = JsonDocument.Parse(str.Content);
+            Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
             foreach (var r in doc.RootElement.EnumerateArray())
             {
                 if (!r.TryGetProperty("id", out JsonElement id))
                     break;
-                id.GetString();
+                asset.Add(id.GetString(), r);
             }
+
+            foreach (var r in valid.Template.Resources.Values)
+            {
+                CheckResourceWhatIf(input, result, asset, r);
+            }
+            foreach (var copy in valid.Template.Copys.Values)
+            {
+                foreach (var r in copy.Resources.Values)
+                {
+                    CheckResourceWhatIf(input, result, asset, r);
+                }
+            }
+            if (input.Mode == DeploymentMode.Complete)
+            {
+                foreach (var item in asset)
+                {
+                    result.Changes.Add(new WhatIfChange()
+                    {
+                        ChangeType = ChangeType.Delete,
+                        ResourceId = item.Key
+                    });
+                }
+            }
+            else
+            {
+                foreach (var item in asset)
+                {
+                    result.Changes.Add(new WhatIfChange()
+                    {
+                        ChangeType = ChangeType.Ignore,
+                        ResourceId = item.Key
+                    });
+                }
+            }
+
             result.Status = "succeeded";
             return result;
+        }
+
+        private static void CheckResourceWhatIf(PredictTemplateOrchestrationInput input, WhatIfOperationResult result, Dictionary<string, JsonElement> asset, Resource resource)
+        {
+            if (asset.TryGetValue(resource.ResouceId, out JsonElement r))
+            {
+                if (input.ResultFormat == WhatIfResultFormat.ResourceIdOnly)
+                {
+                    result.Changes.Add(new WhatIfChange()
+                    {
+                        ChangeType = ChangeType.Deploy
+                    });
+                }
+                else
+                {
+                    // TODO: support WhatIfResultFormat.FullResourcePayloads
+                    result.Changes.Add(new WhatIfChange()
+                    {
+                        ChangeType = ChangeType.Modify
+                    });
+                }
+
+                asset.Remove(resource.ResouceId);
+            }
+            else
+            {
+                result.Changes.Add(new WhatIfChange()
+                {
+                    ChangeType = ChangeType.Create,
+                    ResourceId = resource.ResouceId
+                });
+            }
+            foreach (var childResource in resource.Resources)
+            {
+                CheckResourceWhatIf(input, result, asset, childResource);
+            }
         }
 
         public (bool Result, string Message, Copy Copy) ParseCopy(string jsonString, Dictionary<string, object> context)
@@ -170,12 +247,12 @@ namespace maskx.ARMOrchestration
             {
                 copy.Input = input.GetRawText();
             }
-            copy.Id = $"deployment/{(context["armcontext"] as DeploymentContext).DeploymentId}/copy/{copy.Name}";
+            copy.Id = $"deployment/{(context["armcontext"] as DeploymentContext).RootId}/copy/{copy.Name}";
             return (true, string.Empty, copy);
         }
 
-        public (bool Result, string Message, Resource resource)
-                ParseResource(string jsonString,
+        public (bool Result, string Message, Resource resource) ParseResource(
+            string jsonString,
             Dictionary<string, object> context,
             string parentName = "",
             string parentType = "")
@@ -246,14 +323,14 @@ namespace maskx.ARMOrchestration
             #region ResouceId
 
             var t = deploymentContext.Template;
-            if (t.DeployLevel == Template.ResourceGroupDeploymentLevel)
+            if (t.DeployLevel == DeployLevel.ResourceGroup)
                 r.ResouceId = functions.resourceId(
                     deploymentContext,
                     r.SubscriptionId,
                     r.ResourceGroup,
                     r.Type,
                     r.Name);
-            else if (t.DeployLevel == Template.SubscriptionDeploymentLevel)
+            else if (t.DeployLevel == DeployLevel.Subscription)
                 r.ResouceId = functions.subscriptionResourceId(deploymentContext, r.SubscriptionId, r.Type, r.Name);
             else
                 r.ResouceId = functions.tenantResourceId(r.Type, r.Name);

@@ -1,11 +1,20 @@
-﻿namespace maskx.ARMOrchestration.Orchestrations
+﻿using maskx.ARMOrchestration.ARMTemplate;
+
+namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestrationInput
     {
-        public string DeploymentId { get; set; }
+        /// <summary>
+        ///
+        /// </summary>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error"/>
+        public bool RollbackToLastDeployment { get; set; } = false;
+
+        public string InstanceId { get; set; }
         public string CorrelationId { get; set; }
-        public string TemplateLink { get; set; }
+        public TemplateLink TemplateLink { get; set; }
         public string Template { get; set; }
+        public ParametersLink ParametersLink { get; set; }
         public string Parameters { get; set; }
 
         /// <summary>

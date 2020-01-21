@@ -4,7 +4,8 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentContext
     {
-        public string DeploymentId { get; set; }
+        public string DeploymentName { get; set; }
+        public string RootId { get; set; }
         public string CorrelationId { get; set; }
         public string ResourceGroup { get; set; }
         public string SubscriptionId { get; set; }

@@ -28,7 +28,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             var resourceDeploy = input.Resource;
             var operationArgs = new DeploymentOperationsActivityInput()
             {
-                DeploymentId = input.Context.DeploymentId,
+                DeploymentId = input.Context.RootId,
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
                 CorrelationId = input.Context.CorrelationId,
@@ -67,7 +67,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(WaitDependsOnOrchestration),
-                    (input.Context.DeploymentId, resourceDeploy.DependsOn));
+                    (input.Context.RootId, resourceDeploy.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }

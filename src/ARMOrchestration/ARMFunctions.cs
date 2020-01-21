@@ -392,7 +392,7 @@ namespace maskx.ARMOrchestration
             {
                 var input = cxt["armcontext"] as DeploymentContext;
                 JObject obj = new JObject();
-                obj.Add("name", input.DeploymentId);
+                obj.Add("name", input.DeploymentName);
                 JObject properties = new JObject();
                 //properties.Add("template", JObject.Parse(input.Template));
                 //properties.Add("parameters", JObject.Parse(input.Parameters));
@@ -672,9 +672,9 @@ namespace maskx.ARMOrchestration
                 var pars = args.EvaluateParameters(cxt);
                 var input = cxt["armcontext"] as DeploymentContext;
                 var t = input.Template;
-                if (t.DeployLevel == ARMTemplate.Template.ResourceGroupDeploymentLevel)
+                if (t.DeployLevel == DeployLevel.ResourceGroup)
                     args.Result = resourceId(input, pars);
-                else if (t.DeployLevel == ARMTemplate.Template.SubscriptionDeploymentLevel)
+                else if (t.DeployLevel == DeployLevel.Subscription)
                     args.Result = subscriptionResourceId(input, pars);
                 else
                     args.Result = tenantResourceId(pars);
