@@ -35,6 +35,7 @@ namespace maskx.ARMOrchestration.Extensions
                 orchList.Add(typeof(DeploymentOrchestration));
                 orchList.Add(typeof(WaitDependsOnOrchestration));
                 orchList.Add(typeof(CopyOrchestration));
+                orchList.Add(typeof(RequestOrchestration));
                 return orchList;
             };
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>

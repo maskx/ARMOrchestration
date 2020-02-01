@@ -1,6 +1,6 @@
 ﻿namespace maskx.ARMOrchestration
 {
-    public class BuitinServiceTypes
+    public class BuiltinServiceTypes
     {
         public string ResourceGroup { get; set; } = "Microsoft.Resources/resourceGroups";
         public string Subscription { get; set; }

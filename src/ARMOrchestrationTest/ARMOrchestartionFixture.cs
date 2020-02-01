@@ -35,9 +35,9 @@ namespace ARMCreatorTest
                            HubName = TestHelper.HubName,
                            ConnectionString = TestHelper.ConnectionString
                        };
-                       options.GetRequestInput = (sp, cxt, res, name, property) =>
+                       options.GetRequestInput = (sp, input) =>
                        {
-                           return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", res);
+                           return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input.Resource);
                        };
                    });
                }).Build();

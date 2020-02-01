@@ -32,10 +32,32 @@ namespace maskx.ARMOrchestration.Orchestrations
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
 
             string rtv = string.Empty;
+
+            #region validate template
+
             var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity), input);
             if (valid.Code != 200)
                 return valid;
+
+            #endregion validate template
+
             var deploymentContext = DataConverter.Deserialize<DeploymentContext>(valid.Content);
+
+            #region check permission
+
+            var permissionResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                            typeof(RequestOrchestration),
+                            new RequestOrchestrationInput()
+                            {
+                                DeploymentContext = deploymentContext,
+                                RequestAction = RequestAction.CheckPermission
+                            });
+            if (permissionResult.Code != 200)
+            {
+                return permissionResult;
+            }
+
+            #endregion check permission
 
             Dictionary<string, object> armContext = new Dictionary<string, object>() {
                 { "armcontext", deploymentContext}
@@ -46,17 +68,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             //there are only resource group level lock
             if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
             {
-                AsyncRequestInput lockResult = ARMOptions.GetRequestInput(
-                    serviceProvider,
-                    deploymentContext,
-                    new ARMTemplate.Resource()
-                    {
-                        ResouceId = functions.Evaluate($"[subscriptionresourceid('{ARMOptions.BuitinServiceTypes.ResourceGroup}','{input.ResourceGroup}')]", armContext).ToString()
-                    },
-                    "locks", "readonly");
                 var readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                     typeof(AsyncRequestOrchestration),
-                                     lockResult);
+                        typeof(RequestOrchestration),
+                        new RequestOrchestrationInput()
+                        {
+                            DeploymentContext = deploymentContext,
+                            RequestAction = RequestAction.CheckLock
+                        });
                 if (readonlyLockCheckResult.Code != 404)
                     return readonlyLockCheckResult;
             }
@@ -93,7 +111,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (input.Mode == DeploymentMode.Complete)
             {
-                // TODO: complete mode, delete resource not exist in templae
+                // TODO: complete mode, delete resource not exist in template
             }
 
             #region get template outputs

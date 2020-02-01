@@ -128,9 +128,11 @@ namespace maskx.ARMOrchestration
             else
                 queryScope = $"subscriptions/{input.SubscriptionId}";
             var str = this.options.ListFunction(serviceProvider, queryScope, valid.Template.ApiProfile, string.Empty, "resources");
+            //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);
             Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
-            foreach (var r in doc.RootElement.EnumerateArray())
+            doc.RootElement.TryGetProperty("values", out JsonElement values);
+            foreach (var r in values.EnumerateArray())
             {
                 if (!r.TryGetProperty("id", out JsonElement id))
                     break;

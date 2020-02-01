@@ -13,5 +13,6 @@ namespace maskx.ARMOrchestration.Orchestrations
         public DeploymentMode Mode { get; set; } = DeploymentMode.Incremental;
         public Template Template { get; set; }
         public string Parameters { get; set; }
+        public string DeploymentId { get; set; }
     }
 }

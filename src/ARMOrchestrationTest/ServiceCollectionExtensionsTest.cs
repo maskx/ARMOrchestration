@@ -37,13 +37,13 @@ namespace ARMOrchestrationTest
                             ConnectionString = TestHelper.ConnectionString,
                             AutoCreate = true
                         },
-                        GetRequestInput = (sp, cxt, res, name, property) =>
+                        GetRequestInput = (sp, input) =>
                          {
                              return new AsyncRequestInput()
                              {
-                                 RequestTo = name,
+                                 RequestTo = input.RequestAction.ToString(),
                                  RequestOperation = "PUT",
-                                 RequsetContent = property,
+                                 RequsetContent = input.Resource.ToString(),
                                  //   RuleField = ruleField,
                                  Processor = "MockCommunicationProcessor"
                              };

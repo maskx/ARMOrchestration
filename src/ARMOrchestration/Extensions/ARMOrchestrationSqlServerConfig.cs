@@ -12,6 +12,6 @@ namespace maskx.ARMOrchestration.Extensions
         public CommunicationWorkerOptions CommunicationWorkerOptions { get; set; } = new CommunicationWorkerOptions();
         public GetRequestInput GetRequestInput { get; set; }
         public List<string> ExtensionResources { get; set; } = new List<string>();
-        public BuitinServiceTypes BuitinServiceTypes { get; set; } = new BuitinServiceTypes();
+        public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
     }
 }

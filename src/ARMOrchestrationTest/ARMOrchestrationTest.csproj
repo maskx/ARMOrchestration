@@ -236,4 +236,8 @@
   <ItemGroup>
     <ProjectReference Include="..\ARMOrchestration\ARMOrchestration.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="WhatIfTests\Template\" />
+  </ItemGroup>
 </Project>

@@ -77,8 +77,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region check policy
 
             var checkPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(AsyncRequestOrchestration),
-                            ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "policy", "check"));
+                            typeof(RequestOrchestration),
+                            new RequestOrchestrationInput()
+                            {
+                                RequestAction = RequestAction.CheckPolicy,
+                                DeploymentContext = input.Context,
+                                Resource = resourceDeploy
+                            });
             if (checkPolicyResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.PolicyCheckSuccessed;
@@ -98,8 +103,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Check Resource
 
             beginCreateResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-            typeof(AsyncRequestOrchestration),
-            ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "resource", "check"));
+            typeof(RequestOrchestration),
+            new RequestOrchestrationInput()
+            {
+                DeploymentContext = input.Context,
+                Resource = resourceDeploy,
+                RequestAction = RequestAction.CheckResource
+            });
             // In communication service
             // TODO: when resource in Provisioning, we need wait
             // communication should return the resource status until  resource  available to be Provisioning
@@ -122,11 +132,16 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Resource ReadOnly Lock Check
 
             // code=200 update; code=204 create
-            if (beginCreateResourceResult != null && beginCreateResourceResult.Code == 200)
+            if (beginCreateResourceResult.Code == 200)
             {
                 TaskResult readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                   typeof(AsyncRequestOrchestration),
-                                  ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "locks", "readonly"));
+                                   typeof(RequestOrchestration),
+                                   new RequestOrchestrationInput()
+                                   {
+                                       Resource = resourceDeploy,
+                                       DeploymentContext = input.Context,
+                                       RequestAction = RequestAction.CheckLock
+                                   });
                 if (readonlyLockCheckResult.Code == 404)// lock not exist
                 {
                     operationArgs.Stage = ProvisioningStage.LockCheckSuccessed;
@@ -145,8 +160,10 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Check Quota
 
             var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-             typeof(AsyncRequestOrchestration),
-             ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "quota", "check"));
+             typeof(RequestOrchestration),
+             new RequestOrchestrationInput()
+             {
+             });
             if (checkQoutaResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.QuotaCheckSuccessed;
@@ -164,16 +181,23 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Create or Update Resource
 
             var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-               typeof(AsyncRequestOrchestration),
-               ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "resource", "create"));
+               typeof(RequestOrchestration),
+               new RequestOrchestrationInput()
+               {
+                   RequestAction = beginCreateResourceResult.Code == 200 ? RequestAction.UpdateResource : RequestAction.CreateResource,
+                   DeploymentContext = input.Context,
+                   Resource = resourceDeploy
+               });
             if (createResourceResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
+                operationArgs.Result = createResourceResult.Content;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
             else
             {
                 operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
+                operationArgs.Result = createResourceResult.Content;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return createResourceResult;
             }
@@ -187,8 +211,16 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 extenstionTasks.Add(
                     context.CreateSubOrchestrationInstance<TaskResult>(
-                        typeof(AsyncRequestOrchestration),
-                        ARMOptions.GetRequestInput(serviceProvider, input.Context, resourceDeploy, item.Key, item.Value)));
+                        typeof(RequestOrchestration),
+                        new RequestOrchestrationInput()
+                        {
+                            Resource = resourceDeploy,
+                            RequestAction = RequestAction.CreateExtensionResource,
+                            DeploymentContext = input.Context,
+                            Context = new Dictionary<string, object>() {
+                                {"extenstion",item.Value }
+                            }
+                        }));
             }
             if (extenstionTasks.Count != 0)
             {
@@ -270,8 +302,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             // TODO: should start a orchestration
             // in communication
             var applyPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-              typeof(AsyncRequestOrchestration),
-              ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "policy", "apply"));
+              typeof(RequestOrchestration),
+              new RequestOrchestrationInput()
+              {
+                  RequestAction = RequestAction.ApplyPolicy,
+                  Resource = resourceDeploy,
+                  DeploymentContext = input.Context
+              });
             if (applyPolicyResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.PolicyApplySuccessed;
@@ -289,8 +326,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Commit Quota
 
             var commitQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-            typeof(AsyncRequestOrchestration),
-            ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "quota", "commit"));
+            typeof(RequestOrchestration),
+            new RequestOrchestrationInput()
+            {
+                RequestAction = RequestAction.CommitQuota,
+                Resource = resourceDeploy,
+                DeploymentContext = input.Context
+            });
             if (commitQoutaResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.QuotaCommitSuccesed;
@@ -315,8 +357,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             // 资产服务 里有 资源之间的关系，知道 具体资源可以包含其他资源，及其这些被包含的资源在报文中的路径，从而可以进行处理
 
             var commitResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-            typeof(AsyncRequestOrchestration),
-            ARMOptions.GetRequestInput(this.serviceProvider, input.Context, resourceDeploy, "resource", "commit"));
+            typeof(RequestOrchestration),
+            new RequestOrchestrationInput()
+            {
+                Resource = resourceDeploy,
+                RequestAction = RequestAction.CommitResource,
+                DeploymentContext = input.Context
+            });
             if (commitResourceResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;

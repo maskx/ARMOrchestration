@@ -228,13 +228,13 @@ namespace ARMCreatorTest
                      {
                          ConnectionString = TestHelper.ConnectionString
                      };
-                     opt.GetRequestInput = (sp, cxt, res, name, property) =>
+                     opt.GetRequestInput = (sp, input) =>
                      {
                          return new AsyncRequestInput()
                          {
-                             RequestTo = name,
+                             RequestTo = input.RequestAction.ToString(),
                              RequestOperation = "PUT",
-                             RequsetContent = property,
+                             RequsetContent = input.Resource?.ToString(),
                              //   RuleField = ruleField,
                              Processor = "MockCommunicationProcessor"
                          };
@@ -262,6 +262,7 @@ namespace ARMCreatorTest
                  orchestrationTypes.Add(typeof(DeploymentOrchestration));
                  orchestrationTypes.Add(typeof(WaitDependsOnOrchestration));
                  orchestrationTypes.Add(typeof(CopyOrchestration));
+                 orchestrationTypes.Add(typeof(RequestOrchestration));
                  activityTypes.Add(typeof(AsyncRequestActivity));
                  activityTypes.Add(typeof(HttpRequestActivity));
                  activityTypes.Add(typeof(DeploymentOperationsActivity));

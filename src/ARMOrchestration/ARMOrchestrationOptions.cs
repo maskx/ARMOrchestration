@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration
 {
-    public delegate AsyncRequestInput GetRequestInput(IServiceProvider serviceProvider, DeploymentContext context, Resource resource, string name, string property);
+    public delegate AsyncRequestInput GetRequestInput(IServiceProvider serviceProvider, RequestOrchestrationInput input);
 
     public delegate TaskResult ListFunction(IServiceProvider serviceProvider, string resourceId, string apiVersion, string functionValues = "", string value = "");
 
@@ -22,6 +22,6 @@ namespace maskx.ARMOrchestration
         public ListFunction ListFunction { get; set; }
         public GetRequestInput GetRequestInput { get; set; }
         public List<string> ExtensionResources { get; set; } = new List<string>();
-        public BuitinServiceTypes BuitinServiceTypes { get; set; } = new BuitinServiceTypes();
+        public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
     }
 }
