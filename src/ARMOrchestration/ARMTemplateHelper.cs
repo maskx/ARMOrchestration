@@ -31,7 +31,7 @@ namespace maskx.ARMOrchestration
             DeploymentContext deploymentContext = new DeploymentContext()
             {
                 CorrelationId = input.CorrelationId,
-                RootId = input.InstanceId,
+                RootId = input.DeploymentId,
                 Mode = input.Mode,
                 ResourceGroup = input.ResourceGroup,
                 SubscriptionId = input.SubscriptionId,
@@ -177,7 +177,7 @@ namespace maskx.ARMOrchestration
             return result;
         }
 
-        private static void CheckResourceWhatIf(PredictTemplateOrchestrationInput input, WhatIfOperationResult result, Dictionary<string, JsonElement> asset, Resource resource)
+        private void CheckResourceWhatIf(PredictTemplateOrchestrationInput input, WhatIfOperationResult result, Dictionary<string, JsonElement> asset, Resource resource)
         {
             if (asset.TryGetValue(resource.ResouceId, out JsonElement r))
             {
@@ -216,6 +216,7 @@ namespace maskx.ARMOrchestration
         public (bool Result, string Message, Copy Copy) ParseCopy(string jsonString, Dictionary<string, object> context)
         {
             var copy = new Copy();
+            var deployContext = context["armcontext"] as DeploymentContext;
             using var doc = JsonDocument.Parse(jsonString);
             var root = doc.RootElement;
             if (root.TryGetProperty("name", out JsonElement name))
@@ -249,7 +250,8 @@ namespace maskx.ARMOrchestration
             {
                 copy.Input = input.GetRawText();
             }
-            copy.Id = $"deployment/{(context["armcontext"] as DeploymentContext).RootId}/copy/{copy.Name}";
+
+            copy.Id = $"subscription/{deployContext.SubscriptionId}/{options.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/copy/{copy.Name}";
             return (true, string.Empty, copy);
         }
 
@@ -308,11 +310,11 @@ namespace maskx.ARMOrchestration
             if (root.TryGetProperty("properties", out JsonElement properties))
                 r.Properties = properties.ExpandObject(context, this);
             if (root.TryGetProperty("sku", out JsonElement sku))
-                r.SKU = sku.GetString();
+                r.SKU = sku.GetRawText();
             if (root.TryGetProperty("kind", out JsonElement kind))
-                r.Kind = kind.GetString();
+                r.Kind = kind.GetRawText();
             if (root.TryGetProperty("plan", out JsonElement plan))
-                r.Plan = plan.GetString();
+                r.Plan = plan.GetRawText();
             if (root.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
                 r.ResourceGroup = functions.Evaluate(resourceGroup.GetString(), context).ToString();
             else

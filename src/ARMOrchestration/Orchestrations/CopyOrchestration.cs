@@ -13,7 +13,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             var operationArgs = new DeploymentOperationsActivityInput()
             {
-                DeploymentId = input.Context.RootId,
+                DeploymentId = input.Context.DeploymentId,
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
                 CorrelationId = input.Context.CorrelationId,

@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error"/>
         public bool RollbackToLastDeployment { get; set; } = false;
 
-        public string InstanceId { get; set; }
+        public string DeploymentId { get; set; }
         public string CorrelationId { get; set; }
         public TemplateLink TemplateLink { get; set; }
         public string Template { get; set; }

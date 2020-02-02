@@ -26,7 +26,7 @@ namespace maskx.ARMOrchestration.Activities
                 {
                     CorrelationId = input.CorrelationId,
                     RootId = context.OrchestrationInstance.InstanceId,
-                    DeploymentId = input.InstanceId,
+                    DeploymentId = string.IsNullOrEmpty(input.DeploymentId) ? context.OrchestrationInstance.InstanceId : input.DeploymentId,
                     DeploymentName = input.Name,
                     Mode = input.Mode,
                     ResourceGroup = input.ResourceGroup,

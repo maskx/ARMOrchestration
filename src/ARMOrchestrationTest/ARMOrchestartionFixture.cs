@@ -15,6 +15,7 @@ namespace ARMCreatorTest
         private IHost workerHost = null;
         public OrchestrationWorker OrchestrationWorker { get; private set; }
         public OrchestrationWorkerClient OrchestrationWorkerClient { get; private set; }
+        public ARMFunctions ARMFunctions { get; set; }
 
         public ARMOrchestartionFixture()
         {
@@ -44,6 +45,7 @@ namespace ARMCreatorTest
             workerHost.RunAsync();
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();
             OrchestrationWorkerClient = workerHost.Services.GetService<OrchestrationWorkerClient>();
+            this.ARMFunctions = workerHost.Services.GetService<ARMFunctions>();
         }
 
         public void Dispose()

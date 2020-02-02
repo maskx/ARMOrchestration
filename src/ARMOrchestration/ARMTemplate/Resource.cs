@@ -55,21 +55,5 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string SubscriptionId { get; set; }
 
         public string ResouceId { get; set; }
-
-        public bool TryGetExtensionResource(string name, out string resource)
-        {
-            resource = null;
-            if (string.IsNullOrEmpty(this.Properties))
-                return false;
-            using var doc = JsonDocument.Parse(this.Properties);
-            var root = doc.RootElement;
-            if (root.TryGetProperty(name, out JsonElement r))
-            {
-                resource = r.GetRawText();
-                return true;
-            }
-
-            return false;
-        }
     }
 }

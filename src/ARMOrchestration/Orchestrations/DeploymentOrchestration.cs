@@ -1,13 +1,11 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
-using maskx.OrchestrationService.Orchestration;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using maskx.ARMOrchestration.ARMTemplate;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {

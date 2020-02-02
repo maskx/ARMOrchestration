@@ -62,7 +62,7 @@ namespace ARMOrchestrationTest
             var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
                 new DeploymentOrchestrationInput()
                 {
-                    InstanceId = Guid.NewGuid().ToString("N"),
+                    DeploymentId = Guid.NewGuid().ToString("N"),
                     Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
