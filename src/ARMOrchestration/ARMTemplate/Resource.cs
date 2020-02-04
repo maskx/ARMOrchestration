@@ -38,7 +38,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
         ///
         /// </summary>
-        public List<string> DependsOn { get; set; }
+        public List<string> DependsOn { get; set; } = new List<string>();
 
         public string Properties { get; set; }
 

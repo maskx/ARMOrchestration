@@ -14,5 +14,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public Template Template { get; set; }
         public string Parameters { get; set; }
         public string DeploymentId { get; set; }
+        public TemplateLink TemplateLink { get; set; }
+        public ParametersLink ParametersLink { get; set; }
     }
 }

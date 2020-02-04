@@ -9,7 +9,9 @@ namespace maskx.ARMOrchestration
 {
     public delegate AsyncRequestInput GetRequestInput(IServiceProvider serviceProvider, RequestOrchestrationInput input);
 
-    public delegate TaskResult ListFunction(IServiceProvider serviceProvider, string resourceId, string apiVersion, string functionValues = "", string value = "");
+    public delegate TaskResult ListFunction(IServiceProvider serviceProvider, DeploymentContext context, string resourceId, string apiVersion, string functionValues = "", string value = "");
+
+    public delegate TaskResult ReferenceFunction(IServiceProvider serviceProvider, DeploymentContext context, string resourceName, string apiVersion = "", bool full = false);
 
     public class ARMOrchestrationOptions
     {
@@ -20,6 +22,7 @@ namespace maskx.ARMOrchestration
 
         public DatabaseConfig Database { get; set; }
         public ListFunction ListFunction { get; set; }
+        public ReferenceFunction ReferenceFunction { get; set; }
         public GetRequestInput GetRequestInput { get; set; }
         public List<string> ExtensionResources { get; set; } = new List<string>();
         public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();

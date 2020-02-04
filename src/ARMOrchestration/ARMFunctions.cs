@@ -8,6 +8,7 @@ using System.Text.Json;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.ARMTemplate;
 using Microsoft.Extensions.Options;
+using maskx.DurableTask.SQLServer.SQL;
 
 namespace maskx.ARMOrchestration
 {
@@ -22,7 +23,11 @@ namespace maskx.ARMOrchestration
         {
             this.options = options?.Value;
             this.serviceProvider = serviceProvider;
+            this.InitBuiltInFunction();
+        }
 
+        private void InitBuiltInFunction()
+        {
             #region Array and object
 
             Functions.Add("array", (args, cxt) =>
@@ -394,12 +399,12 @@ namespace maskx.ARMOrchestration
                 JObject obj = new JObject();
                 obj.Add("name", input.DeploymentName);
                 JObject properties = new JObject();
-                //properties.Add("template", JObject.Parse(input.Template));
-                //properties.Add("parameters", JObject.Parse(input.Parameters));
-                //properties.Add("mode", input.Mode);
-                //// TODO: Set provisioningState
-                //properties.Add("provisioningState", "Accepted");
-                //properties.Add("templateLink", new JObject("uri", input.TemplateLink));
+                properties.Add("template", JObject.Parse(input.Template.ToString()));
+                properties.Add("parameters", JObject.Parse(input.Parameters));
+                properties.Add("mode", input.Mode.ToString().ToLower());
+                // TODO: Set provisioningState
+                properties.Add("provisioningState", "Accepted");
+                properties.Add("templateLink", new JValue(input.TemplateLink));
                 obj.Add("properties", properties);
                 args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));
             });
@@ -689,8 +694,64 @@ namespace maskx.ARMOrchestration
             {
                 args.Result = tenantResourceId(args.EvaluateParameters(cxt));
             });
+            Functions.Add("reference", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                string resourceName = pars[0].ToString();
+                var context = cxt["armcontext"] as DeploymentContext;
+                if (cxt.TryGetValue("validateTime", out object validateTime))
+                {
+                    if ((bool)validateTime)
+                    {
+                        if (!cxt.TryGetValue("reference", out object refs))
+                        {
+                        }
+                    }
+                }
+                var r = GetResourceWithinTemplate(resourceName, context);
+                if (string.IsNullOrEmpty(r))
+                {
+                    string apiVersion = string.Empty;
+                    bool full = false;
+                    var taskResult = this.options.ReferenceFunction(serviceProvider, context, resourceName, apiVersion, full);
+                    args.Result = new JsonValue(taskResult.Content);
+                }
+                else
+                {
+                    args.Result = new JsonValue(r);
+                }
+            });
 
             #endregion Resource
+        }
+
+        private string GetResourceWithinTemplate(string resourceName, DeploymentContext cxt)
+        {
+            using (var db = new DbAccess(options.Database.ConnectionString))
+            {
+                if (resourceName.IndexOf('/') < 0)
+                {
+                    db.AddStatement($"select Result from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Resource=@Resource ",
+                        new
+                        {
+                            DeploymentId = cxt.DeploymentId,
+                            Resource = resourceName
+                        });
+                }
+                else
+                {
+                    db.AddStatement($"select Result from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and ResourceId like N'%'+@Resource ",
+                       new
+                       {
+                           DeploymentId = cxt.DeploymentId,
+                           Resource = resourceName
+                       });
+                }
+                var r = db.ExecuteScalarAsync().Result;
+                if (r == DBNull.Value)
+                    return string.Empty;
+                return r.ToString();
+            }
         }
 
         public string resourceId(DeploymentContext input, params object[] pars)
@@ -824,6 +885,7 @@ namespace maskx.ARMOrchestration
                             var pars = args.EvaluateParameters(context);
                             var r = options.ListFunction(
                                  serviceProvider,
+                                 cxt["armcontext"] as DeploymentContext,
                                  pars[0].ToString(),
                                  pars[1].ToString(),
                                  pars.Length == 3 ? pars[2].ToString() : string.Empty,

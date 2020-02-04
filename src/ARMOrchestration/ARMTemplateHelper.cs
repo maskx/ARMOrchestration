@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
+﻿using DurableTask.Core.Serializing;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
@@ -27,7 +28,10 @@ namespace maskx.ARMOrchestration
 
         public (bool Result, string Message, Template Template) ValidateTemplate(DeploymentOrchestrationInput input)
         {
-            Template template = new Template();
+            Template template = new Template()
+            {
+                innerString = input.Template
+            };
             DeploymentContext deploymentContext = new DeploymentContext()
             {
                 CorrelationId = input.CorrelationId,
@@ -37,7 +41,9 @@ namespace maskx.ARMOrchestration
                 SubscriptionId = input.SubscriptionId,
                 TenantId = input.TenantId,
                 Parameters = input.Parameters,
-                Template = template
+                Template = template,
+                TemplateLink = input.TemplateLink,
+                ParametersLink = input.ParametersLink
             };
             using JsonDocument doc = JsonDocument.Parse(input.Template);
             var root = doc.RootElement;
@@ -122,12 +128,24 @@ namespace maskx.ARMOrchestration
                 result.Status = "failed";
                 result.Error = new ErrorResponse() { Code = "400", Message = valid.Message };
             }
+            DeploymentContext deploymentContext = new DeploymentContext()
+            {
+                CorrelationId = input.CorrelationId,
+                Mode = input.Mode,
+                ResourceGroup = input.ResourceGroupName,
+                SubscriptionId = input.SubscriptionId,
+                TenantId = input.TenantId,
+                Parameters = input.Parameters,
+                Template = valid.Template,
+                TemplateLink = input.TemplateLink,
+                ParametersLink = input.ParametersLink
+            };
             string queryScope;
             if (input.ScopeType == ScopeType.ResourceGroup)
                 queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
             else
                 queryScope = $"subscriptions/{input.SubscriptionId}";
-            var str = this.options.ListFunction(serviceProvider, queryScope, valid.Template.ApiProfile, string.Empty, "resources");
+            var str = this.options.ListFunction(serviceProvider, deploymentContext, queryScope, valid.Template.ApiProfile, string.Empty, "resources");
             //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);
             Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
@@ -262,6 +280,7 @@ namespace maskx.ARMOrchestration
             string parentType = "")
         {
             DeploymentContext deploymentContext = context["armcontext"] as DeploymentContext;
+
             Resource r = new Resource();
             using var jsonDoc = JsonDocument.Parse(jsonString);
             var root = jsonDoc.RootElement;
@@ -272,6 +291,7 @@ namespace maskx.ARMOrchestration
                 else if (condition.ValueKind == JsonValueKind.String)
                     r.Condition = (bool)functions.Evaluate(condition.GetString(), context);
             }
+
             if (root.TryGetProperty("apiVersion", out JsonElement apiVersion))
                 r.ApiVersion = apiVersion.GetString();
             else
@@ -300,7 +320,6 @@ namespace maskx.ARMOrchestration
                 r.Comments = comments.GetString();
             if (root.TryGetProperty("dependsOn", out JsonElement dependsOn))
             {
-                r.DependsOn = new List<string>();
                 using var dd = JsonDocument.Parse(dependsOn.GetRawText());
                 foreach (var item in dd.RootElement.EnumerateArray())
                 {

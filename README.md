@@ -9,7 +9,7 @@ The context need 1 value:
 
 |key|value|description|
 |-|-|-|
-|armcontext|ARMOrchestrationInput||
+|armcontext|DeploymentContext||
 |
 
 ### [Array and object](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-array)

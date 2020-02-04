@@ -1,8 +1,4 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
+﻿using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -30,5 +26,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-management-group
         /// </summary>
         public DeployLevel DeployLevel { get; set; }
+
+        internal string innerString;
+
+        public override string ToString()
+        {
+            return innerString;
+        }
     }
 }
