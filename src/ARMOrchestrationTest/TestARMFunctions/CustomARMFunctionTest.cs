@@ -13,7 +13,7 @@ namespace ARMCreatorTest.TestARMFunctions
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()
                 {
-                    ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                    ListFunction = (sp, cxr, resourceId, apiVersion, functionValues, value) =>
                     {
                         return new TaskResult() { Content = value };
                     }

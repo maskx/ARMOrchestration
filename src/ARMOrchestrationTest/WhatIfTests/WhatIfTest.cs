@@ -23,7 +23,7 @@ namespace ARMOrchestrationTest.WhatIfTests
             }),
             new ARMFunctions(Options.Create(new ARMOrchestrationOptions()
             {
-                ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
                 {
                     JObject obj = new JObject();
                     JArray values = new JArray();

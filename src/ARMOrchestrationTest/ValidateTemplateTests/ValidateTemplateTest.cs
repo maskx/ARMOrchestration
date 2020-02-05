@@ -20,7 +20,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             }),
             new ARMFunctions(Options.Create(new ARMOrchestrationOptions()
             {
-                ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
                 {
                     return new TaskResult() { };
                 }

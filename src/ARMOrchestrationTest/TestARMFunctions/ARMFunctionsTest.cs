@@ -1,4 +1,5 @@
 ﻿using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
@@ -420,7 +421,7 @@ namespace ARMCreatorTest.TestARMFunctions
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()
                 {
-                    ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                    ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
                     {
                         return new TaskResult() { };
                     }
@@ -746,12 +747,17 @@ namespace ARMCreatorTest.TestARMFunctions
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()
                 {
-                    ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                    ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
                     {
                         return new TaskResult() { Content = value };
                     }
                 }), null);
-            object rtv = functions.Evaluate("[listResource('resourceId','2019-01-02')]", new Dictionary<string, object>());
+            object rtv = functions.Evaluate(
+                "[listResource('resourceId','2019-01-02')]",
+                new Dictionary<string, object>() {
+                    {"armcontext",new DeploymentContext(){
+                        Template=new Template() } }
+                });
             Assert.Equal("Resource", rtv.ToString());
         }
 

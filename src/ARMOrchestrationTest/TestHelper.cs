@@ -220,7 +220,7 @@ namespace ARMCreatorTest
                  });
                  services.Configure<ARMOrchestrationOptions>((opt) =>
                  {
-                     opt.ListFunction = (sp, resourceId, apiVersion, functionValues, value) =>
+                     opt.ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
                      {
                          return new TaskResult() { Content = value };
                      };
