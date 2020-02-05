@@ -10,7 +10,6 @@ namespace maskx.ARMOrchestration.Extensions
         public SQLServerOrchestrationServiceSettings OrchestrationServiceSettings { get; set; } = new SQLServerOrchestrationServiceSettings();
         public OrchestrationWorkerOptions OrchestrationWorkerOptions { get; set; } = new OrchestrationWorkerOptions();
         public CommunicationWorkerOptions CommunicationWorkerOptions { get; set; } = new CommunicationWorkerOptions();
-        public GetRequestInput GetRequestInput { get; set; }
         public List<string> ExtensionResources { get; set; } = new List<string>();
         public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
     }

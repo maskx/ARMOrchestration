@@ -15,15 +15,18 @@ namespace maskx.ARMOrchestration
         private readonly ARMOrchestrationOptions options;
         public readonly ARMFunctions functions;
         private readonly IServiceProvider serviceProvider;
+        private readonly IInfrastructure infrastructure;
 
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions functions,
-            IServiceProvider service)
+            IServiceProvider service,
+            IInfrastructure infrastructure)
         {
             this.options = options?.Value;
             this.functions = functions;
             this.serviceProvider = service;
+            this.infrastructure = infrastructure;
         }
 
         public (bool Result, string Message, Template Template) ValidateTemplate(DeploymentOrchestrationInput input)
@@ -145,7 +148,7 @@ namespace maskx.ARMOrchestration
                 queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
             else
                 queryScope = $"subscriptions/{input.SubscriptionId}";
-            var str = this.options.ListFunction(serviceProvider, deploymentContext, queryScope, valid.Template.ApiProfile, string.Empty, "resources");
+            var str = this.infrastructure.List(deploymentContext, queryScope, valid.Template.ApiProfile, string.Empty, "resources");
             //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);
             Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
@@ -269,7 +272,7 @@ namespace maskx.ARMOrchestration
                 copy.Input = input.GetRawText();
             }
 
-            copy.Id = $"subscription/{deployContext.SubscriptionId}/{options.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/copy/{copy.Name}";
+            copy.Id = $"subscription/{deployContext.SubscriptionId}/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/copy/{copy.Name}";
             return (true, string.Empty, copy);
         }
 
@@ -375,7 +378,7 @@ namespace maskx.ARMOrchestration
                 }
             }
 
-            foreach (var item in options.ExtensionResources)
+            foreach (var item in this.infrastructure.ExtensionResources)
             {
                 if (root.TryGetProperty(item, out JsonElement e))
                 {

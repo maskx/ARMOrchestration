@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using maskx.OrchestrationService;
+using ARMOrchestrationTest.Mock;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
@@ -14,17 +15,13 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
     public class ValidateTemplateTest
     {
         private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
-            Options.Create(new ARMOrchestrationOptions()
-            {
-                ExtensionResources = new List<string>()
-            }),
-            new ARMFunctions(Options.Create(new ARMOrchestrationOptions()
-            {
-                ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
-                {
-                    return new TaskResult() { };
-                }
-            }), null), null);
+            Options.Create(new ARMOrchestrationOptions()),
+            new ARMFunctions(
+                Options.Create(new ARMOrchestrationOptions()),
+                null,
+                new MockInfrastructure()),
+            null,
+            new MockInfrastructure());
 
         private string GetTemplate(string filename)
         {

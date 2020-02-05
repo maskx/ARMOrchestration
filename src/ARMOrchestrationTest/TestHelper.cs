@@ -1,4 +1,5 @@
-﻿using DurableTask.Core;
+﻿using ARMOrchestrationTest.Mock;
+using DurableTask.Core;
 using DurableTask.Core.Common;
 using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration;
@@ -31,18 +32,22 @@ namespace ARMCreatorTest
         public static AsyncRequestInput CreateAsyncRequestInput(string processorName, Resource resource)
         {
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
-            ruleField.Add("ApiVersion", resource.ApiVersion);
-            ruleField.Add("Type", resource.Type);
-            ruleField.Add("Name", resource.Name);
-            ruleField.Add("Location", resource.Location);
-            ruleField.Add("SKU", resource.SKU);
-            ruleField.Add("Kind", resource.Kind);
-            ruleField.Add("Plan", resource.Plan);
+            if (resource != null)
+            {
+                ruleField.Add("ApiVersion", resource.ApiVersion);
+                ruleField.Add("Type", resource.Type);
+                ruleField.Add("Name", resource.Name);
+                ruleField.Add("Location", resource.Location);
+                ruleField.Add("SKU", resource.SKU);
+                ruleField.Add("Kind", resource.Kind);
+                ruleField.Add("Plan", resource.Plan);
+            }
+
             return new AsyncRequestInput()
             {
                 RequestTo = "ResourceProvider",// TODO: 支持Subscription level Resource和Tenant level Resource后，将有不同的ResourceTo
                 RequestOperation = "PUT",//ResourceProvider 处理 Create Or Update
-                RequsetContent = resource.Properties,
+                RequsetContent = resource?.Properties,
                 //   RuleField = ruleField,
                 Processor = processorName
             };
@@ -220,27 +225,10 @@ namespace ARMCreatorTest
                  });
                  services.Configure<ARMOrchestrationOptions>((opt) =>
                  {
-                     opt.ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
-                     {
-                         return new TaskResult() { Content = value };
-                     };
                      opt.Database = new DatabaseConfig()
                      {
                          ConnectionString = TestHelper.ConnectionString
                      };
-                     opt.GetRequestInput = (sp, input) =>
-                     {
-                         return new AsyncRequestInput()
-                         {
-                             RequestTo = input.RequestAction.ToString(),
-                             RequestOperation = "PUT",
-                             RequsetContent = input.Resource?.ToString(),
-                             //   RuleField = ruleField,
-                             Processor = "MockCommunicationProcessor"
-                         };
-                     };
-                     opt.ExtensionResources = new List<string>() {
-                         "tags" };
                  });
 
                  #region OrchestrationWorker
@@ -311,6 +299,7 @@ namespace ARMCreatorTest
                  services.AddSingleton<OrchestrationWorkerClient>();
                  services.AddSingleton<ARMTemplateHelper>();
                  services.AddSingleton<ARMFunctions>();
+                 services.AddSingleton<IInfrastructure>(new MockInfrastructure());
              });
         }
 

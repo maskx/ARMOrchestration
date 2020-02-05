@@ -17,27 +17,13 @@ namespace ARMOrchestrationTest.WhatIfTests
         private readonly string resource1Id = "";
 
         private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
-            Options.Create(new ARMOrchestrationOptions()
-            {
-                ExtensionResources = new List<string>()
-            }),
-            new ARMFunctions(Options.Create(new ARMOrchestrationOptions()
-            {
-                ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
-                {
-                    JObject obj = new JObject();
-                    JArray values = new JArray();
-                    JObject res1 = new JObject();
-                    res1.Add("id", resourceId);
-                    values.Add(res1);
-                    obj.Add("values", values);
-                    return new TaskResult()
-                    {
-                        Code = 200,
-                        Content = obj.ToString()
-                    };
-                }
-            }), null), null);
+            Options.Create(new ARMOrchestrationOptions()),
+            new ARMFunctions(
+                Options.Create(new ARMOrchestrationOptions()),
+                null,
+                new Mock.MockInfrastructure()),
+            null,
+            new Mock.MockInfrastructure());
 
         [Fact(DisplayName = "WhatIfIncremental")]
         public void WhatIfIncremental()

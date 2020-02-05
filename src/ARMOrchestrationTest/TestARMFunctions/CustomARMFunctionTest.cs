@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration;
+﻿using ARMOrchestrationTest.Mock;
+using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
@@ -13,11 +14,12 @@ namespace ARMCreatorTest.TestARMFunctions
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()
                 {
-                    ListFunction = (sp, cxr, resourceId, apiVersion, functionValues, value) =>
-                    {
-                        return new TaskResult() { Content = value };
-                    }
-                }), null);
+                    //ListFunction = (sp, cxr, resourceId, apiVersion, functionValues, value) =>
+                    //{
+                    //    return new TaskResult() { Content = value };
+                    //}
+                }), null,
+                new MockInfrastructure());
             functions.SetFunction("resourcegroup", (args, cxt) =>
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))

@@ -1,11 +1,10 @@
 ﻿using ARMCreatorTest;
-using ARMCreatorTest.Mock;
+using ARMOrchestrationTest.Mock;
 using DurableTask.Core;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,23 +35,16 @@ namespace ARMOrchestrationTest
                         {
                             ConnectionString = TestHelper.ConnectionString,
                             AutoCreate = true
-                        },
-                        GetRequestInput = (sp, input) =>
-                         {
-                             return new AsyncRequestInput()
-                             {
-                                 RequestTo = input.RequestAction.ToString(),
-                                 RequestOperation = "PUT",
-                                 RequsetContent = input.Resource.ToString(),
-                                 //   RuleField = ruleField,
-                                 Processor = "MockCommunicationProcessor"
-                             };
-                         }
+                        }
                     };
                     services.UsingARMOrchestration(sqlConfig);
                     services.AddSingleton<ICommunicationProcessor>((sp) =>
                     {
                         return new MockCommunicationProcessor();
+                    });
+                    services.AddSingleton<IInfrastructure>((sp) =>
+                    {
+                        return new MockInfrastructure();
                     });
                 })
                 .Build();

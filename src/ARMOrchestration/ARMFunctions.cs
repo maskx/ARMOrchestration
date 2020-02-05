@@ -17,12 +17,15 @@ namespace maskx.ARMOrchestration
         private Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>> Functions = new Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>>();
         private readonly ARMOrchestrationOptions options;
         private readonly IServiceProvider serviceProvider;
+        private readonly IInfrastructure infrastructure;
 
         public ARMFunctions(IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IInfrastructure infrastructure)
         {
             this.options = options?.Value;
             this.serviceProvider = serviceProvider;
+            this.infrastructure = infrastructure;
             this.InitBuiltInFunction();
         }
 
@@ -713,7 +716,7 @@ namespace maskx.ARMOrchestration
                 {
                     string apiVersion = string.Empty;
                     bool full = false;
-                    var taskResult = this.options.ReferenceFunction(serviceProvider, context, resourceName, apiVersion, full);
+                    var taskResult = this.infrastructure.Reference(context, resourceName, apiVersion, full);
                     args.Result = new JsonValue(taskResult.Content);
                 }
                 else
@@ -883,8 +886,7 @@ namespace maskx.ARMOrchestration
                         else if (name.StartsWith("list", StringComparison.OrdinalIgnoreCase))
                         {
                             var pars = args.EvaluateParameters(context);
-                            var r = options.ListFunction(
-                                 serviceProvider,
+                            var r = this.infrastructure.List(
                                  cxt["armcontext"] as DeploymentContext,
                                  pars[0].ToString(),
                                  pars[1].ToString(),

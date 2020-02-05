@@ -15,19 +15,22 @@ namespace maskx.ARMOrchestration.Orchestrations
         private TaskCompletionSource<string> waitHandler = null;
         private ARMOrchestrationOptions options;
         private IServiceProvider serviceProvider;
+        private IInfrastructure infrastructure;
 
         public RequestOrchestration(
             IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IInfrastructure infrastructure)
         {
             this.serviceProvider = serviceProvider;
             this.options = options?.Value;
+            this.infrastructure = infrastructure;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, RequestOrchestrationInput input)
         {
             this.waitHandler = new TaskCompletionSource<string>();
-            AsyncRequestInput requestInput = options.GetRequestInput(this.serviceProvider, input);
+            AsyncRequestInput requestInput = this.infrastructure.GetRequestInput(input);
             requestInput.EventName = eventName;
             await context.ScheduleTask<TaskResult>(typeof(AsyncRequestActivity), requestInput);
             await waitHandler.Task;

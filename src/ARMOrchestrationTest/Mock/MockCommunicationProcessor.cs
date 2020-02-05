@@ -3,7 +3,7 @@ using maskx.OrchestrationService.Worker;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace ARMCreatorTest.Mock
+namespace ARMOrchestrationTest.Mock
 {
     public class MockCommunicationProcessor : ICommunicationProcessor
     {

@@ -2,7 +2,6 @@
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Orchestration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
@@ -16,16 +15,19 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         private readonly ARMOrchestrationOptions ARMOptions;
         private readonly IServiceProvider serviceProvider;
-        private ARMFunctions functions;
+        private readonly ARMFunctions functions;
+        private readonly IInfrastructure infrastructure;
 
         public ResourceOrchestration(
             IServiceProvider serviceProvider,
             IOptions<ARMOrchestrationOptions> armOptions,
-            ARMFunctions functions)
+            ARMFunctions functions,
+            IInfrastructure infrastructure)
         {
             this.ARMOptions = armOptions?.Value;
             this.serviceProvider = serviceProvider;
             this.functions = functions;
+            this.infrastructure = infrastructure;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
@@ -105,7 +107,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             #endregion check policy
 
             TaskResult beginCreateResourceResult = null;
-            if (resourceDeploy.Type != ARMOptions.BuitinServiceTypes.Deployments)
+            if (resourceDeploy.Type != this.infrastructure.BuitinServiceTypes.Deployments)
             {
                 #region Check Resource
 
@@ -189,7 +191,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Create or Update Resource
 
             TaskResult createResourceResult = null;
-            if (resourceDeploy.Type == ARMOptions.BuitinServiceTypes.Deployments)
+            if (resourceDeploy.Type == this.infrastructure.BuitinServiceTypes.Deployments)
             {
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/cross-resource-group-deployment?tabs=azure-powershell
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates
@@ -292,7 +294,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Create or Update Resource
 
-            if (resourceDeploy.Type != ARMOptions.BuitinServiceTypes.Deployments)
+            if (resourceDeploy.Type != this.infrastructure.BuitinServiceTypes.Deployments)
             {
                 #region Extension Resources
 

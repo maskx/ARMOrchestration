@@ -66,8 +66,6 @@ namespace maskx.ARMOrchestration.Extensions
             services.Configure<ARMOrchestrationOptions>((opt) =>
             {
                 opt.Database = config.Database;
-                opt.GetRequestInput = config.GetRequestInput;
-                opt.ExtensionResources = config.ExtensionResources;
             });
             return services;
         }

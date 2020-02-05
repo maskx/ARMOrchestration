@@ -1,6 +1,5 @@
-﻿using ARMCreatorTest.Mock;
+﻿using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,6 +27,8 @@ namespace ARMCreatorTest
                interfaceActivitys,
                (hostContext, services) =>
                {
+                   services.AddSingleton<IInfrastructure>(new MockInfrastructure());
+
                    services.AddSingleton<ICommunicationProcessor>(new MockCommunicationProcessor());
                    services.Configure<ARMOrchestrationOptions>((options) =>
                    {
@@ -35,10 +36,6 @@ namespace ARMCreatorTest
                        {
                            HubName = TestHelper.HubName,
                            ConnectionString = TestHelper.ConnectionString
-                       };
-                       options.GetRequestInput = (sp, input) =>
-                       {
-                           return TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input.Resource);
                        };
                    });
                }).Build();

@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration;
+﻿using ARMOrchestrationTest.Mock;
+using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
@@ -419,13 +420,9 @@ namespace ARMCreatorTest.TestARMFunctions
                 }
             };
             ARMFunctions functions = new ARMFunctions(
-                Options.Create(new ARMOrchestrationOptions()
-                {
-                    ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
-                    {
-                        return new TaskResult() { };
-                    }
-                }), null);
+                Options.Create(new ARMOrchestrationOptions()),
+                null,
+                new MockInfrastructure());
             object rtv = functions.Evaluate("[copyindex()]", cxt);
             Assert.Equal(2, (int)rtv);
             rtv = functions.Evaluate("[copyindex(1)]", cxt);
@@ -745,13 +742,9 @@ namespace ARMCreatorTest.TestARMFunctions
         public void ListResource()
         {
             ARMFunctions functions = new ARMFunctions(
-                Options.Create(new ARMOrchestrationOptions()
-                {
-                    ListFunction = (sp, cxt, resourceId, apiVersion, functionValues, value) =>
-                    {
-                        return new TaskResult() { Content = value };
-                    }
-                }), null);
+                Options.Create(new ARMOrchestrationOptions()),
+                null,
+                new MockInfrastructure());
             object rtv = functions.Evaluate(
                 "[listResource('resourceId','2019-01-02')]",
                 new Dictionary<string, object>() {
