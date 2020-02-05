@@ -18,10 +18,6 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         public NestedTemplateTest(ARMOrchestartionFixture fixture)
         {
             this.fixture = fixture;
-            fixture.ARMFunctions.SetFunction("reference", (args, cxt) =>
-            {
-                args.Result = "1231";
-            });
         }
 
         [Fact(DisplayName = "NestTemplate")]

@@ -459,11 +459,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (commitResourceResult.Code == 200)
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;
+                    operationArgs.Result = commitResourceResult.Content;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCommitFailed;
+                    operationArgs.Result = commitQoutaResult.Content;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return commitResourceResult;
                 }

@@ -25,7 +25,19 @@ namespace ARMOrchestrationTest.Mock
 
         public TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false)
         {
-            throw new NotImplementedException();
+            var pars = resourceName.Split('/');
+            if (pars.Length >= 5)
+            {
+                if ("resourceGroups".Equals(pars[3], StringComparison.OrdinalIgnoreCase))
+                {
+                    return new TaskResult()
+                    {
+                        Code = 200,
+                        Content = TestHelper.GetJsonFileContent("Mock/Response/getresourcegroup")
+                    };
+                }
+            }
+            return new TaskResult() { Code = 200 };
         }
 
         public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();

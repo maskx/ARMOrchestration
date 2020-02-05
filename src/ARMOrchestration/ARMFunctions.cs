@@ -702,26 +702,42 @@ namespace maskx.ARMOrchestration
                 var pars = args.EvaluateParameters(cxt);
                 string resourceName = pars[0].ToString();
                 var context = cxt["armcontext"] as DeploymentContext;
-                if (cxt.TryGetValue("validateTime", out object validateTime))
+                string r = string.Empty;
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
+                // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
+                if (resourceName.IndexOf('/') < 0)
                 {
-                    if ((bool)validateTime)
-                    {
-                        if (!cxt.TryGetValue("reference", out object refs))
-                        {
-                        }
-                    }
+                    r = GetResourceWithinTemplate(resourceName, context);
+                    var jobj = JObject.Parse(r);
+                    if (pars.Length == 3 && "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase))
+                        args.Result = new JsonValue(r);
+                    else
+                        args.Result = new JsonValue(jobj["properties"].ToString());
                 }
-                var r = GetResourceWithinTemplate(resourceName, context);
-                if (string.IsNullOrEmpty(r))
+                else
                 {
                     string apiVersion = string.Empty;
+                    if (pars.Length > 2)
+                        apiVersion = pars[1].ToString();
                     bool full = false;
                     var taskResult = this.infrastructure.Reference(context, resourceName, apiVersion, full);
+                    if (taskResult.Code == 200)
+                        args.Result = new JsonValue(taskResult.Content);
+                }
+            });
+            Functions.Add("resourcegroup", (args, cxt) =>
+            {
+                var context = cxt["armcontext"] as DeploymentContext;
+                var taskResult = this.infrastructure.Reference(
+                    context,
+                    $"/subscription/{context.SubscriptionId}/resourceGroups/{context.ResourceGroup}");
+                if (taskResult.Code == 200)
+                {
                     args.Result = new JsonValue(taskResult.Content);
                 }
                 else
                 {
-                    args.Result = new JsonValue(r);
+                    args.Result = taskResult.Content;
                 }
             });
 

@@ -5,6 +5,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -13,6 +14,10 @@ using Xunit;
 
 namespace ARMCreatorTest.TestARMFunctions
 {
+    /// <summary>
+    ///
+    /// </summary>
+    /// <seealso cref="https://github.com/Azure/azure-docs-json-samples/blob/master/azure-resource-manager/functions/"/>
     [Collection("WebHost ARMOrchestartion")]
     [Trait("c", "ARMFunctions")]
     public class ARMFunctionsTest
@@ -752,6 +757,34 @@ namespace ARMCreatorTest.TestARMFunctions
                         Template=new Template() } }
                 });
             Assert.Equal("Resource", rtv.ToString());
+        }
+
+        [Trait("ARMFunctions", "Resource")]
+        [Fact(DisplayName = "ReferenceNoDependsOn")]
+        public void ReferenceNoDependsOn()
+        {
+            var full = JObject.Parse(TestHelper.GetJsonFileContent("mock/response/ReferenceExample"));
+
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"referenceOutput",full["properties"].ToString(Newtonsoft.Json.Formatting.None)},
+                {"fullReferenceOutput",full.ToString(Newtonsoft.Json.Formatting.None) }
+            };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "reference", result);
+        }
+
+        [Trait("ARMFunctions", "Resource")]
+        [Fact(DisplayName = "resourceGroup")]
+        public void resourceGroup()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"resourceGroupOutput",
+                    JObject
+                .Parse(TestHelper.GetJsonFileContent("mock/response/getresourcegroup"))
+                .ToString(Newtonsoft.Json.Formatting.None)}
+            };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceGroup", result);
         }
 
         #endregion Resource

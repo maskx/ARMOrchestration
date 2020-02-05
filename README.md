@@ -1,4 +1,7 @@
-# ARMCreator
+# ARMOrchestration
+
+NOT SUPPORT:
+* [implicit-dependency](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency): you should use the dependsOn property
 
 ## [ARM Functions](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions)
 
@@ -10,7 +13,8 @@ The context need 1 value:
 |key|value|description|
 |-|-|-|
 |armcontext|DeploymentContext||
-|
+|copyindex|Dictionary<string,int>|the key is loopname,and the value is current loop index|
+|currentloopname|string|If no value is provided for loopName, this loopname is used |
 
 ### [Array and object](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-array)
 

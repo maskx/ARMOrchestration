@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
+﻿using ARMCreatorTest;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService.Worker;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -17,6 +18,10 @@ namespace ARMOrchestrationTest.Mock
             {
                 job.ResponseCode = job.RequestTo == RequestAction.CheckLock.ToString() ? 404 : 200;
                 job.ResponseContent = "MockCommunicationProcessor";
+                if (job.RequestTo == RequestAction.CommitResource.ToString())
+                {
+                    job.ResponseContent = TestHelper.GetJsonFileContent("mock/response/ReferenceExample");
+                }
                 job.Status = CommunicationJob.JobStatus.Completed;
                 rtv.Add(job);
             }

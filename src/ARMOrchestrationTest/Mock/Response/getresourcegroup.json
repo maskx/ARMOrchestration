@@ -1,0 +1,12 @@
+﻿{
+  "id": "/subscriptions/C1FA36C2-4D58-45E8-9C51-498FADB4D8BF/resourceGroups/ResourceGroup1",
+  "name": "ResourceGroup1",
+  "type": "Microsoft.Resources/resourceGroups",
+  "location": "southcentralus",
+  "managedBy": "abc",
+  "tags": {
+  },
+  "properties": {
+    "provisioningState": "completed"
+  }
+}
