@@ -15,7 +15,7 @@ The context need 1 value:
 |armcontext|DeploymentContext||
 |copyindex|Dictionary<string,int>|the key is loopname,and the value is current loop index|
 |currentloopname|string|If no value is provided for loopName, this loopname is used |
-
+|validatetime|bool|default is true|
 ### [Array and object](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-array)
 
 ### [Comparison](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-comparison)

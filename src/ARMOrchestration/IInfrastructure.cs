@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
+﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using System;
@@ -13,6 +14,8 @@ namespace maskx.ARMOrchestration
         TaskResult List(DeploymentContext context, string resourceId, string apiVersion, string functionValues = "", string value = "");
 
         TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false);
+
+        TaskResult WhatIf(DeploymentContext context, string resourceName);
 
         BuiltinServiceTypes BuitinServiceTypes { get; set; }
         List<string> ExtensionResources { get; set; }

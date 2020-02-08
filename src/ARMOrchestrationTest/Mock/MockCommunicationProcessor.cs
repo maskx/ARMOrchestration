@@ -18,7 +18,7 @@ namespace ARMOrchestrationTest.Mock
             {
                 job.ResponseCode = job.RequestTo == RequestAction.CheckLock.ToString() ? 404 : 200;
                 job.ResponseContent = "MockCommunicationProcessor";
-                if (job.RequestTo == RequestAction.CommitResource.ToString())
+                if (job.RequestTo == RequestAction.ReadyResource.ToString())
                 {
                     job.ResponseContent = TestHelper.GetJsonFileContent("mock/response/ReferenceExample");
                 }

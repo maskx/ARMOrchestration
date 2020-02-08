@@ -30,9 +30,9 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, RequestOrchestrationInput input)
         {
             this.waitHandler = new TaskCompletionSource<string>();
-            AsyncRequestInput requestInput = this.infrastructure.GetRequestInput(input);
-            requestInput.EventName = eventName;
-            await context.ScheduleTask<TaskResult>(typeof(AsyncRequestActivity), requestInput);
+            //AsyncRequestInput requestInput = ;
+            // requestInput.EventName = eventName;
+            await context.ScheduleTask<TaskResult>(typeof(AsyncRequestActivity), this.infrastructure.GetRequestInput(input));
             await waitHandler.Task;
             return DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
         }

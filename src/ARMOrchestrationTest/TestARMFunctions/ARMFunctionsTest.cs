@@ -15,7 +15,7 @@ using Xunit;
 namespace ARMCreatorTest.TestARMFunctions
 {
     /// <summary>
-    ///
+    /// ARMFunctionsTest
     /// </summary>
     /// <seealso cref="https://github.com/Azure/azure-docs-json-samples/blob/master/azure-resource-manager/functions/"/>
     [Collection("WebHost ARMOrchestartion")]

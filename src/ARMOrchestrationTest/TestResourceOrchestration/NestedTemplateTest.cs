@@ -42,9 +42,9 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                   Assert.Equal(200, r.Code);
                   using var doc = JsonDocument.Parse(r.Content);
                   var root = doc.RootElement;
-                  Assert.True(root.TryGetProperty("messageFromLinkedTemplate", out JsonElement messageFromLinkedTemplate));
+                  Assert.True(root.GetProperty("properties").TryGetProperty("messageFromLinkedTemplate", out JsonElement messageFromLinkedTemplate));
 
-                  //  Assert.Equal("from nested template", messageFromLinkedTemplate.GetProperty("value").GetString());
+                  Assert.Equal("from nested template", messageFromLinkedTemplate.GetProperty("value").GetString());
               });
         }
     }

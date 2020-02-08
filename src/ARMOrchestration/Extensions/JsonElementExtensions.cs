@@ -115,7 +115,12 @@ namespace maskx.ARMOrchestration.Extensions
                 copyindex[copy.Name] = i;
                 var r = helper.ParseResource(resource.GetRawText(), copyContext);
                 if (r.Result)
-                    resources.Add(r.resource.ResouceId, r.resource);
+                {
+                    foreach (var item in r.resource)
+                    {
+                        resources.Add(item.Name, item);
+                    }
+                }
                 else
                     return (false, r.Message, null);
             }

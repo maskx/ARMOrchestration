@@ -26,6 +26,7 @@ namespace maskx.ARMOrchestration
             this.options = options?.Value;
             this.serviceProvider = serviceProvider;
             this.infrastructure = infrastructure;
+
             this.InitBuiltInFunction();
         }
 
@@ -704,15 +705,27 @@ namespace maskx.ARMOrchestration
                 var context = cxt["armcontext"] as DeploymentContext;
                 string r = string.Empty;
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 if (resourceName.IndexOf('/') < 0)
                 {
+                    this.infrastructure.WhatIf(context, "");
                     r = GetResourceWithinTemplate(resourceName, context);
-                    var jobj = JObject.Parse(r);
+                    if (string.IsNullOrWhiteSpace(r))
+                    {
+                        // TODO: deal with result is empty string
+                        return;
+                    }
                     if (pars.Length == 3 && "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase))
                         args.Result = new JsonValue(r);
                     else
-                        args.Result = new JsonValue(jobj["properties"].ToString());
+                    {
+                        using var doc = JsonDocument.Parse(r);
+                        if (doc.RootElement.TryGetProperty("properties", out JsonElement _properties))
+                        {
+                            args.Result = new JsonValue(_properties.GetRawText());
+                        }
+                    }
                 }
                 else
                 {
@@ -869,7 +882,7 @@ namespace maskx.ARMOrchestration
         }
 
         /// <summary>
-        ///
+        /// Evaluate expression
         /// </summary>
         /// <param name="function"></param>
         /// <param name="context">
@@ -973,59 +986,6 @@ namespace maskx.ARMOrchestration
             var value = rootEle.GetProperty("value").GetString();
             var v = this.Evaluate(value, context);
             return v;
-        }
-
-        public string GetOutputs(string outputs, Dictionary<string, object> context)
-        {
-            using JsonDocument outDoc = JsonDocument.Parse(outputs);
-            var outputDefineElement = outDoc.RootElement;
-            JObject jOutput = new JObject();
-            foreach (var item in outputDefineElement.EnumerateObject())
-            {
-                var v = item.Value.GetProperty("value");
-                switch (v.ValueKind)
-                {
-                    case JsonValueKind.Undefined:
-                        jOutput.Add(item.Name, JValue.CreateUndefined());
-                        break;
-
-                    case JsonValueKind.Object:
-                        jOutput.Add(item.Name, JObject.Parse(v.GetRawText()));
-                        break;
-
-                    case JsonValueKind.Array:
-                        jOutput.Add(item.Name, JArray.Parse(v.GetRawText()));
-                        break;
-
-                    case JsonValueKind.String:
-                        var r = this.Evaluate(v.GetString(), context);
-                        var t = item.Value.GetProperty("type").GetString().ToLower();
-                        if ("object" == t)
-                            jOutput.Add(item.Name, JObject.Parse(r.ToString()));
-                        else if ("array" == t)
-                            jOutput.Add(item.Name, JArray.Parse(r.ToString()));
-                        else
-                            jOutput.Add(item.Name, new JValue(r));
-                        break;
-
-                    case JsonValueKind.Number:
-                        jOutput.Add(item.Name, v.GetInt32());
-                        break;
-
-                    case JsonValueKind.True:
-                    case JsonValueKind.False:
-                        jOutput.Add(item.Name, v.GetBoolean());
-                        break;
-
-                    case JsonValueKind.Null:
-                        jOutput.Add(item.Name, JValue.CreateNull());
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-            return jOutput.ToString(Newtonsoft.Json.Formatting.None);
         }
     }
 }

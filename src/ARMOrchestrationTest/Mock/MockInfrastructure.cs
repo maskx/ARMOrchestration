@@ -5,7 +5,6 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace ARMOrchestrationTest.Mock
 {
@@ -13,8 +12,40 @@ namespace ARMOrchestrationTest.Mock
     {
         public AsyncRequestInput GetRequestInput(RequestOrchestrationInput input)
         {
-            var r = TestHelper.CreateAsyncRequestInput("MockCommunicationProcessor", input.Resource);
-            r.RequestTo = input.RequestAction.ToString();
+            Dictionary<string, object> ruleField = new Dictionary<string, object>();
+            if (input.Resource != null)
+            {
+                ruleField.Add("ApiVersion", input.Resource.ApiVersion);
+                ruleField.Add("Type", input.Resource.Type);
+                ruleField.Add("Name", input.Resource.Name);
+                ruleField.Add("Location", input.Resource.Location);
+                ruleField.Add("SKU", input.Resource.SKU);
+                ruleField.Add("Kind", input.Resource.Kind);
+                ruleField.Add("Plan", input.Resource.Plan);
+            }
+            else
+            {
+                ruleField.Add("ApiVersion", DBNull.Value);
+                ruleField.Add("Type", DBNull.Value);
+                ruleField.Add("Name", DBNull.Value);
+                ruleField.Add("Location", DBNull.Value);
+                ruleField.Add("SKU", DBNull.Value);
+                ruleField.Add("Kind", DBNull.Value);
+                ruleField.Add("Plan", DBNull.Value);
+            }
+            var deploymentContext = input.DeploymentContext;
+            ruleField.Add("SubscriptionId", deploymentContext.SubscriptionId);
+            ruleField.Add("TenantId", deploymentContext.TenantId);
+            ruleField.Add("ResourceGroup", deploymentContext.ResourceGroup);
+            var r = new AsyncRequestInput()
+            {
+                EventName = "CommunicationEvent",
+                RequestTo = input.RequestAction.ToString(),
+                RequestOperation = "PUT",
+                RequsetContent = input.Resource?.ToString(),
+                RuleField = ruleField,
+                Processor = "MockCommunicationProcessor"
+            };
             return r;
         }
 
@@ -25,10 +56,10 @@ namespace ARMOrchestrationTest.Mock
 
         public TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false)
         {
-            var pars = resourceName.Split('/');
-            if (pars.Length >= 5)
+            var pars = resourceName.TrimStart('/').Split('/');
+            if (pars.Length >= 4)
             {
-                if ("resourceGroups".Equals(pars[3], StringComparison.OrdinalIgnoreCase))
+                if ("resourceGroups".Equals(pars[2], StringComparison.OrdinalIgnoreCase))
                 {
                     return new TaskResult()
                     {
@@ -42,5 +73,10 @@ namespace ARMOrchestrationTest.Mock
 
         public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
         public List<string> ExtensionResources { get; set; } = new List<string>() { "tags" };
+
+        public TaskResult WhatIf(DeploymentContext context, string resourceName)
+        {
+            return new TaskResult();
+        }
     }
 }

@@ -169,10 +169,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 #region Check Quota
 
                 var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                 typeof(RequestOrchestration),
-                 new RequestOrchestrationInput()
-                 {
-                 });
+                    typeof(RequestOrchestration),
+                    new RequestOrchestrationInput()
+                    {
+                        DeploymentContext = input.Context,
+                        RequestAction = RequestAction.CheckQuota,
+                        Resource = resourceDeploy
+                    });
                 if (checkQoutaResult.Code == 200)
                 {
                     operationArgs.Stage = ProvisioningStage.QuotaCheckSuccessed;
@@ -296,6 +299,63 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (resourceDeploy.Type != this.infrastructure.BuitinServiceTypes.Deployments)
             {
+                #region Commit Quota
+
+                var commitQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(RequestOrchestration),
+                new RequestOrchestrationInput()
+                {
+                    RequestAction = RequestAction.CommitQuota,
+                    Resource = resourceDeploy,
+                    DeploymentContext = input.Context
+                });
+                if (commitQoutaResult.Code == 200)
+                {
+                    operationArgs.Stage = ProvisioningStage.QuotaCommitSuccesed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = ProvisioningStage.QuotaCommitFailed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    return commitQoutaResult;
+                }
+
+                #endregion Commit Quota
+
+                #region Commit Resource
+
+                // TODO: 需要考考虑一个RP请求创建了多个资源的情况，怎样提交到资产服务
+                // 创建虚机的请求里直接新建网卡和磁盘，怎样在资产服务里同时记录虚机、磁盘、网卡的情况
+                // 创建VNet时 创建的subnet，添加的ACL
+                // 同时创建资源的情形，RP返回的propeties里应该包含创建的所有资源信息（可以是资源的ID）
+                ///ARM 不了解 资源的Properties，直接转发给资产服务
+                // 资产服务 里有 资源之间的关系，知道 具体资源可以包含其他资源，及其这些被包含的资源在报文中的路径，从而可以进行处理
+
+                var commitResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(RequestOrchestration),
+                    new RequestOrchestrationInput()
+                    {
+                        Resource = resourceDeploy,
+                        RequestAction = RequestAction.CommitResource,
+                        DeploymentContext = input.Context
+                    });
+                if (commitResourceResult.Code == 200)
+                {
+                    operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;
+                    operationArgs.Result = commitResourceResult.Content;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = ProvisioningStage.ResourceCommitFailed;
+                    operationArgs.Result = commitQoutaResult.Content;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    return commitResourceResult;
+                }
+
+                #endregion Commit Resource
+
                 #region Extension Resources
 
                 List<Task<TaskResult>> extenstionTasks = new List<Task<TaskResult>>();
@@ -342,50 +402,51 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 #region Create Or Update child resource
 
-                if (resourceDeploy.Resources != null)
-                {
-                    List<Task<TaskResult>> childTasks = new List<Task<TaskResult>>();
-                    foreach (var r in resourceDeploy.Resources)
-                    {
-                        var p = new ResourceOrchestrationInput()
-                        {
-                            Resource = r,
-                        };
-                        childTasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(ResourceOrchestration),
-                            p));
-                        // ARM does NOT support Iteration for a child resource
-                        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#iteration-for-a-child-resource
-                        //if (null == r.Copy)
-                        //{
-                        //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
-                        //}
-                        //else
-                        //{
-                        //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(GroupOrchestration), p));
-                        //}
-                    }
-                    await Task.WhenAll(childTasks);
-                    int successed = 0;
-                    int failed = 0;
-                    foreach (var t in childTasks)
-                    {
-                        if (t.Result.Code == 200) successed++;
-                        else failed++;
-                    }
-                    if (failed > 0)
-                    {
-                        operationArgs.Stage = ProvisioningStage.ChildResourceFailed;
-                        operationArgs.Result = $"Child resource successed: {successed}/{childTasks.Count} ";
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                        return new TaskResult() { Code = 500, Content = operationArgs.Result };
-                    }
-                    else
-                    {
-                        operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    }
-                }
+                //if (resourceDeploy.Resources != null)
+                //{
+                //    List<Task<TaskResult>> childTasks = new List<Task<TaskResult>>();
+                //    foreach (var r in resourceDeploy.Resources)
+                //    {
+                //        var p = new ResourceOrchestrationInput()
+                //        {
+                //            ParentId = resourceDeploy.ResouceId,
+                //            Resource = r,
+                //        };
+                //        childTasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                //            typeof(ResourceOrchestration),
+                //            p));
+                //        // ARM does NOT support Iteration for a child resource
+                //        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#iteration-for-a-child-resource
+                //        //if (null == r.Copy)
+                //        //{
+                //        //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
+                //        //}
+                //        //else
+                //        //{
+                //        //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(GroupOrchestration), p));
+                //        //}
+                //    }
+                //    await Task.WhenAll(childTasks);
+                //    int successed = 0;
+                //    int failed = 0;
+                //    foreach (var t in childTasks)
+                //    {
+                //        if (t.Result.Code == 200) successed++;
+                //        else failed++;
+                //    }
+                //    if (failed > 0)
+                //    {
+                //        operationArgs.Stage = ProvisioningStage.ChildResourceFailed;
+                //        operationArgs.Result = $"Child resource successed: {successed}/{childTasks.Count} ";
+                //        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                //        return new TaskResult() { Code = 500, Content = operationArgs.Result };
+                //    }
+                //    else
+                //    {
+                //        operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
+                //        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                //    }
+                //}
 
                 #endregion Create Or Update child resource
 
@@ -415,62 +476,31 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 #endregion Apply Policy
 
-                #region Commit Quota
+                #region Ready Resource
 
-                var commitQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
-                new RequestOrchestrationInput()
+                var readyResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(RequestOrchestration),
+                    new RequestOrchestrationInput()
+                    {
+                        Resource = resourceDeploy,
+                        RequestAction = RequestAction.ReadyResource,
+                        DeploymentContext = input.Context
+                    });
+                if (readyResourceResult.Code == 200)
                 {
-                    RequestAction = RequestAction.CommitQuota,
-                    Resource = resourceDeploy,
-                    DeploymentContext = input.Context
-                });
-                if (commitQoutaResult.Code == 200)
-                {
-                    operationArgs.Stage = ProvisioningStage.QuotaCommitSuccesed;
+                    operationArgs.Stage = ProvisioningStage.ResourceReadySuccessed;
+                    operationArgs.Result = readyResourceResult.Content;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
-                    operationArgs.Stage = ProvisioningStage.QuotaCommitFailed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    return commitQoutaResult;
-                }
-
-                #endregion Commit Quota
-
-                #region Commit Resource
-
-                // TODO: 需要考考虑一个RP请求创建了多个资源的情况，怎样提交到资产服务
-                // 创建虚机的请求里直接新建网卡和磁盘，怎样在资产服务里同时记录虚机、磁盘、网卡的情况
-                // 创建VNet时 创建的subnet，添加的ACL
-                // 同时创建资源的情形，RP返回的propeties里应该包含创建的所有资源信息（可以是资源的ID）
-                ///ARM 不了解 资源的Properties，直接转发给资产服务
-                // 资产服务 里有 资源之间的关系，知道 具体资源可以包含其他资源，及其这些被包含的资源在报文中的路径，从而可以进行处理
-
-                var commitResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
-                new RequestOrchestrationInput()
-                {
-                    Resource = resourceDeploy,
-                    RequestAction = RequestAction.CommitResource,
-                    DeploymentContext = input.Context
-                });
-                if (commitResourceResult.Code == 200)
-                {
-                    operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;
-                    operationArgs.Result = commitResourceResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                }
-                else
-                {
-                    operationArgs.Stage = ProvisioningStage.ResourceCommitFailed;
-                    operationArgs.Result = commitQoutaResult.Content;
+                    operationArgs.Stage = ProvisioningStage.ResourceReadyFailed;
+                    operationArgs.Result = readyResourceResult.Content;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return commitResourceResult;
                 }
 
-                #endregion Commit Resource
+                #endregion Ready Resource
             }
 
             #region save deployment result

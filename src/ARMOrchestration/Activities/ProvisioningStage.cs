@@ -2,12 +2,13 @@
 {
     public enum ProvisioningStage
     {
-        Failed = -1300,
-        ResourceCommitFailed = -1200,
-        QuotaCommitFailed = -1100,
-        PolicyApplyFailed = -1000,
-        ChildResourceFailed = -900,
-        ExtensionResourceFailed = -800,
+        Failed = -1400,
+        ResourceReadyFailed = -1300,
+        PolicyApplyFailed = -1200,
+        ChildResourceFailed = -1100,
+        ExtensionResourceFailed = -1000,
+        ResourceCommitFailed = -900,
+        QuotaCommitFailed = -800,
         ResourceCreateFailed = -700,
         QuotaCheckFailed = -600,
         LockCheckFailed = -500,
@@ -23,11 +24,12 @@
         LockCheckSuccessed = 500,
         QuotaCheckSuccessed = 600,
         ResourceCreateSuccessed = 700,
-        ExtensionResourceSuccessed = 800,
-        ChildResourceSuccessed = 900,
-        PolicyApplySuccessed = 1000,
-        QuotaCommitSuccesed = 1100,
-        ResourceCommitSuccessed = 1200,
-        Successed = 1300
+        QuotaCommitSuccesed = 800,
+        ResourceCommitSuccessed = 900,
+        ExtensionResourceSuccessed = 1000,
+        ChildResourceSuccessed = 1100,
+        PolicyApplySuccessed = 1200,
+        ResourceReadySuccessed = 1300,
+        Successed = 1400
     }
 }

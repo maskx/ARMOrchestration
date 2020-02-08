@@ -27,7 +27,7 @@ namespace maskx.ARMOrchestration.Workers
             this.fetchCommandString = string.Format(fetchCommandTemplate,
                 this.options.Database.WaitDependsOnTableName,
                 this.options.Database.DeploymentOperationsTableName,
-                (int)ProvisioningStage.ResourceCommitSuccessed,
+                (int)ProvisioningStage.ResourceReadySuccessed,
                 (int)ProvisioningStage.ConditionCheckFailed);
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
         }

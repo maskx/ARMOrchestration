@@ -18,6 +18,7 @@ using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,31 +28,24 @@ using Xunit;
 
 namespace ARMCreatorTest
 {
-    public class TestHelper
+    public static class TestHelper
     {
-        public static AsyncRequestInput CreateAsyncRequestInput(string processorName, Resource resource)
+        public static void WriteMock(string path, string name, string contents)
         {
-            Dictionary<string, object> ruleField = new Dictionary<string, object>();
-            if (resource != null)
-            {
-                ruleField.Add("ApiVersion", resource.ApiVersion);
-                ruleField.Add("Type", resource.Type);
-                ruleField.Add("Name", resource.Name);
-                ruleField.Add("Location", resource.Location);
-                ruleField.Add("SKU", resource.SKU);
-                ruleField.Add("Kind", resource.Kind);
-                ruleField.Add("Plan", resource.Plan);
-            }
-
-            return new AsyncRequestInput()
-            {
-                RequestTo = "ResourceProvider",// TODO: 支持Subscription level Resource和Tenant level Resource后，将有不同的ResourceTo
-                RequestOperation = "PUT",//ResourceProvider 处理 Create Or Update
-                RequsetContent = resource?.Properties,
-                //   RuleField = ruleField,
-                Processor = processorName
-            };
+            var p = Path.Combine(AppContext.BaseDirectory, "mock", path);
+            if (!Directory.Exists(p))
+                Directory.CreateDirectory(p);
+            var f = Path.Combine(p, $"{name}.json");
+            File.WriteAllText(f, contents);
         }
+
+        public static string ReadMock(string path)
+        {
+            var p = Path.Combine(AppContext.BaseDirectory, "mock", $"{path}.json");
+            return File.ReadAllText(p);
+        }
+
+        public static IOptions<ARMOrchestrationOptions> ARMOrchestrationOptions { get; private set; }
 
         public static IConfigurationRoot Configuration { get; private set; }
         public static DataConverter DataConverter { get; private set; } = new JsonDataConverter();
@@ -76,6 +70,7 @@ namespace ARMCreatorTest
                 .AddUserSecrets("afab7740-fb18-44a0-9f16-b94c3327da7e")
                 .Build();
             TaskHubClient = new TaskHubClient(CreateOrchestrationClient());
+            ARMOrchestrationOptions = Options.Create(new ARMOrchestrationOptions());
         }
 
         public static IOrchestrationServiceClient CreateOrchestrationClient()
@@ -284,6 +279,16 @@ namespace ARMCreatorTest
                        options.RuleFields.AddRange(communicationWorkerOptions.RuleFields);
                        options.SchemaName = communicationWorkerOptions.SchemaName;
                    }
+                   options.RuleFields.Add("ApiVersion");
+                   options.RuleFields.Add("Type");
+                   options.RuleFields.Add("Name");
+                   options.RuleFields.Add("Location");
+                   options.RuleFields.Add("SKU");
+                   options.RuleFields.Add("Kind");
+                   options.RuleFields.Add("Plan");
+                   options.RuleFields.Add("SubscriptionId");
+                   options.RuleFields.Add("TenantId");
+                   options.RuleFields.Add("ResourceGroup");
                });
                  services.AddHostedService<CommunicationWorker>();
 

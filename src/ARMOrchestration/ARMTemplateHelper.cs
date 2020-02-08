@@ -1,5 +1,4 @@
-﻿using DurableTask.Core.Serializing;
-using maskx.ARMOrchestration.ARMTemplate;
+﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
@@ -31,10 +30,7 @@ namespace maskx.ARMOrchestration
 
         public (bool Result, string Message, Template Template) ValidateTemplate(DeploymentOrchestrationInput input)
         {
-            Template template = new Template()
-            {
-                innerString = input.Template
-            };
+            Template template = new Template();
             DeploymentContext deploymentContext = new DeploymentContext()
             {
                 CorrelationId = input.CorrelationId,
@@ -106,7 +102,12 @@ namespace maskx.ARMOrchestration
                 {
                     var resResult = ParseResource(resource.GetRawText(), armContext);
                     if (resResult.Result)
-                        template.Resources.Add(resResult.resource.ResouceId, resResult.resource);
+                    {
+                        foreach (var item in resResult.resource)
+                        {
+                            template.Resources.Add(item.Name, item);
+                        }
+                    }
                     else
                         return (false, resResult.Message, null);
                 }
@@ -200,7 +201,7 @@ namespace maskx.ARMOrchestration
 
         private void CheckResourceWhatIf(PredictTemplateOrchestrationInput input, WhatIfOperationResult result, Dictionary<string, JsonElement> asset, Resource resource)
         {
-            if (asset.TryGetValue(resource.ResouceId, out JsonElement r))
+            if (asset.TryGetValue(resource.Name, out JsonElement r))
             {
                 if (input.ResultFormat == WhatIfResultFormat.ResourceIdOnly)
                 {
@@ -218,7 +219,7 @@ namespace maskx.ARMOrchestration
                     });
                 }
 
-                asset.Remove(resource.ResouceId);
+                asset.Remove(resource.Name);
             }
             else
             {
@@ -227,10 +228,6 @@ namespace maskx.ARMOrchestration
                     ChangeType = ChangeType.Create,
                     ResourceId = resource.ResouceId
                 });
-            }
-            foreach (var childResource in resource.Resources)
-            {
-                CheckResourceWhatIf(input, result, asset, childResource);
             }
         }
 
@@ -276,15 +273,16 @@ namespace maskx.ARMOrchestration
             return (true, string.Empty, copy);
         }
 
-        public (bool Result, string Message, Resource resource) ParseResource(
+        public (bool Result, string Message, List<Resource> resource) ParseResource(
             string jsonString,
             Dictionary<string, object> context,
             string parentName = "",
             string parentType = "")
         {
             DeploymentContext deploymentContext = context["armcontext"] as DeploymentContext;
-
             Resource r = new Resource();
+            List<Resource> resources = new List<Resource>();
+            resources.Add(r);
             using var jsonDoc = JsonDocument.Parse(jsonString);
             var root = jsonDoc.RootElement;
             if (root.TryGetProperty("condition", out JsonElement condition))
@@ -307,6 +305,10 @@ namespace maskx.ARMOrchestration
             }
             else
                 return (false, "not find type in resource node", null);
+            if (!string.IsNullOrEmpty(parentName))
+            {
+                r.DependsOn.Add(parentName);
+            }
             if (root.TryGetProperty("name", out JsonElement name))
             {
                 r.Name = functions.Evaluate(name.GetString(), context).ToString();
@@ -317,8 +319,6 @@ namespace maskx.ARMOrchestration
                 return (false, "not find name in resource node", null);
             if (root.TryGetProperty("location", out JsonElement location))
                 r.Location = functions.Evaluate(location.GetString(), context).ToString();
-            if (root.TryGetProperty("tags", out JsonElement tags))
-                r.Tags = tags.GetRawText();
             if (root.TryGetProperty("comments", out JsonElement comments))
                 r.Comments = comments.GetString();
             if (root.TryGetProperty("dependsOn", out JsonElement dependsOn))
@@ -334,7 +334,7 @@ namespace maskx.ARMOrchestration
             if (root.TryGetProperty("sku", out JsonElement sku))
                 r.SKU = sku.GetRawText();
             if (root.TryGetProperty("kind", out JsonElement kind))
-                r.Kind = kind.GetRawText();
+                r.Kind = kind.GetString();
             if (root.TryGetProperty("plan", out JsonElement plan))
                 r.Plan = plan.GetRawText();
             if (root.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
@@ -363,15 +363,15 @@ namespace maskx.ARMOrchestration
 
             #endregion ResouceId
 
-            if (root.TryGetProperty("resources", out JsonElement resources))
+            if (root.TryGetProperty("resources", out JsonElement _resources))
             {
-                foreach (var childres in resources.EnumerateArray())
+                foreach (var childres in _resources.EnumerateArray())
                 {
                     //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/child-resource-name-type
                     var childResult = ParseResource(childres.GetRawText(), context, r.Name, r.Type);
                     if (childResult.Result)
                     {
-                        r.Resources.Add(childResult.resource);
+                        resources.AddRange(childResult.resource);
                     }
                     else
                         return (false, childResult.Message, null);
@@ -385,7 +385,7 @@ namespace maskx.ARMOrchestration
                     r.ExtensionResource.Add(item, e.GetRawText());
                 }
             }
-            return (true, string.Empty, r);
+            return (true, string.Empty, resources);
         }
     }
 }

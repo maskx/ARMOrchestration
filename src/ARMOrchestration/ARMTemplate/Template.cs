@@ -27,11 +27,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// </summary>
         public DeployLevel DeployLevel { get; set; }
 
-        internal string innerString;
-
         public override string ToString()
         {
-            return innerString;
+            // TODO: Templae.ToString();
+            return string.Empty;
         }
     }
 }

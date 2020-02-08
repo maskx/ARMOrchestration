@@ -16,6 +16,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         CreateExtensionResource,
         CommitQuota,
         CommitResource,
-        ApplyPolicy
+        ApplyPolicy,
+        ReadyResource
     }
 }
