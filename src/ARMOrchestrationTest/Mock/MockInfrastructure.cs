@@ -39,7 +39,6 @@ namespace ARMOrchestrationTest.Mock
             ruleField.Add("ResourceGroup", deploymentContext.ResourceGroup);
             var r = new AsyncRequestInput()
             {
-                EventName = "CommunicationEvent",
                 RequestTo = input.RequestAction.ToString(),
                 RequestOperation = "PUT",
                 RequsetContent = input.Resource?.ToString(),

@@ -97,9 +97,10 @@ namespace ARMCreatorTest
         {
             var settings = new SQLServerOrchestrationServiceSettings
             {
-                TaskOrchestrationDispatcherSettings = { CompressOrchestrationState = true }
+                TaskOrchestrationDispatcherSettings = { CompressOrchestrationState = true },
             };
-
+            settings.TaskOrchestrationDispatcherSettings.DispatcherCount = 4;
+            settings.TaskActivityDispatcherSettings.DispatcherCount = 4;
             return settings;
         }
 
@@ -166,13 +167,16 @@ namespace ARMCreatorTest
 
             using var templateDoc = JsonDocument.Parse(templateString);
             using var outputDoc = JsonDocument.Parse(outputString);
-            var outputRoot = outputDoc.RootElement;
+            var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
             if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
             {
                 List<string> child = new List<string>();
                 foreach (var item in outputDefineElement.EnumerateObject())
                 {
-                    Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement v), $"cannot find {item.Name} in output");
+                    Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement o), $"cannot find {item.Name} in output");
+                    Assert.True(o.TryGetProperty("type", out JsonElement _type));
+                    Assert.True(o.TryGetProperty("value", out JsonElement v));
+
                     if (v.ValueKind == JsonValueKind.String)
                         Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
                     else
@@ -244,7 +248,6 @@ namespace ARMCreatorTest
                  orchestrationTypes.Add(typeof(ResourceOrchestration));
                  orchestrationTypes.Add(typeof(DeploymentOrchestration));
                  orchestrationTypes.Add(typeof(WaitDependsOnOrchestration));
-                 orchestrationTypes.Add(typeof(CopyOrchestration));
                  orchestrationTypes.Add(typeof(RequestOrchestration));
                  activityTypes.Add(typeof(AsyncRequestActivity));
                  activityTypes.Add(typeof(HttpRequestActivity));

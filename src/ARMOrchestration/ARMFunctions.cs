@@ -367,7 +367,7 @@ namespace maskx.ARMOrchestration
                 if (!args.HasResult && cxt.TryGetValue("armcontext", out object armcxt))
                 {
                     var pds = (armcxt as DeploymentContext).Template.Parameters;
-                    using var defineDoc = JsonDocument.Parse(pds.ToString());
+                    using var defineDoc = JsonDocument.Parse(pds);
                     if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
                     {
                         throw new Exception($"ARM Template does not define the parameter:{par1}");

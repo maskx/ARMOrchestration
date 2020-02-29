@@ -18,13 +18,32 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string ApiVersion { get; set; }
 
+        /// <summary>
+        /// the type set in template
+        /// </summary>
         public string Type { get; set; }
 
+        /// <summary>
+        /// the type of resource
+        /// the child resource is parentType/childType
+        /// </summary>
+        public string FullType { get; set; }
+
+        /// <summary>
+        /// the name set in template
+        /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// the name of resource
+        /// the child resource is parentName/childName
+        /// </summary>
+        public string FullName { get; set; }
 
         public string Location { get; set; }
 
         public string Comments { get; set; }
+        public List<string> Resources { get; set; } = new List<string>();
 
         /// <summary>
         /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.

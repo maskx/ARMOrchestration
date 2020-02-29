@@ -42,8 +42,7 @@ namespace ARMCreatorTest.TestResourceOrchestration
             var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                        "Condition/FunctionConditionFalse");
             var r = TestHelper.GetDeploymentOpetions(instance.InstanceId).Result;
-            var a = TestHelper.DataConverter.Deserialize<TaskResult>(r[0].Result);
-            Assert.Equal("condition is false", a.Content);
+            Assert.Empty(r);
         }
     }
 }

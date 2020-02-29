@@ -45,7 +45,7 @@ namespace maskx.ARMOrchestration.Extensions
                         writer.WriteBooleanValue(b);
                     else if (r is string s)
                         writer.WriteStringValue(s);
-                    else if (r is int i)
+                    else if (r is Int32 i)
                         writer.WriteNumberValue(i);
                     else
                         writer.WriteNullValue();

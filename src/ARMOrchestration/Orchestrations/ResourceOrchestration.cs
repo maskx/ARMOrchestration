@@ -49,255 +49,143 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
-            #region Condition
-
-            if (resourceDeploy.Condition)
-            {
-                operationArgs.Stage = ProvisioningStage.ConditionCheckSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-            }
-            else
-            {
-                var conditionFail = new TaskResult() { Code = 200, Content = "condition is false" };
-                operationArgs.Stage = ProvisioningStage.ConditionCheckFailed;
-                operationArgs.Result = this.DataConverter.Serialize(conditionFail);
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                return conditionFail;
-            }
-
-            #endregion Condition
-
             #region DependsOn
 
-            if (null != resourceDeploy.DependsOn && resourceDeploy.DependsOn.Count > 0)
+            if (resourceDeploy.DependsOn.Count > 0)
             {
                 operationArgs.Stage = ProvisioningStage.DependsOnWaited;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(WaitDependsOnOrchestration),
-                    (input.Context.RootId, resourceDeploy.DependsOn));
+                    (input.Context.DeploymentId, resourceDeploy.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
 
             #endregion DependsOn
 
-            #region check policy
+            #region Create or Update Resource
 
-            var checkPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(RequestOrchestration),
-                            new RequestOrchestrationInput()
-                            {
-                                RequestAction = RequestAction.CheckPolicy,
-                                DeploymentContext = input.Context,
-                                Resource = resourceDeploy
-                            });
-            if (checkPolicyResult.Code == 200)
+            if (resourceDeploy.Type != Copy.ServiceType)
             {
-                operationArgs.Stage = ProvisioningStage.PolicyCheckSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-            }
-            else
-            {
-                operationArgs.Stage = ProvisioningStage.PolicyCheckFailed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                return checkPolicyResult;
-            }
-
-            #endregion check policy
-
-            TaskResult beginCreateResourceResult = null;
-            if (resourceDeploy.Type != this.infrastructure.BuitinServiceTypes.Deployments)
-            {
-                #region Check Resource
-
-                beginCreateResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
-                new RequestOrchestrationInput()
+                TaskResult createResourceResult = null;
+                if (resourceDeploy.Type == this.infrastructure.BuitinServiceTypes.Deployments)
                 {
-                    DeploymentContext = input.Context,
-                    Resource = resourceDeploy,
-                    RequestAction = RequestAction.CheckResource
-                });
-                // In communication service
-                // TODO: when resource in Provisioning, we need wait
-                // communication should return the resource status until  resource  available to be Provisioning
-                // TODO: should check authorization.
-                // communication should return 503 when no authorization
-                if (beginCreateResourceResult.Code == 200 || beginCreateResourceResult.Code == 204)
-                {
-                    operationArgs.Stage = ProvisioningStage.ResourceCheckSuccessed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                }
-                else
-                {
-                    operationArgs.Stage = ProvisioningStage.ResourceCheckFailed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    return beginCreateResourceResult;
-                }
-
-                #endregion Check Resource
-
-                #region Resource ReadOnly Lock Check
-
-                // code=200 update; code=204 create
-                if (beginCreateResourceResult.Code == 200)
-                {
-                    TaskResult readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                       typeof(RequestOrchestration),
-                                       new RequestOrchestrationInput()
-                                       {
-                                           Resource = resourceDeploy,
-                                           DeploymentContext = input.Context,
-                                           RequestAction = RequestAction.CheckLock
-                                       });
-                    if (readonlyLockCheckResult.Code == 404)// lock not exist
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/cross-resource-group-deployment?tabs=azure-powershell
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates
+                    // deployment history is different to the Azure
+                    // we nest the history of the nest deployment template
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#deployment-history
+                    Dictionary<string, object> armContext = new Dictionary<string, object>() { { "armcontext", input.Context } };
+                    using var doc = JsonDocument.Parse(resourceDeploy.Properties);
+                    var rootElement = doc.RootElement;
+                    var mode = DeploymentMode.Incremental;
+                    if (rootElement.TryGetProperty("mode", out JsonElement _mode)
+                        && _mode.GetString().Equals(DeploymentMode.Complete.ToString(), StringComparison.OrdinalIgnoreCase))
                     {
-                        operationArgs.Stage = ProvisioningStage.LockCheckSuccessed;
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                        mode = DeploymentMode.Complete;
+                    }
+                    string template = string.Empty;
+                    if (rootElement.TryGetProperty("template", out JsonElement _template))
+                    {
+                        template = _template.GetRawText();
+                    }
+                    TemplateLink templateLink = null;
+                    if (rootElement.TryGetProperty("templateLink", out JsonElement _templateLink))
+                    {
+                        templateLink = new TemplateLink()
+                        {
+                            ContentVersion = _templateLink.GetProperty("contentVersion").GetString(),
+                            Uri = this.functions.Evaluate(_templateLink.GetProperty("uri").GetString(), armContext).ToString()
+                        };
+                    }
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
+                    string parameters = string.Empty;
+                    ParametersLink parametersLink = null;
+                    if (rootElement.TryGetProperty("expressionEvaluationOptions", out JsonElement _expressionEvaluationOptions)
+                        && _expressionEvaluationOptions.GetProperty("scope").GetString().Equals("inner", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (rootElement.TryGetProperty("parameters", out JsonElement _parameters))
+                        {
+                            parameters = _parameters.GetRawText();
+                        }
+                        if (rootElement.TryGetProperty("parametersLink", out JsonElement _parametersLink))
+                        {
+                            parametersLink = new ParametersLink()
+                            {
+                                ContentVersion = _parametersLink.GetProperty("contentVersion").GetString(),
+                                Uri = this.functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), armContext).ToString()
+                            };
+                        }
                     }
                     else
                     {
-                        operationArgs.Stage = ProvisioningStage.LockCheckFailed;
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                        return readonlyLockCheckResult;
+                        parameters = input.Context.Parameters;
+
+                        var jobj = JObject.Parse(rootElement.GetRawText());
+                        jobj["variables"] = input.Context.Template.Variables;
                     }
-                }
 
-                #endregion Resource ReadOnly Lock Check
-
-                #region Check Quota
-
-                var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(RequestOrchestration),
-                    new RequestOrchestrationInput()
-                    {
-                        DeploymentContext = input.Context,
-                        RequestAction = RequestAction.CheckQuota,
-                        Resource = resourceDeploy
-                    });
-                if (checkQoutaResult.Code == 200)
-                {
-                    operationArgs.Stage = ProvisioningStage.QuotaCheckSuccessed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                }
-                else
-                {
-                    operationArgs.Stage = ProvisioningStage.QuotaCheckFailed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    return checkQoutaResult;
-                }
-
-                #endregion Check Quota
-            }
-
-            #region Create or Update Resource
-
-            TaskResult createResourceResult = null;
-            if (resourceDeploy.Type == this.infrastructure.BuitinServiceTypes.Deployments)
-            {
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/cross-resource-group-deployment?tabs=azure-powershell
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates
-                // deployment history is different to the Azure
-                // we nest the history of the nest deployment template
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#deployment-history
-                Dictionary<string, object> armContext = new Dictionary<string, object>() {
-                    { "armcontext",input.Context}
-                };
-                using var doc = JsonDocument.Parse(resourceDeploy.Properties);
-                var rootElement = doc.RootElement;
-                var mode = DeploymentMode.Incremental;
-                if (rootElement.TryGetProperty("mode", out JsonElement _mode)
-                    && _mode.GetString().Equals(DeploymentMode.Complete.ToString(), StringComparison.OrdinalIgnoreCase))
-                {
-                    mode = DeploymentMode.Complete;
-                }
-                string template = string.Empty;
-                if (rootElement.TryGetProperty("template", out JsonElement _template))
-                {
-                    template = _template.GetRawText();
-                }
-                TemplateLink templateLink = null;
-                if (rootElement.TryGetProperty("templateLink", out JsonElement _templateLink))
-                {
-                    templateLink = new TemplateLink()
-                    {
-                        ContentVersion = _templateLink.GetProperty("contentVersion").GetString(),
-                        Uri = this.functions.Evaluate(_templateLink.GetProperty("uri").GetString(), armContext).ToString()
-                    };
-                }
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
-                string parameters = string.Empty;
-                ParametersLink parametersLink = null;
-                if (rootElement.TryGetProperty("expressionEvaluationOptions", out JsonElement _expressionEvaluationOptions)
-                    && _expressionEvaluationOptions.GetProperty("scope").GetString().Equals("inner", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (rootElement.TryGetProperty("parameters", out JsonElement _parameters))
-                    {
-                        parameters = _parameters.GetRawText();
-                    }
-                    if (rootElement.TryGetProperty("parametersLink", out JsonElement _parametersLink))
-                    {
-                        parametersLink = new ParametersLink()
+                    createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                        typeof(DeploymentOrchestration),
+                        DataConverter.Serialize(
+                        new DeploymentOrchestrationInput()
                         {
-                            ContentVersion = _parametersLink.GetProperty("contentVersion").GetString(),
-                            Uri = this.functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), armContext).ToString()
-                        };
-                    }
+                            CorrelationId = input.Context.CorrelationId,
+                            Name = resourceDeploy.Name,
+                            SubscriptionId = resourceDeploy.SubscriptionId,
+                            ResourceGroup = resourceDeploy.ResourceGroup,
+                            Mode = mode,
+                            Template = template,
+                            TemplateLink = templateLink,
+                            Parameters = parameters,
+                            ParametersLink = parametersLink
+                        }));
                 }
                 else
                 {
-                    parameters = input.Context.Parameters;
-
-                    var jobj = JObject.Parse(rootElement.GetRawText());
-                    jobj["variables"] = input.Context.Template.Variables;
+                    createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                  typeof(RequestOrchestration),
+                                  new RequestOrchestrationInput()
+                                  {
+                                      RequestAction = RequestAction.CreateResource,
+                                      DeploymentContext = input.Context,
+                                      Resource = resourceDeploy
+                                  });
                 }
 
-                createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(DeploymentOrchestration),
-                    DataConverter.Serialize(
-                    new DeploymentOrchestrationInput()
-                    {
-                        CorrelationId = input.Context.CorrelationId,
-                        Name = resourceDeploy.Name,
-                        SubscriptionId = resourceDeploy.SubscriptionId,
-                        ResourceGroup = resourceDeploy.ResourceGroup,
-                        Mode = mode,
-                        Template = template,
-                        TemplateLink = templateLink,
-                        Parameters = parameters,
-                        ParametersLink = parametersLink
-                    }));
-            }
-            else
-            {
-                createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                              typeof(RequestOrchestration),
-                              new RequestOrchestrationInput()
-                              {
-                                  RequestAction = beginCreateResourceResult.Code == 200 ? RequestAction.UpdateResource : RequestAction.CreateResource,
-                                  DeploymentContext = input.Context,
-                                  Resource = resourceDeploy
-                              });
-            }
-
-            if (createResourceResult.Code == 200)
-            {
-                operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
-                operationArgs.Result = createResourceResult.Content;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-            }
-            else
-            {
-                operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
-                operationArgs.Result = createResourceResult.Content;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                return createResourceResult;
+                if (createResourceResult.Code == 200)
+                {
+                    operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
+                    operationArgs.Result = createResourceResult.Content;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+                else
+                {
+                    operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
+                    operationArgs.Result = createResourceResult.Content;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    return createResourceResult;
+                }
             }
 
             #endregion Create or Update Resource
 
-            if (resourceDeploy.Type != this.infrastructure.BuitinServiceTypes.Deployments)
+            #region wait for child resource completed
+
+            if (resourceDeploy.Resources.Count > 0)
+            {
+                await context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(WaitDependsOnOrchestration),
+                    (input.Context.DeploymentId, resourceDeploy.Resources));
+                operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            }
+
+            #endregion wait for child resource completed
+
+            if (resourceDeploy.Type != this.infrastructure.BuitinServiceTypes.Deployments
+                && resourceDeploy.Type != Copy.ServiceType)
             {
                 #region Commit Quota
 
@@ -355,160 +243,103 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
 
                 #endregion Commit Resource
-
-                #region Extension Resources
-
-                List<Task<TaskResult>> extenstionTasks = new List<Task<TaskResult>>();
-                foreach (var item in resourceDeploy.ExtensionResource)
-                {
-                    extenstionTasks.Add(
-                        context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(RequestOrchestration),
-                            new RequestOrchestrationInput()
-                            {
-                                Resource = resourceDeploy,
-                                RequestAction = RequestAction.CreateExtensionResource,
-                                DeploymentContext = input.Context,
-                                Context = new Dictionary<string, object>() {
-                                {"extenstion",item.Value }
-                                }
-                            }));
-                }
-                if (extenstionTasks.Count != 0)
-                {
-                    await Task.WhenAll(extenstionTasks);
-                    int successed = 0;
-                    int failed = 0;
-                    foreach (var t in extenstionTasks)
-                    {
-                        if (t.Result.Code == 200) successed++;
-                        else failed++;
-                    }
-                    if (failed > 0)
-                    {
-                        operationArgs.Stage = ProvisioningStage.ExtensionResourceFailed;
-                        operationArgs.Result = $"Extension resource successed: {successed}/{extenstionTasks.Count} ";
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                        return new TaskResult() { Code = 500, Content = operationArgs.Result };
-                    }
-                    else
-                    {
-                        operationArgs.Stage = ProvisioningStage.ExtensionResourceSuccessed;
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    }
-                }
-
-                #endregion Extension Resources
-
-                #region Create Or Update child resource
-
-                //if (resourceDeploy.Resources != null)
-                //{
-                //    List<Task<TaskResult>> childTasks = new List<Task<TaskResult>>();
-                //    foreach (var r in resourceDeploy.Resources)
-                //    {
-                //        var p = new ResourceOrchestrationInput()
-                //        {
-                //            ParentId = resourceDeploy.ResouceId,
-                //            Resource = r,
-                //        };
-                //        childTasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                //            typeof(ResourceOrchestration),
-                //            p));
-                //        // ARM does NOT support Iteration for a child resource
-                //        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#iteration-for-a-child-resource
-                //        //if (null == r.Copy)
-                //        //{
-                //        //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
-                //        //}
-                //        //else
-                //        //{
-                //        //    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(GroupOrchestration), p));
-                //        //}
-                //    }
-                //    await Task.WhenAll(childTasks);
-                //    int successed = 0;
-                //    int failed = 0;
-                //    foreach (var t in childTasks)
-                //    {
-                //        if (t.Result.Code == 200) successed++;
-                //        else failed++;
-                //    }
-                //    if (failed > 0)
-                //    {
-                //        operationArgs.Stage = ProvisioningStage.ChildResourceFailed;
-                //        operationArgs.Result = $"Child resource successed: {successed}/{childTasks.Count} ";
-                //        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                //        return new TaskResult() { Code = 500, Content = operationArgs.Result };
-                //    }
-                //    else
-                //    {
-                //        operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
-                //        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                //    }
-                //}
-
-                #endregion Create Or Update child resource
-
-                #region Apply Policy
-
-                // TODO: should start a orchestration
-                // in communication
-                var applyPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                  typeof(RequestOrchestration),
-                  new RequestOrchestrationInput()
-                  {
-                      RequestAction = RequestAction.ApplyPolicy,
-                      Resource = resourceDeploy,
-                      DeploymentContext = input.Context
-                  });
-                if (applyPolicyResult.Code == 200)
-                {
-                    operationArgs.Stage = ProvisioningStage.PolicyApplySuccessed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                }
-                else
-                {
-                    operationArgs.Stage = ProvisioningStage.PolicyApplyFailed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    return applyPolicyResult;
-                }
-
-                #endregion Apply Policy
-
-                #region Ready Resource
-
-                var readyResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(RequestOrchestration),
-                    new RequestOrchestrationInput()
-                    {
-                        Resource = resourceDeploy,
-                        RequestAction = RequestAction.ReadyResource,
-                        DeploymentContext = input.Context
-                    });
-                if (readyResourceResult.Code == 200)
-                {
-                    operationArgs.Stage = ProvisioningStage.ResourceReadySuccessed;
-                    operationArgs.Result = readyResourceResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                }
-                else
-                {
-                    operationArgs.Stage = ProvisioningStage.ResourceReadyFailed;
-                    operationArgs.Result = readyResourceResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
-                    return commitResourceResult;
-                }
-
-                #endregion Ready Resource
             }
 
-            #region save deployment result
+            #region Extension Resources
 
-            operationArgs.Stage = ProvisioningStage.Successed;
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            List<Task<TaskResult>> extenstionTasks = new List<Task<TaskResult>>();
+            foreach (var item in resourceDeploy.ExtensionResource)
+            {
+                extenstionTasks.Add(
+                    context.CreateSubOrchestrationInstance<TaskResult>(
+                        typeof(RequestOrchestration),
+                        new RequestOrchestrationInput()
+                        {
+                            Resource = resourceDeploy,
+                            RequestAction = RequestAction.CreateExtensionResource,
+                            DeploymentContext = input.Context,
+                            Context = new Dictionary<string, object>() {
+                                {"extenstion",item.Value }
+                            }
+                        }));
+            }
+            if (extenstionTasks.Count != 0)
+            {
+                await Task.WhenAll(extenstionTasks);
+                int successed = 0;
+                int failed = 0;
+                foreach (var t in extenstionTasks)
+                {
+                    if (t.Result.Code == 200) successed++;
+                    else failed++;
+                }
+                if (failed > 0)
+                {
+                    operationArgs.Stage = ProvisioningStage.ExtensionResourceFailed;
+                    operationArgs.Result = $"Extension resource successed: {successed}/{extenstionTasks.Count} ";
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    return new TaskResult() { Code = 500, Content = operationArgs.Result };
+                }
+                else
+                {
+                    operationArgs.Stage = ProvisioningStage.ExtensionResourceSuccessed;
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                }
+            }
 
-            #endregion save deployment result
+            #endregion Extension Resources
+
+            #region Apply Policy
+
+            // TODO: should start a orchestration
+            // in communication
+            var applyPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+              typeof(RequestOrchestration),
+              new RequestOrchestrationInput()
+              {
+                  RequestAction = RequestAction.ApplyPolicy,
+                  Resource = resourceDeploy,
+                  DeploymentContext = input.Context
+              });
+            if (applyPolicyResult.Code == 200)
+            {
+                operationArgs.Stage = ProvisioningStage.PolicyApplySuccessed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            }
+            else
+            {
+                operationArgs.Stage = ProvisioningStage.PolicyApplyFailed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                return applyPolicyResult;
+            }
+
+            #endregion Apply Policy
+
+            #region Ready Resource
+
+            var readyResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(RequestOrchestration),
+                new RequestOrchestrationInput()
+                {
+                    Resource = resourceDeploy,
+                    RequestAction = RequestAction.ReadyResource,
+                    DeploymentContext = input.Context
+                });
+            if (readyResourceResult.Code == 200)
+            {
+                operationArgs.Stage = ProvisioningStage.ResourceReadySuccessed;
+                operationArgs.Result = readyResourceResult.Content;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            }
+            else
+            {
+                operationArgs.Stage = ProvisioningStage.ResourceReadyFailed;
+                operationArgs.Result = readyResourceResult.Content;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                return readyResourceResult;
+            }
+
+            #endregion Ready Resource
 
             return new TaskResult() { Code = 200 };
         }

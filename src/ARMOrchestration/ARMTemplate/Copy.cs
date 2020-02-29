@@ -13,8 +13,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public const string SerialMode = "serial";
         public const string ParallelMode = "parallel";
 
-        public Dictionary<string, Resource> Resources { get; set; }
-
         public string Id { get; set; }
 
         /// <summary>

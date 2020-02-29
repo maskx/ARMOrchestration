@@ -102,9 +102,21 @@ namespace maskx.ARMOrchestration.Extensions
             return Encoding.UTF8.GetString(ms.ToArray());
         }
 
-        public static (bool Result, string Message, Dictionary<string, Resource> Resources) ExpandCopyResource(this JsonElement resource, Copy copy, Dictionary<string, object> context, ARMOrchestrationOptions options, ARMTemplateHelper helper)
+        public static (bool Result, string Message, List<Resource> Resources) ExpandCopyResource(
+            this JsonElement resource,
+            Copy copy,
+            Dictionary<string, object> context,
+            ARMTemplateHelper helper)
         {
-            Dictionary<string, Resource> resources = new Dictionary<string, Resource>();
+            Resource CopyResource = new Resource()
+            {
+                Name = copy.Name,
+                Type = Copy.ServiceType,
+                ResouceId = $"{Copy.ServiceType}/{copy.Name}"
+            };
+            List<Resource> resources = new List<Resource>();
+            resources.Add(CopyResource);
+
             var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
             Dictionary<string, object> copyContext = new Dictionary<string, object>();
             copyContext.Add("armcontext", context["armcontext"]);
@@ -113,12 +125,16 @@ namespace maskx.ARMOrchestration.Extensions
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var r = helper.ParseResource(resource.GetRawText(), copyContext);
+                var r = helper.ParseResource(resource, copyContext);
                 if (r.Result)
                 {
-                    foreach (var item in r.resource)
+                    CopyResource.Resources.Add(r.Resources[0].Name);
+                    resources.AddRange(r.Resources);
+                    if (copy.Mode == Copy.SerialMode
+                        && copy.BatchSize > 0
+                        && i >= copy.BatchSize)
                     {
-                        resources.Add(item.Name, item);
+                        r.Resources[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
                     }
                 }
                 else

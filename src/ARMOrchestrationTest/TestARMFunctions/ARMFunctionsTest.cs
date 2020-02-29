@@ -584,10 +584,10 @@ namespace ARMCreatorTest.TestARMFunctions
             var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(t.Task.Result).Content;
 
             using var outputDoc = JsonDocument.Parse(outputString);
-            var outputRoot = outputDoc.RootElement;
+            var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
 
             Assert.True(outputRoot.TryGetProperty("guidOutput", out JsonElement v), $"cannot find guidOutput in output");
-            Assert.True(Guid.TryParse(v.GetString(), out Guid d));
+            Assert.True(Guid.TryParse(v.GetProperty("value").GetString(), out Guid d));
         }
 
         [Trait("ARMFunctions", "String")]

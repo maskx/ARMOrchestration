@@ -1,7 +1,7 @@
 ﻿{
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "",
-  "apiProfile": "",
+  "contentVersion": "2019-01-01",
+  "apiProfile": "2017-03-09-profile",
   "parameters": {},
   "variables": {},
   "functions": [],

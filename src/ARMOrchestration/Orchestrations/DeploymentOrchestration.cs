@@ -15,10 +15,10 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestration : TaskOrchestration<TaskResult, string>
     {
-        private ARMOrchestrationOptions ARMOptions;
-        private IServiceProvider serviceProvider;
+        private readonly ARMOrchestrationOptions ARMOptions;
+        private readonly IServiceProvider serviceProvider;
         private readonly ARMFunctions functions;
-        private ARMTemplateHelper helper;
+        private readonly ARMTemplateHelper helper;
 
         public DeploymentOrchestration(
             IOptions<ARMOrchestrationOptions> options,
@@ -40,13 +40,31 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region validate template
 
-            var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity), input);
+            var valid = await context.ScheduleTask<TaskResult>(
+                typeof(ValidateTemplateActivity), input);
             if (valid.Code != 200)
                 return valid;
 
             #endregion validate template
 
-            var deploymentContext = DataConverter.Deserialize<DeploymentContext>(valid.Content);
+            var deploy = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+
+            var deploymentContext = new DeploymentContext()
+            {
+                CorrelationId = input.CorrelationId,
+                RootId = context.OrchestrationInstance.InstanceId,
+                DeploymentId = string.IsNullOrEmpty(input.DeploymentId) ? context.OrchestrationInstance.InstanceId : input.DeploymentId,
+                DeploymentName = input.Name,
+                Mode = input.Mode,
+                ResourceGroup = input.ResourceGroup,
+                SubscriptionId = input.SubscriptionId,
+                TenantId = input.TenantId,
+                Parameters = input.Parameters,
+                Template = deploy.TemplateOjbect
+            };
+            Dictionary<string, object> armContext = new Dictionary<string, object>() {
+                { "armcontext", deploymentContext}
+            };
 
             #region check permission
 
@@ -64,50 +82,86 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion check permission
 
-            Dictionary<string, object> armContext = new Dictionary<string, object>() {
-                { "armcontext", deploymentContext}
-            };
+            #region ReadOnly Lock Check,ResourceGroup or Subscription level
 
-            #region ResourceGroup ReadOnly Lock Check
+            var readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(RequestOrchestration),
+                    new RequestOrchestrationInput()
+                    {
+                        DeploymentContext = deploymentContext,
+                        RequestAction = RequestAction.CheckLock
+                    });
+            if (readonlyLockCheckResult.Code != 404)
+                return readonlyLockCheckResult;
 
-            //there are only resource group level lock
-            if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
-            {
-                var readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                        typeof(RequestOrchestration),
-                        new RequestOrchestrationInput()
-                        {
-                            DeploymentContext = deploymentContext,
-                            RequestAction = RequestAction.CheckLock
-                        });
-                if (readonlyLockCheckResult.Code != 404)
-                    return readonlyLockCheckResult;
-            }
+            #endregion ReadOnly Lock Check,ResourceGroup or Subscription level
 
-            #endregion ResourceGroup ReadOnly Lock Check
+            #region check policy
+
+            var checkPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                            typeof(RequestOrchestration),
+                            new RequestOrchestrationInput()
+                            {
+                                RequestAction = RequestAction.CheckPolicy,
+                                DeploymentContext = deploymentContext
+                            });
+            if (checkPolicyResult.Code != 200)
+                return checkPolicyResult;
+
+            #endregion check policy
+
+            #region Check Resource
+
+            ///////////////////////////////
+            // In communication Processor:
+            // TODO: when resource in Provisioning, we need wait
+            // communication should return the resource status until  resource  available to be Provisioning
+            //////////////////////////////
+            // In resource service
+            // TODO: should check authorization. Create or Update permission
+            // TODO: should check lock
+            // communication should return 503 when no authorization
+            var beginCreateResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(RequestOrchestration),
+                new RequestOrchestrationInput()
+                {
+                    DeploymentContext = deploymentContext,
+                    RequestAction = RequestAction.CheckResource
+                });
+
+            if (beginCreateResourceResult.Code != 200)
+                return beginCreateResourceResult;
+
+            #endregion Check Resource
+
+            #region Check Quota
+
+            var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                typeof(RequestOrchestration),
+                new RequestOrchestrationInput()
+                {
+                    DeploymentContext = deploymentContext,
+                    RequestAction = RequestAction.CheckQuota,
+                });
+            if (checkQoutaResult.Code != 200)
+                return checkPolicyResult;
+
+            #endregion Check Quota
 
             #region Provisioning resources
 
             List<Task> tasks = new List<Task>();
 
-            foreach (var resource in deploymentContext.Template.Resources)
+            foreach (var resource in deploymentContext.Template.Resources.Values)
             {
-                var p = new ResourceOrchestrationInput()
-                {
-                    Resource = resource.Value,
-                    Context = deploymentContext,
-                };
-
-                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(typeof(ResourceOrchestration), p));
-            }
-            foreach (var item in deploymentContext.Template.Copys)
-            {
+                if (!resource.Condition)
+                    continue;
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(CopyOrchestration),
-                    new CopyOrchestrationInput()
+                    typeof(ResourceOrchestration),
+                    new ResourceOrchestrationInput()
                     {
-                        Copy = item.Value,
-                        Context = deploymentContext
+                        Resource = resource,
+                        Context = deploymentContext,
                     }));
             }
             await Task.WhenAll(tasks.ToArray());
@@ -152,17 +206,17 @@ namespace maskx.ARMOrchestration.Orchestrations
             writer.WritePropertyName("properties");
             writer.WriteStartObject();
             writer.WritePropertyName("outputs");
+            writer.WriteStartObject();
             foreach (var item in outputDefineElement.EnumerateObject())
             {
-                writer.WriteStartObject();
                 writer.WritePropertyName(item.Name);
                 writer.WriteStartObject();
                 writer.WriteString("type", item.Value.GetProperty("type").GetString());
                 writer.WritePropertyName("value");
                 writer.WriteElement(item.Value.GetProperty("value"), context, helper);
                 writer.WriteEndObject();
-                writer.WriteEndObject();
             }
+            writer.WriteEndObject();
             writer.WriteEndObject();
             writer.WriteEndObject();
             writer.Flush();

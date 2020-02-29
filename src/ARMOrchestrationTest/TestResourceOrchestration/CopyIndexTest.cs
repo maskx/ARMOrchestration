@@ -47,13 +47,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content;
                     using var templateDoc = JsonDocument.Parse(TestHelper.GetTemplateContent("CopyIndex/VariableIteration"));
                     using var outputDoc = JsonDocument.Parse(outputString);
-                    var outputRoot = outputDoc.RootElement;
+                    var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
                     if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
                     {
                         List<string> child = new List<string>();
                         foreach (var item in outputDefineElement.EnumerateObject())
                         {
-                            Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement v), $"cannot find {item.Name} in output");
+                            Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement o), $"cannot find {item.Name} in output");
+                            o.TryGetProperty("value", out JsonElement v);
                             if (v.ValueKind == JsonValueKind.String)
                                 Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
                             else

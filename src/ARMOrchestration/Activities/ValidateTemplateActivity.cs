@@ -20,21 +20,9 @@ namespace maskx.ARMOrchestration.Activities
 
         protected override TaskResult Execute(TaskContext context, DeploymentOrchestrationInput input)
         {
-            var r = templateHelper.ValidateTemplate(input);
+            var r = templateHelper.ParseDeployment(input);
             if (r.Result)
-                return new TaskResult(200, DataConverter.Serialize(new DeploymentContext()
-                {
-                    CorrelationId = input.CorrelationId,
-                    RootId = context.OrchestrationInstance.InstanceId,
-                    DeploymentId = string.IsNullOrEmpty(input.DeploymentId) ? context.OrchestrationInstance.InstanceId : input.DeploymentId,
-                    DeploymentName = input.Name,
-                    Mode = input.Mode,
-                    ResourceGroup = input.ResourceGroup,
-                    SubscriptionId = input.SubscriptionId,
-                    TenantId = input.TenantId,
-                    Parameters = input.Parameters,
-                    Template = r.Template
-                }));
+                return new TaskResult(200, DataConverter.Serialize(r.Deployment));
             else
                 return new TaskResult() { Code = 400, Content = r.Message };
         }

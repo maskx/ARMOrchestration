@@ -261,7 +261,7 @@ namespace maskx.ARMOrchestration
             return RootElement.EnumerateArray().Max((e) =>
             {
                 //ARM only support int in array
-                return e.GetInt64();
+                return e.GetInt32();
             });
         }
 
@@ -270,7 +270,7 @@ namespace maskx.ARMOrchestration
             return RootElement.EnumerateArray().Min((e) =>
             {
                 //ARM only support int in array
-                return e.GetInt64();
+                return e.GetInt32();
             });
         }
 

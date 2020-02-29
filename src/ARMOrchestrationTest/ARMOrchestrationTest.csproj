@@ -237,6 +237,15 @@
     <None Update="ValidateTemplateTests\Template\ChildResource.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="ValidateTemplateTests\Template\ExpressionsInNestedTemplates-outer.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="ValidateTemplateTests\Template\ExpressionsInNestedTemplates-inner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="ValidateTemplateTests\Template\NestTemplate.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="ValidateTemplateTests\Template\NoResources.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

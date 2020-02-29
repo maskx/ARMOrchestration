@@ -15,7 +15,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string Variables { get; set; }
 
         public Dictionary<string, Resource> Resources { get; set; } = new Dictionary<string, Resource>();
-        public Dictionary<string, Copy> Copys = new Dictionary<string, Copy>();
 
         public Functions Functions { get; set; }
 
