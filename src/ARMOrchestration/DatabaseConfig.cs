@@ -8,6 +8,7 @@
 
         public string ConnectionString { get; set; }
 
+        /// <summary>
         /// Gets or sets the hub name for the database instance store.
         /// </summary>
         public string HubName { get; set; } = "ARM";

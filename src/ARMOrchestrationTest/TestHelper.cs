@@ -147,12 +147,16 @@ namespace ARMCreatorTest
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
-                    Template = templateString,
+                    TemplateContent = templateString,
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
-                    Name = filename.Replace('/', '-'),
+                    DeploymentName = filename.Replace('/', '-'),
                     SubscriptionId = TestHelper.SubscriptionId,
-                    ResourceGroup = TestHelper.ResourceGroup
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005"
                 })
             }).Result;
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();
@@ -162,7 +166,7 @@ namespace ARMCreatorTest
                 if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
                     t.SetResult(args.Result);
             });
-
+            t.Task.Wait();
             var outputString = DataConverter.Deserialize<TaskResult>(t.Task.Result).Content;
 
             using var templateDoc = JsonDocument.Parse(templateString);
@@ -257,6 +261,7 @@ namespace ARMCreatorTest
                  activityTypes.Add(typeof(ValidateTemplateActivity));
                  services.Configure<OrchestrationWorkerOptions>(options =>
                  {
+                     options.IncludeDetails = true;
                      options.GetBuildInOrchestrators = (sp) => orchestrationTypes;
                      options.GetBuildInTaskActivities = (sp) => activityTypes;
                      if (interfaceActivitys != null)
@@ -326,12 +331,16 @@ namespace ARMCreatorTest
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
-                    Template = TestHelper.GetTemplateContent(filename),
+                    TemplateContent = TestHelper.GetTemplateContent(filename),
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
-                    Name = filename.Replace('/', '-'),
+                    DeploymentName = filename.Replace('/', '-'),
                     SubscriptionId = TestHelper.SubscriptionId,
-                    ResourceGroup = TestHelper.ResourceGroup
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005"
                 })
             }).Result;
             TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();
@@ -371,7 +380,7 @@ namespace ARMCreatorTest
                   {
                       r.Add(new DeploymentOperationsActivityInput()
                       {
-                          Resource = reader["Resource"].ToString(),
+                          Name = reader["Resource"].ToString(),
                           ResourceId = reader["ResourceId"].ToString(),
                           Result = reader["Result"]?.ToString()
                       });

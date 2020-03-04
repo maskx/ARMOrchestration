@@ -566,12 +566,16 @@ namespace ARMCreatorTest.TestARMFunctions
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
-                    Template = templateString,
+                    TemplateContent = templateString,
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
-                    Name = filename.Replace('/', '-'),
+                    DeploymentName = filename.Replace('/', '-'),
                     SubscriptionId = TestHelper.SubscriptionId,
-                    ResourceGroup = TestHelper.ResourceGroup
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005"
                 })
             }).Result;
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();

@@ -4,13 +4,9 @@ using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Extensions
 {
-    public class ARMOrchestrationSqlServerConfig
+    public class ARMOrchestrationSqlServerConfig : ARMOrchestrationConfig
     {
         public DatabaseConfig Database { get; set; }
         public SQLServerOrchestrationServiceSettings OrchestrationServiceSettings { get; set; } = new SQLServerOrchestrationServiceSettings();
-        public OrchestrationWorkerOptions OrchestrationWorkerOptions { get; set; } = new OrchestrationWorkerOptions();
-        public CommunicationWorkerOptions CommunicationWorkerOptions { get; set; } = new CommunicationWorkerOptions();
-        public List<string> ExtensionResources { get; set; } = new List<string>();
-        public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
     }
 }

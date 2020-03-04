@@ -55,7 +55,7 @@ namespace ARMOrchestrationTest
                 new DeploymentOrchestrationInput()
                 {
                     DeploymentId = Guid.NewGuid().ToString("N"),
-                    Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
+                    TemplateContent = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     CorrelationId = Guid.NewGuid().ToString("N")

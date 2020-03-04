@@ -1,5 +1,4 @@
 ﻿using DurableTask.Core;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
@@ -22,9 +21,9 @@ USING (VALUES (@InstanceId,@ExecutionId)) as [Source](InstanceId,ExecutionId)
 ON [Target].InstanceId = [Source].InstanceId AND [Target].ExecutionId = [Source].ExecutionId
 WHEN NOT MATCHED THEN
 	INSERT
-	([InstanceId],[ExecutionId],[DeploymentId],[CorrelationId],[ParentId],[Resource],[Type],[Stage],[ResourceId],[CreateTimeUtc],[UpdateTimeUtc])
+	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input])
 	VALUES
-	(@InstanceId,@ExecutionId,@DeploymentId,@CorrelationId,@ParentId,@Resource,@Type,@Stage,@ResourceId,GETUTCDATE(),GETUTCDATE())
+	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input)
 WHEN MATCHED THEN
 	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=@Result;
 ";
@@ -54,17 +53,33 @@ WHEN MATCHED THEN
             Dictionary<string, object> pars = new Dictionary<string, object>() {
                 { "InstanceId",input.InstanceId },
                 { "ExecutionId",input.ExecutionId},
-                { "DeploymentId",input.DeploymentId},
-                { "CorrelationId",input.CorrelationId},
+                { "GroupId",input.DeploymentContext.GroupId },
+                { "GroupType",input.DeploymentContext.GroupType },
+                { "HierarchyId",input.DeploymentContext.HierarchyId },
+                { "RootId",input.DeploymentContext.RootId },
+                { "DeploymentId",input.DeploymentContext.DeploymentId},
+                { "CorrelationId",input.DeploymentContext.CorrelationId},
                 { "ResourceId",input.ResourceId},
-                { "Resource",input.Resource},
+                { "Name",input.Name},
+                { "Type",input.Type},
                 { "Stage",(int)input.Stage},
-                { "Type",input.Type}
             };
-            if (string.IsNullOrEmpty(input.ParentId))
-                pars.Add("ParentId", DBNull.Value);
+            if (string.IsNullOrEmpty(input.DeploymentContext.SubscriptionId))
+                pars.Add("SubscriptionId", DBNull.Value);
             else
-                pars.Add("ParentId", input.ParentId);
+                pars.Add("SubscriptionId", input.DeploymentContext.SubscriptionId);
+            if (string.IsNullOrEmpty(input.DeploymentContext.ManagementGroupId))
+                pars.Add("ManagementGroupId", DBNull.Value);
+            else
+                pars.Add("ManagementGroupId", input.DeploymentContext.ManagementGroupId);
+            if (string.IsNullOrEmpty(input.ParentResourceId))
+                pars.Add("ParentResourceId", DBNull.Value);
+            else
+                pars.Add("ParentResourceId", input.ParentResourceId);
+            if (string.IsNullOrWhiteSpace(input.Input))
+                pars.Add("Input", DBNull.Value);
+            else
+                pars.Add("Input", input.Input);
             if (string.IsNullOrEmpty(input.Result))
                 pars.Add("Result", DBNull.Value);
             else

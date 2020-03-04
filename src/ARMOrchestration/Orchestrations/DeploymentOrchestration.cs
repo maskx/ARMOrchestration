@@ -6,6 +6,7 @@ using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -19,22 +20,56 @@ namespace maskx.ARMOrchestration.Orchestrations
         private readonly IServiceProvider serviceProvider;
         private readonly ARMFunctions functions;
         private readonly ARMTemplateHelper helper;
+        private readonly IInfrastructure infrastructure;
 
         public DeploymentOrchestration(
             IOptions<ARMOrchestrationOptions> options,
             IServiceProvider serviceProvider,
             ARMFunctions functions,
-            ARMTemplateHelper helper)
+            ARMTemplateHelper helper,
+            IInfrastructure infrastructure)
         {
             this.ARMOptions = options?.Value;
             this.serviceProvider = serviceProvider;
             this.functions = functions;
             this.helper = helper;
+            this.infrastructure = infrastructure;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
+            if (string.IsNullOrEmpty(input.RootId))
+                input.RootId = input.DeploymentId;
+            var operationArgs = new DeploymentOperationsActivityInput()
+            {
+                DeploymentContext = input,
+                InstanceId = context.OrchestrationInstance.InstanceId,
+                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                Name = input.DeploymentName,
+                Type = infrastructure.BuitinServiceTypes.Deployments,
+                ResourceId = input.DeploymentId,
+                ParentResourceId = input.DeploymentId,
+                Stage = ProvisioningStage.StartProcessing,
+                Input = DataConverter.Serialize(input)
+            };
+
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+
+            #region DependsOn
+
+            if (input.DependsOn.Count > 0)
+            {
+                operationArgs.Stage = ProvisioningStage.DependsOnWaited;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(WaitDependsOnOrchestration),
+                    (input.DeploymentId, input.DependsOn));
+                operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            }
+
+            #endregion DependsOn
 
             string rtv = string.Empty;
 
@@ -47,23 +82,10 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion validate template
 
-            var deploy = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+            input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
 
-            var deploymentContext = new DeploymentContext()
-            {
-                CorrelationId = input.CorrelationId,
-                RootId = context.OrchestrationInstance.InstanceId,
-                DeploymentId = string.IsNullOrEmpty(input.DeploymentId) ? context.OrchestrationInstance.InstanceId : input.DeploymentId,
-                DeploymentName = input.Name,
-                Mode = input.Mode,
-                ResourceGroup = input.ResourceGroup,
-                SubscriptionId = input.SubscriptionId,
-                TenantId = input.TenantId,
-                Parameters = input.Parameters,
-                Template = deploy.TemplateOjbect
-            };
             Dictionary<string, object> armContext = new Dictionary<string, object>() {
-                { "armcontext", deploymentContext}
+                { "armcontext", input as DeploymentContext}
             };
 
             #region check permission
@@ -72,7 +94,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             typeof(RequestOrchestration),
                             new RequestOrchestrationInput()
                             {
-                                DeploymentContext = deploymentContext,
+                                DeploymentContext = input,
                                 RequestAction = RequestAction.CheckPermission
                             });
             if (permissionResult.Code != 200)
@@ -88,7 +110,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     typeof(RequestOrchestration),
                     new RequestOrchestrationInput()
                     {
-                        DeploymentContext = deploymentContext,
+                        DeploymentContext = input,
                         RequestAction = RequestAction.CheckLock
                     });
             if (readonlyLockCheckResult.Code != 404)
@@ -103,7 +125,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             new RequestOrchestrationInput()
                             {
                                 RequestAction = RequestAction.CheckPolicy,
-                                DeploymentContext = deploymentContext
+                                DeploymentContext = input
                             });
             if (checkPolicyResult.Code != 200)
                 return checkPolicyResult;
@@ -125,7 +147,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 typeof(RequestOrchestration),
                 new RequestOrchestrationInput()
                 {
-                    DeploymentContext = deploymentContext,
+                    DeploymentContext = input,
                     RequestAction = RequestAction.CheckResource
                 });
 
@@ -140,7 +162,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 typeof(RequestOrchestration),
                 new RequestOrchestrationInput()
                 {
-                    DeploymentContext = deploymentContext,
+                    DeploymentContext = input,
                     RequestAction = RequestAction.CheckQuota,
                 });
             if (checkQoutaResult.Code != 200)
@@ -152,7 +174,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             List<Task> tasks = new List<Task>();
 
-            foreach (var resource in deploymentContext.Template.Resources.Values)
+            foreach (var resource in input.Template.Resources.Values)
             {
                 if (!resource.Condition)
                     continue;
@@ -161,7 +183,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     new ResourceOrchestrationInput()
                     {
                         Resource = resource,
-                        Context = deploymentContext,
+                        Context = input,
                     }));
             }
             await Task.WhenAll(tasks.ToArray());
@@ -175,12 +197,16 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region get template outputs
 
-            if (!string.IsNullOrEmpty(deploymentContext.Template.Outputs))
+            if (!string.IsNullOrEmpty(input.Template.Outputs))
             {
-                rtv = this.GetOutputs(deploymentContext);
+                rtv = this.GetOutputs(input);
             }
 
             #endregion get template outputs
+
+            operationArgs.Result = rtv;
+            operationArgs.Stage = ProvisioningStage.Successed;
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
             return new TaskResult() { Code = 200, Content = rtv };
         }

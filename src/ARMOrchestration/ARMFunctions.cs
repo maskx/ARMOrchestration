@@ -408,7 +408,7 @@ namespace maskx.ARMOrchestration
                 properties.Add("mode", input.Mode.ToString().ToLower());
                 // TODO: Set provisioningState
                 properties.Add("provisioningState", "Accepted");
-                properties.Add("templateLink", new JValue(input.TemplateLink));
+
                 obj.Add("properties", properties);
                 args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));
             });
@@ -698,6 +698,7 @@ namespace maskx.ARMOrchestration
             {
                 args.Result = tenantResourceId(args.EvaluateParameters(cxt));
             });
+            // TODO: reference
             Functions.Add("reference", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);

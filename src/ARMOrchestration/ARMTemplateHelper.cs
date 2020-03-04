@@ -5,6 +5,7 @@ using maskx.ARMOrchestration.WhatIf;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -33,9 +34,23 @@ namespace maskx.ARMOrchestration
 
         public (bool Result, string Message, DeploymentOrchestrationInput Deployment) ParseDeployment(DeploymentOrchestrationInput input)
         {
-            if (string.IsNullOrEmpty(input.Template))
-                return (false, "can not find template node", null);
-            using JsonDocument doc = JsonDocument.Parse(input.Template);
+            string templateContent = string.Empty;
+            if (input.Template != null)
+                return (true, "", input);
+            Template template = new Template();
+            input.Template = template;
+            if (!string.IsNullOrEmpty(input.TemplateContent))
+            {
+                templateContent = input.TemplateContent;
+            }
+            else if (input.TemplateLink != null)
+            {
+                // TODO: get template content form link
+                templateContent = input.TemplateContent;
+            }
+            if (string.IsNullOrEmpty(templateContent))
+                return (false, "can not find template setting", null);
+            using JsonDocument doc = JsonDocument.Parse(templateContent);
             var root = doc.RootElement;
             if (!root.TryGetProperty("$schema", out JsonElement schema))
                 return (false, "not find $schema in template", null);
@@ -43,7 +58,6 @@ namespace maskx.ARMOrchestration
                 return (false, "not find contentVersion in template", null);
             if (!root.TryGetProperty("resources", out JsonElement resources))
                 return (false, "not find resources in template", null);
-            var template = input.TemplateOjbect;
 
             DeploymentContext deploymentContext = new DeploymentContext()
             {
@@ -55,9 +69,7 @@ namespace maskx.ARMOrchestration
                 TenantId = input.TenantId,
                 Parameters = input.Parameters,
                 Template = template,
-                TemplateLink = input.TemplateLink,
-                ParametersLink = input.ParametersLink,
-                DeploymentName = input.Name
+                DeploymentName = input.DeploymentName
             };
 
             Dictionary<string, object> armContext = new Dictionary<string, object>() {
@@ -150,7 +162,7 @@ namespace maskx.ARMOrchestration
                 Parameters = input.Parameters,
                 ResourceGroup = input.ResourceGroupName,
                 SubscriptionId = input.SubscriptionId,
-                Template = input.Template,
+                TemplateContent = input.Template,
                 TenantId = input.TenantId
             });
             if (!valid.Result)
@@ -165,17 +177,14 @@ namespace maskx.ARMOrchestration
                 ResourceGroup = input.ResourceGroupName,
                 SubscriptionId = input.SubscriptionId,
                 TenantId = input.TenantId,
-                Parameters = input.Parameters,
-
-                TemplateLink = input.TemplateLink,
-                ParametersLink = input.ParametersLink
+                Parameters = input.Parameters
             };
             string queryScope;
             if (input.ScopeType == ScopeType.ResourceGroup)
                 queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
             else
                 queryScope = $"subscriptions/{input.SubscriptionId}";
-            var str = this.infrastructure.List(deploymentContext, queryScope, valid.Deployment.TemplateOjbect.ApiProfile, string.Empty, "resources");
+            var str = this.infrastructure.List(deploymentContext, queryScope, valid.Deployment.Template.ApiProfile, string.Empty, "resources");
             //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);
             Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
@@ -187,7 +196,7 @@ namespace maskx.ARMOrchestration
                 asset.Add(id.GetString(), r);
             }
 
-            foreach (var r in valid.Deployment.TemplateOjbect.Resources.Values)
+            foreach (var r in valid.Deployment.Template.Resources.Values)
             {
                 CheckResourceWhatIf(input, result, asset, r);
             }
@@ -350,22 +359,27 @@ namespace maskx.ARMOrchestration
                 var root1 = doc1.RootElement;
                 foreach (var node in root1.EnumerateObject())
                 {
+                    if (node.Name.Equals("parameters", StringComparison.OrdinalIgnoreCase)
+                        || node.Name.Equals("variables", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
                     writer.WritePropertyName(node.Name);
-                    if (node.Name.Equals("parameters", StringComparison.OrdinalIgnoreCase))
-                    {
-                        using var p = JsonDocument.Parse(deploymentContext.Template.Parameters);
-                        p.RootElement.WriteTo(writer);
-                    }
-                    else if (node.Name.Equals("variables", StringComparison.OrdinalIgnoreCase))
-                    {
-                        using var v = JsonDocument.Parse(deploymentContext.Template.Variables);
-                        v.RootElement.WriteTo(writer);
-                    }
-                    else
-                    {
-                        node.Value.WriteTo(writer);
-                    }
+                    node.Value.WriteTo(writer);
                 }
+                if (!string.IsNullOrWhiteSpace(deploymentContext.Template.Parameters))
+                {
+                    using var p = JsonDocument.Parse(deploymentContext.Template.Parameters);
+                    writer.WritePropertyName("parameters");
+                    p.RootElement.WriteTo(writer);
+                }
+                if (!string.IsNullOrWhiteSpace(deploymentContext.Template.Variables))
+                {
+                    using var v = JsonDocument.Parse(deploymentContext.Template.Variables);
+                    writer.WritePropertyName("variables");
+                    v.RootElement.WriteTo(writer);
+                }
+
                 writer.WriteEndObject();
                 writer.Flush();
                 template = Encoding.UTF8.GetString(ms.ToArray());
@@ -374,11 +388,11 @@ namespace maskx.ARMOrchestration
             var deployInput = new DeploymentOrchestrationInput()
             {
                 CorrelationId = deploymentContext.CorrelationId,
-                Name = resource.Name,
+                DeploymentName = resource.Name,
                 SubscriptionId = resource.SubscriptionId,
                 ResourceGroup = resource.ResourceGroup,
                 Mode = mode,
-                Template = template,
+                TemplateContent = template,
                 TemplateLink = templateLink,
                 Parameters = parameters,
                 ParametersLink = parametersLink,
@@ -481,7 +495,7 @@ namespace maskx.ARMOrchestration
                 r.Plan = plan.GetRawText();
 
             if (!r.Condition)
-                return (true, "Condition equal false", resources, null);
+                return (true, "Condition equal false", resources, deployments);
 
             if (resourceElement.TryGetProperty("properties", out JsonElement properties))
             {

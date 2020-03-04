@@ -33,18 +33,17 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             var resourceDeploy = input.Resource;
-
             var operationArgs = new DeploymentOperationsActivityInput()
             {
-                DeploymentId = input.Context.DeploymentId,
+                DeploymentContext = input.Context,
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                CorrelationId = input.Context.CorrelationId,
-                Resource = resourceDeploy.Name,
+                Name = resourceDeploy.Name,
                 Type = resourceDeploy.Type,
                 ResourceId = resourceDeploy.ResouceId,
-                ParentId = input.ParentId,
-                Stage = ProvisioningStage.StartProcessing
+                ParentResourceId = input.ParentId,
+                Stage = ProvisioningStage.StartProcessing,
+                Input = DataConverter.Serialize(input.Resource)
             };
 
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
@@ -132,11 +131,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                         new DeploymentOrchestrationInput()
                         {
                             CorrelationId = input.Context.CorrelationId,
-                            Name = resourceDeploy.Name,
+                            DeploymentName = resourceDeploy.Name,
                             SubscriptionId = resourceDeploy.SubscriptionId,
                             ResourceGroup = resourceDeploy.ResourceGroup,
                             Mode = mode,
-                            Template = template,
+                            TemplateContent = template,
                             TemplateLink = templateLink,
                             Parameters = parameters,
                             ParametersLink = parametersLink
