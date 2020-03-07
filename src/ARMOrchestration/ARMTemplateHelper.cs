@@ -5,9 +5,7 @@ using maskx.ARMOrchestration.WhatIf;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -59,21 +57,8 @@ namespace maskx.ARMOrchestration
             if (!root.TryGetProperty("resources", out JsonElement resources))
                 return (false, "not find resources in template", null);
 
-            DeploymentContext deploymentContext = new DeploymentContext()
-            {
-                CorrelationId = input.CorrelationId,
-                RootId = input.DeploymentId,
-                Mode = input.Mode,
-                ResourceGroup = input.ResourceGroup,
-                SubscriptionId = input.SubscriptionId,
-                TenantId = input.TenantId,
-                Parameters = input.Parameters,
-                Template = template,
-                DeploymentName = input.DeploymentName
-            };
-
             Dictionary<string, object> armContext = new Dictionary<string, object>() {
-                {"armcontext", deploymentContext} };
+                {"armcontext", input} };
 
             template.Schema = schema.GetString();
             template.ContentVersion = contentVersion.GetString();
@@ -135,17 +120,11 @@ namespace maskx.ARMOrchestration
                     }
                 }
             }
-            string key;
-            Resource tempR;
             foreach (var res in template.Resources.Values)
             {
-                if (!res.Condition)
-                    continue;
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
-                    key = res.DependsOn[i];
-                    tempR = template.Resources[key];
-                    if (!tempR.Condition)
+                    if (!template.Resources.ContainsKey(res.DependsOn[i]))
                         res.DependsOn.RemoveAt(i);
                     // TODO: check circular dependencies
                 }
@@ -297,8 +276,13 @@ namespace maskx.ARMOrchestration
             {
                 copy.Input = input.GetRawText();
             }
-
-            copy.Id = $"subscription/{deployContext.SubscriptionId}/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/copy/{copy.Name}";
+            if (string.IsNullOrEmpty(deployContext.SubscriptionId))
+                copy.Id = $"/subscription/{deployContext.SubscriptionId}";
+            if (string.IsNullOrEmpty(deployContext.ManagementGroupId))
+                copy.Id = $"/manamgementgroup/{deployContext.ManagementGroupId}";
+            if (string.IsNullOrEmpty(deployContext.ResourceGroup))
+                copy.Id = copy.Id + $"/resourceGroups/{deployContext.ResourceGroup}";
+            copy.Id = copy.Id + $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/copy/{copy.Name}";
             return (true, string.Empty, copy);
         }
 
@@ -387,10 +371,17 @@ namespace maskx.ARMOrchestration
 
             var deployInput = new DeploymentOrchestrationInput()
             {
+                RootId = deploymentContext.RootId,
+                DeploymentId = Guid.NewGuid().ToString("N"),
+                ParentId = deploymentContext.DeploymentId,
+                GroupId = deploymentContext.GroupId,
+                GroupType = deploymentContext.GroupType,
+                HierarchyId = deploymentContext.HierarchyId,
                 CorrelationId = deploymentContext.CorrelationId,
-                DeploymentName = resource.Name,
                 SubscriptionId = resource.SubscriptionId,
+                ManagementGroupId = resource.ManagementGroupId,
                 ResourceGroup = resource.ResourceGroup,
+                DeploymentName = resource.Name,
                 Mode = mode,
                 TemplateContent = template,
                 TemplateLink = templateLink,
@@ -398,6 +389,7 @@ namespace maskx.ARMOrchestration
                 ParametersLink = parametersLink,
                 ApiVersion = resource.ApiVersion
             };
+
             var t = ParseDeployment(deployInput);
             if (!t.Result)
                 return (false, t.Message, null);
@@ -415,7 +407,7 @@ namespace maskx.ARMOrchestration
             Resource r = new Resource();
             List<Resource> resources = new List<Resource>();
             List<DeploymentOrchestrationInput> deployments = new List<DeploymentOrchestrationInput>();
-            resources.Add(r);
+
             if (resourceElement.TryGetProperty("condition", out JsonElement condition))
             {
                 if (condition.ValueKind == JsonValueKind.False)
@@ -457,7 +449,12 @@ namespace maskx.ARMOrchestration
                 r.SubscriptionId = functions.Evaluate(subscriptionId.GetString(), context).ToString();
             else
                 r.SubscriptionId = deploymentContext.SubscriptionId;
-
+            // TODO: need support deployment resource in managementGroup
+            // subscriptionId and managementGroupId should be only one have value
+            if (resourceElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
+                r.ManagementGroupId = functions.Evaluate(managementGroupId.GetString(), context).ToString();
+            else
+                r.ManagementGroupId = deploymentContext.ManagementGroupId;
             if (resourceElement.TryGetProperty("location", out JsonElement location))
                 r.Location = functions.Evaluate(location.GetString(), context).ToString();
             if (resourceElement.TryGetProperty("comments", out JsonElement comments))
@@ -527,7 +524,8 @@ namespace maskx.ARMOrchestration
                 else
                     return (false, d.Message, null, null);
             }
-
+            else
+                resources.Add(r);
             foreach (var item in this.infrastructure.ExtensionResources)
             {
                 if (resourceElement.TryGetProperty(item, out JsonElement e))
@@ -573,6 +571,7 @@ namespace maskx.ARMOrchestration
                 var r = ParseResource(resource, copyContext);
                 if (r.Result)
                 {
+                    r.Resources[0].CopyId = copy.Id;
                     CopyResource.Resources.Add(r.Resources[0].Name);
                     resources.AddRange(r.Resources);
                     if (copy.Mode == Copy.SerialMode

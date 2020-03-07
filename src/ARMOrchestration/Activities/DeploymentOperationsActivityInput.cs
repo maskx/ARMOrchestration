@@ -16,7 +16,11 @@ namespace maskx.ARMOrchestration.Activities
         /// </summary>
         public string ExecutionId { get; set; }
 
-        public string ParentResourceId { get; set; }
+        /// <summary>
+        /// child of copy, the ParentId copy's path, like /Microsoft.Resources/deployments/copy/{copyname}
+        /// </summary>
+        public string ParentId { get; set; }
+
         public string ResourceId { get; set; }
 
         /// <summary>

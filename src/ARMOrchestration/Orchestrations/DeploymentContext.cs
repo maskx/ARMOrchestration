@@ -20,8 +20,16 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// </summary>
         public string HierarchyId { get; set; }
 
+        /// <summary>
+        /// the deploymentId of root deployment
+        /// </summary>
         public string RootId { get; set; }
+
+        /// <summary>
+        /// the deploymentId of parent, DependsOn will search resource status in this deployment's scope
+        /// </summary>
         public string ParentId { get; set; }
+
         public string DeploymentId { get; set; }
         public string CorrelationId { get; set; }
 

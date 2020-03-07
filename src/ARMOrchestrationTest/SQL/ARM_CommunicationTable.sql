@@ -24,7 +24,8 @@
 	[Plan] nvarchar(500) null,
 	[SubscriptionId] nvarchar(50) null,
 	[TenantId] nvarchar(50) null,
-	[ResourceGroup] nvarchar(50) null
+	[ResourceGroup] nvarchar(50) null,
+	[Context] [nvarchar](max) NULL,
  CONSTRAINT [PK_dbo_arm_Communication] PRIMARY KEY CLUSTERED 
 (
 	[InstanceId] ASC,

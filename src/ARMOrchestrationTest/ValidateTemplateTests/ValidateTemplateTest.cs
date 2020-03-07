@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using maskx.OrchestrationService;
 using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration.ARMTemplate;
+using System;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
@@ -163,13 +164,20 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             {
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
-                TemplateContent = GetTemplate("NestTemplate")
+                TemplateContent = GetTemplate("NestTemplate"),
+                DeploymentId = Guid.NewGuid().ToString("N"),
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005"
             });
             Assert.True(r.Result);
             Assert.Single(r.Deployment.Deployments);
             var d = r.Deployment.Deployments[0];
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
+            Assert.Equal(r.Deployment.RootId, d.RootId);
+            Assert.NotNull(d.DeploymentId);
+
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);

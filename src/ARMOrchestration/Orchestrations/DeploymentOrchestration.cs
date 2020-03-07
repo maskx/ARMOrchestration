@@ -1,12 +1,10 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -40,7 +38,11 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
             if (string.IsNullOrEmpty(input.RootId))
+            {
                 input.RootId = input.DeploymentId;
+                input.ParentId = $"{context.OrchestrationInstance.InstanceId}:{ context.OrchestrationInstance.ExecutionId}";
+            }
+
             var operationArgs = new DeploymentOperationsActivityInput()
             {
                 DeploymentContext = input,
@@ -48,11 +50,17 @@ namespace maskx.ARMOrchestration.Orchestrations
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
                 Name = input.DeploymentName,
                 Type = infrastructure.BuitinServiceTypes.Deployments,
-                ResourceId = input.DeploymentId,
-                ParentResourceId = input.DeploymentId,
+                ParentId = input.ParentId,
                 Stage = ProvisioningStage.StartProcessing,
                 Input = DataConverter.Serialize(input)
             };
+            if (string.IsNullOrEmpty(input.SubscriptionId))
+                operationArgs.ResourceId = $"/subscripition/{input.SubscriptionId}";
+            else if (string.IsNullOrEmpty(input.ManagementGroupId))
+                operationArgs.ResourceId = $"/managementgroup/{input.ManagementGroupId}";
+            if (string.IsNullOrEmpty(input.ResourceGroup))
+                operationArgs.ResourceId = operationArgs.ResourceId + $"/resourceGroups/{input.ResourceGroup}";
+            operationArgs.ResourceId = operationArgs.ResourceId + $"/providers/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
 
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
@@ -64,7 +72,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(WaitDependsOnOrchestration),
-                    (input.DeploymentId, input.DependsOn));
+                    (input.ParentId, input.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
@@ -176,8 +184,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             foreach (var resource in input.Template.Resources.Values)
             {
-                if (!resource.Condition)
-                    continue;
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(ResourceOrchestration),
                     new ResourceOrchestrationInput()
@@ -185,6 +191,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Resource = resource,
                         Context = input,
                     }));
+            }
+            foreach (var deploy in input.Deployments)
+            {
+                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                    typeof(DeploymentOrchestration),
+                   DataConverter.Serialize(deploy)));
             }
             await Task.WhenAll(tasks.ToArray());
 

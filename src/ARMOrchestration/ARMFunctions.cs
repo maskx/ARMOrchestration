@@ -688,6 +688,7 @@ namespace maskx.ARMOrchestration
                 else
                     args.Result = tenantResourceId(pars);
             });
+            // TODO: to support managementGroup resource, should add a managementGroupResourceId function
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);

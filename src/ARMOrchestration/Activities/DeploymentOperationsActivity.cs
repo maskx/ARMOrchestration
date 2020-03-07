@@ -72,10 +72,10 @@ WHEN MATCHED THEN
                 pars.Add("ManagementGroupId", DBNull.Value);
             else
                 pars.Add("ManagementGroupId", input.DeploymentContext.ManagementGroupId);
-            if (string.IsNullOrEmpty(input.ParentResourceId))
+            if (string.IsNullOrEmpty(input.ParentId))
                 pars.Add("ParentResourceId", DBNull.Value);
             else
-                pars.Add("ParentResourceId", input.ParentResourceId);
+                pars.Add("ParentResourceId", input.ParentId);
             if (string.IsNullOrWhiteSpace(input.Input))
                 pars.Add("Input", DBNull.Value);
             else

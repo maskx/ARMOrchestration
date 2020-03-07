@@ -41,7 +41,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Name = resourceDeploy.Name,
                 Type = resourceDeploy.Type,
                 ResourceId = resourceDeploy.ResouceId,
-                ParentResourceId = input.ParentId,
+                ParentId = string.IsNullOrEmpty(resourceDeploy.CopyId) ? input.Context.DeploymentId : resourceDeploy.CopyId,
                 Stage = ProvisioningStage.StartProcessing,
                 Input = DataConverter.Serialize(input.Resource)
             };

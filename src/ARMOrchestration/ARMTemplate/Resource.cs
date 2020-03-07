@@ -66,15 +66,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string Kind { get; set; }
 
         public string Plan { get; set; }
-
-        //public List<Resource> Resources { get; set; } = new List<Resource>();
         public Dictionary<string, string> ExtensionResource { get; set; } = new Dictionary<string, string>();
 
         public string ResourceGroup { get; set; }
 
         public string SubscriptionId { get; set; }
+        public string ManagementGroupId { get; set; }
 
         public string ResouceId { get; set; }
+        public string CopyId { get; set; }
 
         public override string ToString()
         {
