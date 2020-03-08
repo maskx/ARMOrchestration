@@ -196,7 +196,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(DeploymentOrchestration),
-                   DataConverter.Serialize(deploy)));
+                   DataConverter.Serialize(deploy.Value)));
             }
             await Task.WhenAll(tasks.ToArray());
 

@@ -50,6 +50,7 @@ namespace maskx.ARMOrchestration
                 return (false, "can not find template setting", null);
             using JsonDocument doc = JsonDocument.Parse(templateContent);
             var root = doc.RootElement;
+
             if (!root.TryGetProperty("$schema", out JsonElement schema))
                 return (false, "not find $schema in template", null);
             if (!root.TryGetProperty("contentVersion", out JsonElement contentVersion))
@@ -116,7 +117,7 @@ namespace maskx.ARMOrchestration
                     }
                     foreach (var d in resResult.deployments)
                     {
-                        input.Deployments.Add(d);
+                        input.Deployments.Add(d.DeploymentName, d);
                     }
                 }
             }
@@ -421,7 +422,7 @@ namespace maskx.ARMOrchestration
             else
                 return (false, "not find apiVersion in resource node", null, null);
             if (resourceElement.TryGetProperty("type", out JsonElement type))
-                r.Type = functions.Evaluate(type.GetString(), context).ToString();
+                r.Type = type.GetString();
             else
                 return (false, "not find type in resource node", null, null);
             if (!string.IsNullOrEmpty(parentType))

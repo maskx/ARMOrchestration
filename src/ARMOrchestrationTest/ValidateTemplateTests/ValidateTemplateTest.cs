@@ -172,7 +172,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             });
             Assert.True(r.Result);
             Assert.Single(r.Deployment.Deployments);
-            var d = r.Deployment.Deployments[0];
+            var d = r.Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.Equal(r.Deployment.RootId, d.RootId);
@@ -197,7 +197,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             });
             Assert.True(r.Result);
             Assert.Single(r.Deployment.Deployments);
-            var d = r.Deployment.Deployments[0];
+            var d = r.Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.NotNull(d.Template);
@@ -218,7 +218,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             });
             Assert.True(r.Result);
             Assert.Single(r.Deployment.Deployments);
-            var d = r.Deployment.Deployments[0];
+            var d = r.Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.NotNull(d.Template);

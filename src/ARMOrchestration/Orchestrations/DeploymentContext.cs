@@ -59,5 +59,6 @@ namespace maskx.ARMOrchestration.Orchestrations
         public bool RollbackToLastDeployment { get; set; } = false;
 
         public List<string> DependsOn { get; set; } = new List<string>();
+        public Dictionary<string, DeploymentOrchestrationInput> Deployments { get; set; } = new Dictionary<string, DeploymentOrchestrationInput>();
     }
 }

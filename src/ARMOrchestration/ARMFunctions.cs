@@ -711,8 +711,8 @@ namespace maskx.ARMOrchestration
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 if (resourceName.IndexOf('/') < 0)
                 {
-                    this.infrastructure.WhatIf(context, "");
                     r = GetResourceWithinTemplate(resourceName, context);
+
                     if (string.IsNullOrWhiteSpace(r))
                     {
                         // TODO: deal with result is empty string
@@ -763,24 +763,13 @@ namespace maskx.ARMOrchestration
         {
             using (var db = new DbAccess(options.Database.ConnectionString))
             {
-                if (resourceName.IndexOf('/') < 0)
-                {
-                    db.AddStatement($"select Result from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Resource=@Resource ",
-                        new
-                        {
-                            DeploymentId = cxt.DeploymentId,
-                            Resource = resourceName
-                        });
-                }
-                else
-                {
-                    db.AddStatement($"select Result from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and ResourceId like N'%'+@Resource ",
-                       new
-                       {
-                           DeploymentId = cxt.DeploymentId,
-                           Resource = resourceName
-                       });
-                }
+                db.AddStatement($"select Result from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
+                          new
+                          {
+                              DeploymentId = cxt.DeploymentId,
+                              Name = resourceName
+                          });
+
                 var r = db.ExecuteScalarAsync().Result;
                 if (r == DBNull.Value)
                     return string.Empty;
