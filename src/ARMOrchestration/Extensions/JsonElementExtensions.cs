@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Extensions
 {
@@ -102,7 +103,7 @@ namespace maskx.ARMOrchestration.Extensions
             return Encoding.UTF8.GetString(ms.ToArray());
         }
 
-        public static (bool Result, string Message, List<Resource> Resources) ExpandCopyResource(
+        public static async Task<(bool Result, string Message, List<Resource> Resources)> ExpandCopyResource(
             this JsonElement resource,
             Copy copy,
             Dictionary<string, object> context,
@@ -125,7 +126,7 @@ namespace maskx.ARMOrchestration.Extensions
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var r = helper.ParseResource(resource, copyContext);
+                var r = await helper.ParseResource(resource, copyContext);
                 if (r.Result)
                 {
                     CopyResource.Resources.Add(r.Resources[0].Name);

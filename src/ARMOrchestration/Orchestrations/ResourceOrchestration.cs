@@ -1,7 +1,9 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
@@ -156,13 +158,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (createResourceResult.Code == 200)
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
-                    operationArgs.Result = createResourceResult.Content;
+                    operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
-                    operationArgs.Result = createResourceResult.Content;
+                    operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent;
                     await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                     return createResourceResult;
                 }
@@ -308,6 +310,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             else
             {
                 operationArgs.Stage = ProvisioningStage.PolicyApplyFailed;
+                operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(applyPolicyResult.Content).ResponseContent;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return applyPolicyResult;
             }
@@ -326,14 +329,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                 });
             if (readyResourceResult.Code == 200)
             {
-                operationArgs.Stage = ProvisioningStage.ResourceReadySuccessed;
-                operationArgs.Result = readyResourceResult.Content;
+                operationArgs.Stage = ProvisioningStage.Successed;
+                operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(readyResourceResult.Content).ResponseContent;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
             }
             else
             {
                 operationArgs.Stage = ProvisioningStage.ResourceReadyFailed;
-                operationArgs.Result = readyResourceResult.Content;
+                operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(readyResourceResult.Content).ResponseContent;
                 await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
                 return readyResourceResult;
             }

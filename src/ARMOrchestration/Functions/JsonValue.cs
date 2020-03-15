@@ -5,7 +5,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Text.Json;
 
-namespace maskx.ARMOrchestration
+namespace maskx.ARMOrchestration.Functions
 {
     public class JsonValue : DynamicObject, IDisposable
     {

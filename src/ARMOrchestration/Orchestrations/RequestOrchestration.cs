@@ -1,6 +1,7 @@
 ﻿using DurableTask.Core;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
+using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;

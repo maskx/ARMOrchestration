@@ -1,6 +1,7 @@
 ﻿using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
@@ -775,6 +776,20 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"fullReferenceOutput",full.ToString(Newtonsoft.Json.Formatting.None) }
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "reference", result);
+        }
+
+        [Trait("ARMFunctions", "Resource")]
+        [Fact(DisplayName = "ReferenceDependsOn")]
+        public void ReferenceDependsOn()
+        {
+            var full = JObject.Parse(TestHelper.GetJsonFileContent("mock/response/ReferenceExample"));
+
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"referenceOutput",full["properties"].ToString(Newtonsoft.Json.Formatting.None)},
+                {"fullReferenceOutput",full.ToString(Newtonsoft.Json.Formatting.None) }
+            };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "referenceDependsOn", result);
         }
 
         [Trait("ARMFunctions", "Resource")]

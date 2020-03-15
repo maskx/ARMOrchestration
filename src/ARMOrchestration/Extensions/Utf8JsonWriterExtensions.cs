@@ -1,7 +1,9 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Extensions
 {
@@ -38,7 +40,7 @@ namespace maskx.ARMOrchestration.Extensions
                     break;
 
                 case JsonValueKind.String:
-                    var r = helper.functions.Evaluate(element.GetString(), context);
+                    var r = helper.ARMfunctions.Evaluate(element.GetString(), context);
                     if (r is JsonValue j)
                         j.RootElement.WriteTo(writer);
                     else if (r is bool b)
@@ -63,7 +65,7 @@ namespace maskx.ARMOrchestration.Extensions
                 foreach (var item in property.Value.EnumerateArray())
                 {
                     // TODO: add validate
-                    var copyResult = helper.ParseCopy(item.GetRawText(), context);
+                    var copyResult = helper.ParseCopy(item.GetRawText(), context).Result;
                     if (!copyResult.Result)
                         return (false, copyResult.Message);
                     var copy = copyResult.Copy;

@@ -9,8 +9,9 @@ using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.ARMTemplate;
 using Microsoft.Extensions.Options;
 using maskx.DurableTask.SQLServer.SQL;
+using System.Threading.Tasks;
 
-namespace maskx.ARMOrchestration
+namespace maskx.ARMOrchestration.Functions
 {
     public class ARMFunctions
     {
@@ -364,7 +365,7 @@ namespace maskx.ARMOrchestration
                         }
                     }
                 }
-                if (!args.HasResult && cxt.TryGetValue("armcontext", out object armcxt))
+                if (!args.HasResult && cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                 {
                     var pds = (armcxt as DeploymentContext).Template.Parameters;
                     using var defineDoc = JsonDocument.Parse(pds);
@@ -382,7 +383,7 @@ namespace maskx.ARMOrchestration
             });
             Functions.Add("variables", (args, cxt) =>
             {
-                if (!cxt.TryGetValue("armcontext", out object armcxt))
+                if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                     return;
                 string vars = (armcxt as DeploymentContext).Template.Variables;
 
@@ -399,7 +400,7 @@ namespace maskx.ARMOrchestration
             // TODO: deployment Functions
             Functions.Add("deployment", (args, cxt) =>
             {
-                var input = cxt["armcontext"] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 JObject obj = new JObject();
                 obj.Add("name", input.DeploymentName);
                 JObject properties = new JObject();
@@ -679,7 +680,7 @@ namespace maskx.ARMOrchestration
             Functions.Add("resourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt["armcontext"] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 var t = input.Template;
                 if (t.DeployLevel == DeployLevel.ResourceGroup)
                     args.Result = resourceId(input, pars);
@@ -692,7 +693,7 @@ namespace maskx.ARMOrchestration
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt["armcontext"] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 args.Result = subscriptionResourceId(input, pars);
             });
             Functions.Add("tenantresourceid", (args, cxt) =>
@@ -704,29 +705,40 @@ namespace maskx.ARMOrchestration
             {
                 var pars = args.EvaluateParameters(cxt);
                 string resourceName = pars[0].ToString();
-                var context = cxt["armcontext"] as DeploymentContext;
+                var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 string r = string.Empty;
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 if (resourceName.IndexOf('/') < 0)
                 {
-                    r = GetResourceWithinTemplate(resourceName, context);
-
-                    if (string.IsNullOrWhiteSpace(r))
+                    if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
                     {
-                        // TODO: deal with result is empty string
-                        return;
+                        // 这个时候 dependsOn 的 resource， 也许还未被处理，在Template.Reosurces 里面还不存在
+                        // 因此要先处理 dependsOn 的 Resource
+                        context.Template.Resources.WaitDependsOn(resourceName);
+
+                        var wi = infrastructure.WhatIf(context, resourceName);
+                        if (wi.Code != 200)
+                        {
+                            throw new Exception($"reference function run WhatIf fail:deployment id is {context.DeploymentId} ; resourceName is {resourceName}");
+                        }
+                        List<string> dependsOn;
+                        if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                        {
+                            dependsOn = d as List<string>;
+                        }
+                        else
+                        {
+                            dependsOn = new List<string>();
+                            cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                        }
+                        dependsOn.Add(resourceName);
+                        r = wi.Content;
                     }
-                    if (pars.Length == 3 && "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase))
-                        args.Result = new JsonValue(r);
                     else
                     {
-                        using var doc = JsonDocument.Parse(r);
-                        if (doc.RootElement.TryGetProperty("properties", out JsonElement _properties))
-                        {
-                            args.Result = new JsonValue(_properties.GetRawText());
-                        }
+                        r = GetResourceWithinTemplate(resourceName, context);
                     }
                 }
                 else
@@ -737,12 +749,22 @@ namespace maskx.ARMOrchestration
                     bool full = false;
                     var taskResult = this.infrastructure.Reference(context, resourceName, apiVersion, full);
                     if (taskResult.Code == 200)
-                        args.Result = new JsonValue(taskResult.Content);
+                        r = taskResult.Content;
+                }
+                if (pars.Length == 3 && "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase))
+                    args.Result = new JsonValue(r);
+                else
+                {
+                    using var doc = JsonDocument.Parse(r);
+                    if (doc.RootElement.TryGetProperty("properties", out JsonElement _properties))
+                    {
+                        args.Result = new JsonValue(_properties.GetRawText());
+                    }
                 }
             });
             Functions.Add("resourcegroup", (args, cxt) =>
             {
-                var context = cxt["armcontext"] as DeploymentContext;
+                var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 var taskResult = this.infrastructure.Reference(
                     context,
                     $"/subscription/{context.SubscriptionId}/resourceGroups/{context.ResourceGroup}");
@@ -771,7 +793,7 @@ namespace maskx.ARMOrchestration
                           });
 
                 var r = db.ExecuteScalarAsync().Result;
-                if (r == DBNull.Value)
+                if (r == null)
                     return string.Empty;
                 return r.ToString();
             }
@@ -891,7 +913,7 @@ namespace maskx.ARMOrchestration
             if (function.StartsWith("[") && function.EndsWith("]") && !function.StartsWith("[["))
             {
                 string functionString = function.TrimStart('[').TrimEnd(']');
-                var expression = new maskx.Expression.Expression(functionString)
+                var expression = new Expression.Expression(functionString)
                 {
                     EvaluateFunction = (name, args, cxt) =>
                     {
@@ -907,7 +929,7 @@ namespace maskx.ARMOrchestration
                         {
                             var pars = args.EvaluateParameters(context);
                             var r = this.infrastructure.List(
-                                 cxt["armcontext"] as DeploymentContext,
+                                 cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext,
                                  pars[0].ToString(),
                                  pars[1].ToString(),
                                  pars.Length == 3 ? pars[2].ToString() : string.Empty,
@@ -916,6 +938,32 @@ namespace maskx.ARMOrchestration
                         }
                     }
                 };
+                //if (context.ContainsKey(ContextKeys.IS_PREPARE))
+                //{
+                //    FunctionVisitor v = new FunctionVisitor(EvaluateOptions.None);
+                //    v.EvaluateFunction = expression.EvaluateFunction;
+                //    v.Parameters = expression.Parameters;
+                //    v.TryGetType = expression.TryGetType;
+                //    v.TryGetObject = expression.TryGetObject;
+                //    expression.ParsedExpression.Accept(v, context);
+                //    if (v.ReferenceFunction.Count > 0)
+                //    {
+                //        List<string> dependsOn;
+                //        if (context.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                //        {
+                //            dependsOn = d as List<string>;
+                //        }
+                //        else
+                //        {
+                //            dependsOn = new List<string>();
+                //            context.Add(ContextKeys.DEPENDSON, dependsOn);
+                //        }
+                //        foreach (var item in v.ReferenceFunction)
+                //        {
+                //            dependsOn.Add("");
+                //        }
+                //    }
+                //}
                 return expression.Evaluate(context);
             }
             return function;
@@ -947,7 +995,7 @@ namespace maskx.ARMOrchestration
         private bool TryGetCustomFunction(string function, Dictionary<string, object> context, out ARMTemplate.Member member)
         {
             member = null;
-            if (!context.TryGetValue("armcontext", out object armcxt))
+            if (!context.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                 return false;
             var udfs = (armcxt as DeploymentContext).Template.Functions;
             if (udfs == null)

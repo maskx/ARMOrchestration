@@ -10,6 +10,7 @@ using maskx.OrchestrationService;
 using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration.ARMTemplate;
 using System;
+using maskx.ARMOrchestration.Functions;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
@@ -125,7 +126,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             });
             Assert.True(r.Result);
             Assert.Single(r.Deployment.Template.Resources);
-            var resource = r.Deployment.Template.Resources.Values.First();
+            var resource = r.Deployment.Template.Resources.First();
             using var doc = JsonDocument.Parse(resource.Properties);
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("storageProfile", out JsonElement storageProfile));
@@ -181,7 +182,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);
-            var res = t.Resources.Values.First();
+            var res = t.Resources.First();
             Assert.Equal("storageAccount1", res.FullName);
             Assert.Equal("Microsoft.Storage/storageAccounts", res.FullType);
         }
@@ -203,7 +204,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);
-            var res = t.Resources.Values.First();
+            var res = t.Resources.First();
             Assert.Equal("from nested template", res.FullName);
         }
 
@@ -224,8 +225,30 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);
-            var res = t.Resources.Values.First();
+            var res = t.Resources.First();
             Assert.Equal("from parent template", res.FullName);
+        }
+
+        [Fact(DisplayName = "ReferenceDependsOn")]
+        public void ReferenceDependsOn()
+        {
+            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            {
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                DeploymentName = "ValidateTemplate-ReferenceDependsOn",
+                DeploymentId = Guid.NewGuid().ToString("N"),
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005",
+                TemplateContent = GetTemplate("referenceDependsOn")
+            });
+            Assert.True(r.Result);
+            var t = r.Deployment.Template;
+            Assert.Equal(2, t.Resources.Count);
+            var res = t.Resources["completed2020-3-11"];
+            Assert.Single(res.DependsOn);
+            Assert.Equal("examplestorage", res.DependsOn[0]);
         }
     }
 }

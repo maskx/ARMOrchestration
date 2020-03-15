@@ -5,6 +5,7 @@ using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.Workers;
 using maskx.DurableTask.SQLServer;

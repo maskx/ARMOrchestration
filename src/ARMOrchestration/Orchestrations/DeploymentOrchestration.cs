@@ -1,6 +1,7 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
 using System;
@@ -54,13 +55,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Stage = ProvisioningStage.StartProcessing,
                 Input = DataConverter.Serialize(input)
             };
-            if (string.IsNullOrEmpty(input.SubscriptionId))
+            if (!string.IsNullOrEmpty(input.SubscriptionId))
                 operationArgs.ResourceId = $"/subscripition/{input.SubscriptionId}";
-            else if (string.IsNullOrEmpty(input.ManagementGroupId))
+            else if (!string.IsNullOrEmpty(input.ManagementGroupId))
                 operationArgs.ResourceId = $"/managementgroup/{input.ManagementGroupId}";
-            if (string.IsNullOrEmpty(input.ResourceGroup))
-                operationArgs.ResourceId = operationArgs.ResourceId + $"/resourceGroups/{input.ResourceGroup}";
-            operationArgs.ResourceId = operationArgs.ResourceId + $"/providers/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
+            if (!string.IsNullOrEmpty(input.ResourceGroup))
+                operationArgs.ResourceId += $"/resourceGroups/{input.ResourceGroup}";
+            operationArgs.ResourceId += $"/providers/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
 
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
 
@@ -182,7 +183,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             List<Task> tasks = new List<Task>();
 
-            foreach (var resource in input.Template.Resources.Values)
+            foreach (var resource in input.Template.Resources)
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(ResourceOrchestration),

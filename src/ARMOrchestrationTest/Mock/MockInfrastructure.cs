@@ -5,6 +5,7 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace ARMOrchestrationTest.Mock
 {
@@ -75,7 +76,9 @@ namespace ARMOrchestrationTest.Mock
 
         public TaskResult WhatIf(DeploymentContext context, string resourceName)
         {
-            return new TaskResult();
+            var r = context.Template.Resources[resourceName];
+            var c = TestHelper.GetJsonFileContent("Mock/Response/getresourcegroup");
+            return new TaskResult() { Content = c, Code = 200 };
         }
     }
 }
