@@ -36,13 +36,5 @@
     }
   ],
   "outputs": {
-    "referenceOutput": {
-      "type": "object",
-      "value": "[reference(concat(reference(parameters('storageAccountName')).provisioningState,'2020-3-11'))]"
-    },
-    "fullReferenceOutput": {
-      "type": "object",
-      "value": "[reference(concat(reference(parameters('storageAccountName')).provisioningState,'2020-3-11'), '2016-12-01', 'Full')]"
-    }
   }
 }

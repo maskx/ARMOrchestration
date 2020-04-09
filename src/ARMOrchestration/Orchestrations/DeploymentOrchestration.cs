@@ -38,13 +38,17 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
+            if (string.IsNullOrEmpty(input.DeploymentId))
+            {
+                input.DeploymentId = context.OrchestrationInstance.InstanceId;
+            }
             if (string.IsNullOrEmpty(input.RootId))
             {
                 input.RootId = input.DeploymentId;
                 input.ParentId = $"{context.OrchestrationInstance.InstanceId}:{ context.OrchestrationInstance.ExecutionId}";
             }
 
-            var operationArgs = new DeploymentOperationsActivityInput()
+            var operationArgs = new DeploymentOperationActivityInput()
             {
                 DeploymentContext = input,
                 InstanceId = context.OrchestrationInstance.InstanceId,
@@ -63,19 +67,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                 operationArgs.ResourceId += $"/resourceGroups/{input.ResourceGroup}";
             operationArgs.ResourceId += $"/providers/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
 
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
 
             #region DependsOn
 
             if (input.DependsOn.Count > 0)
             {
                 operationArgs.Stage = ProvisioningStage.DependsOnWaited;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(WaitDependsOnOrchestration),
                     (input.ParentId, input.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
             }
 
             #endregion DependsOn
@@ -219,7 +223,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             operationArgs.Result = rtv;
             operationArgs.Stage = ProvisioningStage.Successed;
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
 
             return new TaskResult() { Code = 200, Content = rtv };
         }

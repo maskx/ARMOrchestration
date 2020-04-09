@@ -768,7 +768,7 @@ namespace ARMCreatorTest.TestARMFunctions
         [Fact(DisplayName = "ReferenceNoDependsOn")]
         public void ReferenceNoDependsOn()
         {
-            var full = JObject.Parse(TestHelper.GetJsonFileContent("mock/response/ReferenceExample"));
+            var full = JObject.Parse(TestHelper.GetJsonFileContent("mock/response/examplestorage"));
 
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
@@ -782,14 +782,20 @@ namespace ARMCreatorTest.TestARMFunctions
         [Fact(DisplayName = "ReferenceDependsOn")]
         public void ReferenceDependsOn()
         {
-            var full = JObject.Parse(TestHelper.GetJsonFileContent("mock/response/ReferenceExample"));
-
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"referenceOutput",full["properties"].ToString(Newtonsoft.Json.Formatting.None)},
-                {"fullReferenceOutput",full.ToString(Newtonsoft.Json.Formatting.None) }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "referenceDependsOn", result);
+            var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "referenceDependsOn", result);
+            var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
+            DeploymentOperation deployment = null;
+            foreach (var r in rs)
+            {
+                if (r.Name == "Succeeded2020-3-11")
+                {
+                    deployment = r;
+                }
+            }
+            Assert.NotNull(deployment);
         }
 
         [Trait("ARMFunctions", "Resource")]

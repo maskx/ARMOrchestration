@@ -1,11 +1,9 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
+﻿using maskx.ARMOrchestration.Activities;
 
-namespace maskx.ARMOrchestration.Activities
+namespace maskx.ARMOrchestration
 {
-    public partial class DeploymentOperationsActivityInput
+    public class DeploymentOperation
     {
-        public DeploymentContext DeploymentContext { get; set; }
-
         /// <summary>
         /// Orchestration InstanceId
         /// </summary>
@@ -16,10 +14,20 @@ namespace maskx.ARMOrchestration.Activities
         /// </summary>
         public string ExecutionId { get; set; }
 
+        public string GroupId { get; set; }
+        public string GroupType { get; set; }
+        public string HierarchyId { get; set; }
+        public string RootId { get; set; }
+        public string DeploymentId { get; set; }
+        public string CorrelationId { get; set; }
+
+        public string SubscriptionId { get; set; }
+        public string ManagementGroupId { get; set; }
+
         /// <summary>
         /// child of copy, the ParentId copy's path, like /Microsoft.Resources/deployments/copy/{copyname}
         /// </summary>
-        public string ParentId { get; set; }
+        public string ParentResourceId { get; set; }
 
         public string ResourceId { get; set; }
 

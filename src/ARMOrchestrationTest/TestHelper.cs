@@ -20,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -114,7 +115,7 @@ namespace ARMCreatorTest
         public static string GetJsonFileContent(string filename)
         {
             string s = Path.Combine(AppContext.BaseDirectory, $"{filename}.json");
-            return File.ReadAllText(s);
+            return JObject.Parse(File.ReadAllText(s)).ToString(Newtonsoft.Json.Formatting.None);
         }
 
         public static string GetTemplateContent(string filename)
@@ -135,7 +136,7 @@ namespace ARMCreatorTest
             return new JsonValue(templatString).GetNodeStringValue(path);
         }
 
-        public static void FunctionTest(OrchestrationWorker worker, string filename, Dictionary<string, string> result)
+        public static OrchestrationInstance FunctionTest(OrchestrationWorker worker, string filename, Dictionary<string, string> result)
         {
             var templateString = TestHelper.GetFunctionInputContent(filename);
             var instance = worker.JumpStartOrchestrationAsync(new Job()
@@ -154,7 +155,6 @@ namespace ARMCreatorTest
                     DeploymentName = filename.Replace('/', '-'),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
-                    DeploymentId = Guid.NewGuid().ToString("N"),
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
                     HierarchyId = "001002003004005"
@@ -188,6 +188,7 @@ namespace ARMCreatorTest
                         Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
                 }
             }
+            return instance;
         }
 
         public static IOrchestrationService CreateOrchestrationService()
@@ -256,7 +257,7 @@ namespace ARMCreatorTest
                  orchestrationTypes.Add(typeof(RequestOrchestration));
                  activityTypes.Add(typeof(AsyncRequestActivity));
                  activityTypes.Add(typeof(HttpRequestActivity));
-                 activityTypes.Add(typeof(DeploymentOperationsActivity));
+                 activityTypes.Add(typeof(DeploymentOperationActivity));
                  activityTypes.Add(typeof(WaitDependsOnActivity));
 
                  activityTypes.Add(typeof(ValidateTemplateActivity));
@@ -314,6 +315,7 @@ namespace ARMCreatorTest
                  services.AddSingleton<ARMTemplateHelper>();
                  services.AddSingleton<ARMFunctions>();
                  services.AddSingleton<IInfrastructure>(new MockInfrastructure());
+                 services.AddSingleton<ARMOrchestrationClient>();
              });
         }
 
@@ -371,15 +373,15 @@ namespace ARMCreatorTest
             return instance;
         }
 
-        public static async Task<List<DeploymentOperationsActivityInput>> GetDeploymentOpetions(string deploymentId)
+        public static async Task<List<DeploymentOperationActivityInput>> GetDeploymentOpetions(string deploymentId)
         {
-            List<DeploymentOperationsActivityInput> r = new List<DeploymentOperationsActivityInput>();
+            List<DeploymentOperationActivityInput> r = new List<DeploymentOperationActivityInput>();
             using (var db = new DbAccess(TestHelper.ConnectionString))
             {
                 db.AddStatement($"select * from arm_DeploymentOperations where deploymentId=N'{deploymentId}'");
                 await db.ExecuteReaderAsync((reader, index) =>
                   {
-                      r.Add(new DeploymentOperationsActivityInput()
+                      r.Add(new DeploymentOperationActivityInput()
                       {
                           Name = reader["Resource"].ToString(),
                           ResourceId = reader["ResourceId"].ToString(),

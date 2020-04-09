@@ -114,5 +114,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             return this._Resources.TryRemove(item.Name, out Resource v);
         }
+
+        public void Reorganize()
+        {
+        }
     }
 }

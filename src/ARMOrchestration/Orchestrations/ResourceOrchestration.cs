@@ -35,7 +35,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             var resourceDeploy = input.Resource;
-            var operationArgs = new DeploymentOperationsActivityInput()
+            var operationArgs = new DeploymentOperationActivityInput()
             {
                 DeploymentContext = input.Context,
                 InstanceId = context.OrchestrationInstance.InstanceId,
@@ -48,19 +48,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Input = DataConverter.Serialize(input.Resource)
             };
 
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
 
             #region DependsOn
 
             if (resourceDeploy.DependsOn.Count > 0)
             {
                 operationArgs.Stage = ProvisioningStage.DependsOnWaited;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
                     typeof(WaitDependsOnOrchestration),
                     (input.Context.DeploymentId, resourceDeploy.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
             }
 
             #endregion DependsOn
@@ -159,13 +159,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
                     operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
                     operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                     return createResourceResult;
                 }
             }
@@ -180,7 +180,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     typeof(WaitDependsOnOrchestration),
                     (input.Context.DeploymentId, resourceDeploy.Resources));
                 operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
             }
 
             #endregion wait for child resource completed
@@ -201,12 +201,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (commitQoutaResult.Code == 200)
                 {
                     operationArgs.Stage = ProvisioningStage.QuotaCommitSuccesed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.QuotaCommitFailed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                     return commitQoutaResult;
                 }
 
@@ -233,13 +233,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;
                     operationArgs.Result = commitResourceResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCommitFailed;
                     operationArgs.Result = commitQoutaResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                     return commitResourceResult;
                 }
 
@@ -278,13 +278,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     operationArgs.Stage = ProvisioningStage.ExtensionResourceFailed;
                     operationArgs.Result = $"Extension resource successed: {successed}/{extenstionTasks.Count} ";
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                     return new TaskResult() { Code = 500, Content = operationArgs.Result };
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ExtensionResourceSuccessed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 }
             }
 
@@ -305,13 +305,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (applyPolicyResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.PolicyApplySuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
             }
             else
             {
                 operationArgs.Stage = ProvisioningStage.PolicyApplyFailed;
                 operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(applyPolicyResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 return applyPolicyResult;
             }
 
@@ -331,13 +331,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 operationArgs.Stage = ProvisioningStage.Successed;
                 operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(readyResourceResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
             }
             else
             {
                 operationArgs.Stage = ProvisioningStage.ResourceReadyFailed;
                 operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(readyResourceResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationsActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
                 return readyResourceResult;
             }
 

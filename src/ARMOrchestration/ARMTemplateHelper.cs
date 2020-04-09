@@ -136,6 +136,10 @@ namespace maskx.ARMOrchestration
                 return (false, error, null);
             foreach (var res in template.Resources)
             {
+                // TODO: remove deployment type  and resource with condition equal false
+                if (res.FullType == infrastructure.BuitinServiceTypes.Deployments)
+                {
+                }
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
                     if (!template.Resources.ContainsKey(res.DependsOn[i]))
@@ -570,8 +574,7 @@ namespace maskx.ARMOrchestration
                 else
                     return (false, d.Message, null, null);
             }
-            else
-                resources.Add(r);
+            resources.Add(r);
             foreach (var item in this.infrastructure.ExtensionResources)
             {
                 if (resourceElement.TryGetProperty(item, out JsonElement e))

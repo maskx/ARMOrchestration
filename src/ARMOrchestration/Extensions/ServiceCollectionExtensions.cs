@@ -45,7 +45,7 @@ namespace maskx.ARMOrchestration.Extensions
                     activityTypes = new List<Type>();
                 else
                     activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                activityTypes.Add(typeof(DeploymentOperationsActivity));
+                activityTypes.Add(typeof(DeploymentOperationActivity));
                 activityTypes.Add(typeof(WaitDependsOnActivity));
 
                 activityTypes.Add(typeof(ValidateTemplateActivity));

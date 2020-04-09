@@ -706,60 +706,59 @@ namespace maskx.ARMOrchestration.Functions
                 var pars = args.EvaluateParameters(cxt);
                 string resourceName = pars[0].ToString();
                 var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
-                string r = string.Empty;
+                string apiVersion = string.Empty;
+                if (pars.Length > 1)
+                    apiVersion = pars[1].ToString();
+                bool full = false;
+                if (pars.Length > 2)
+                    full = "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase);
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
-                if (resourceName.IndexOf('/') < 0)
+                if (resourceName.IndexOf('/') < 0 && cxt.ContainsKey(ContextKeys.IS_PREPARE))
                 {
-                    if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                    // 这个时候 dependsOn 的 resource， 也许还未被处理，在Template.Reosurces 里面还不存在
+                    // 因此要先处理 dependsOn 的 Resource
+                    // 如果DependsOn的是 Deployment 怎么处理？
+                    context.Template.Resources.WaitDependsOn(resourceName);
+                    var wi = infrastructure.WhatIf(context, resourceName);
+                    if (wi.Code != 200)
                     {
-                        // 这个时候 dependsOn 的 resource， 也许还未被处理，在Template.Reosurces 里面还不存在
-                        // 因此要先处理 dependsOn 的 Resource
-                        context.Template.Resources.WaitDependsOn(resourceName);
-
-                        var wi = infrastructure.WhatIf(context, resourceName);
-                        if (wi.Code != 200)
-                        {
-                            throw new Exception($"reference function run WhatIf fail:deployment id is {context.DeploymentId} ; resourceName is {resourceName}");
-                        }
-                        List<string> dependsOn;
-                        if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
-                        {
-                            dependsOn = d as List<string>;
-                        }
-                        else
-                        {
-                            dependsOn = new List<string>();
-                            cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                        }
-                        dependsOn.Add(resourceName);
-                        r = wi.Content;
+                        throw new Exception($"reference function run WhatIf fail:deployment id is {context.DeploymentId} ; resourceName is {resourceName}");
+                    }
+                    List<string> dependsOn;
+                    if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                    {
+                        dependsOn = d as List<string>;
                     }
                     else
                     {
-                        r = GetResourceWithinTemplate(resourceName, context);
+                        dependsOn = new List<string>();
+                        cxt.Add(ContextKeys.DEPENDSON, dependsOn);
                     }
-                }
-                else
-                {
-                    string apiVersion = string.Empty;
-                    if (pars.Length > 2)
-                        apiVersion = pars[1].ToString();
-                    bool full = false;
-                    var taskResult = this.infrastructure.Reference(context, resourceName, apiVersion, full);
-                    if (taskResult.Code == 200)
-                        r = taskResult.Content;
-                }
-                if (pars.Length == 3 && "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase))
-                    args.Result = new JsonValue(r);
-                else
-                {
-                    using var doc = JsonDocument.Parse(r);
-                    if (doc.RootElement.TryGetProperty("properties", out JsonElement _properties))
+                    dependsOn.Add(resourceName);
+
+                    if (full)
+                        args.Result = new JsonValue(wi.Content);
+                    else
                     {
-                        args.Result = new JsonValue(_properties.GetRawText());
+                        using var doc = JsonDocument.Parse(wi.Content);
+                        if (doc.RootElement.TryGetProperty("properties", out JsonElement _properties))
+                        {
+                            args.Result = new JsonValue(_properties.GetRawText());
+                        }
                     }
+                }
+                else
+                {
+                    string id = resourceName;
+                    if (resourceName.IndexOf('/') < 0)
+                    {
+                        id = context.Template.Resources[resourceName].ResouceId;
+                    }
+                    var taskResult = this.infrastructure.Reference(context, id, apiVersion, full);
+                    if (taskResult.Code == 200)
+                        args.Result = new JsonValue(taskResult.Content);
                 }
             });
             Functions.Add("resourcegroup", (args, cxt) =>
@@ -767,7 +766,9 @@ namespace maskx.ARMOrchestration.Functions
                 var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 var taskResult = this.infrastructure.Reference(
                     context,
-                    $"/subscription/{context.SubscriptionId}/resourceGroups/{context.ResourceGroup}");
+                    $"/subscription/{context.SubscriptionId}/resourceGroups/{context.ResourceGroup}",
+                    string.Empty,
+                    true);
                 if (taskResult.Code == 200)
                 {
                     args.Result = new JsonValue(taskResult.Content);

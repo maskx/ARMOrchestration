@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class DeploymentOperationsActivity : TaskActivity<DeploymentOperationsActivityInput, TaskResult>
+    public class DeploymentOperationActivity : TaskActivity<DeploymentOperationActivityInput, TaskResult>
     {
         private readonly ARMOrchestrationOptions options;
         private readonly string commandString;
@@ -28,18 +28,18 @@ WHEN MATCHED THEN
 	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=@Result;
 ";
 
-        public DeploymentOperationsActivity(IOptions<ARMOrchestrationOptions> options)
+        public DeploymentOperationActivity(IOptions<ARMOrchestrationOptions> options)
         {
             this.options = options.Value;
             this.commandString = string.Format(commandTemplate, this.options.Database.DeploymentOperationsTableName);
         }
 
-        protected override TaskResult Execute(TaskContext context, DeploymentOperationsActivityInput input)
+        protected override TaskResult Execute(TaskContext context, DeploymentOperationActivityInput input)
         {
             return ExecuteAsync(context, input).Result;
         }
 
-        protected override async Task<TaskResult> ExecuteAsync(TaskContext context, DeploymentOperationsActivityInput input)
+        protected override async Task<TaskResult> ExecuteAsync(TaskContext context, DeploymentOperationActivityInput input)
         {
             TraceActivityEventSource.Log.TraceEvent(
                 TraceEventType.Information,

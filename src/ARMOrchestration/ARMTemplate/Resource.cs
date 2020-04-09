@@ -141,5 +141,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());
         }
+
+        /// <summary>
+        ///  the resources dependsOn me
+        /// </summary>
+        public List<string> Subsequent { get; set; } = new List<string>();
     }
 }

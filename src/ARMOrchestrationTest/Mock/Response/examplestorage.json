@@ -1,0 +1,32 @@
+﻿{
+  "apiVersion": "2016-12-01",
+  "location": "southcentralus",
+  "sku": {
+    "name": "Standard_LRS",
+    "tier": "Standard"
+  },
+  "tags": {},
+  "kind": "Storage",
+  "properties": {
+    "creationTime": "2017-10-09T18:55:40.5863736Z",
+    "primaryEndpoints": {
+      "blob": "https://examplestorage.blob.core.windows.net/",
+      "file": "https://examplestorage.file.core.windows.net/",
+      "queue": "https://examplestorage.queue.core.windows.net/",
+      "table": "https://examplestorage.table.core.windows.net/"
+    },
+    "primaryLocation": "southcentralus",
+    "provisioningState": "Succeeded",
+    "statusOfPrimary": "available",
+    "supportsHttpsTrafficOnly": false
+  },
+  "subscriptionId": "C1FA36C2-4D58-45E8-9C51-498FADB4D8BF",
+  "resourceGroupName": "functionexamplegroup",
+  "resourceId": "Microsoft.Storage/storageAccounts/examplestorage",
+  "referenceApiVersion": "2016-12-01",
+  "condition": true,
+  "isConditionTrue": true,
+  "isTemplateResource": false,
+  "isAction": false,
+  "provisioningOperation": "Read"
+}

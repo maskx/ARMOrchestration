@@ -3,9 +3,9 @@ using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 
 namespace ARMOrchestrationTest.Mock
 {
@@ -57,18 +57,14 @@ namespace ARMOrchestrationTest.Mock
         public TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false)
         {
             var pars = resourceName.TrimStart('/').Split('/');
-            if (pars.Length >= 4)
+            var c = TestHelper.GetJsonFileContent($"Mock/Response/{pars[pars.Length - 1]}");
+            if (!full)
+                c = JObject.Parse(c)["properties"].ToString(Newtonsoft.Json.Formatting.None);
+            return new TaskResult()
             {
-                if ("resourceGroups".Equals(pars[2], StringComparison.OrdinalIgnoreCase))
-                {
-                    return new TaskResult()
-                    {
-                        Code = 200,
-                        Content = TestHelper.GetJsonFileContent("Mock/Response/getresourcegroup")
-                    };
-                }
-            }
-            return new TaskResult() { Code = 200 };
+                Code = 200,
+                Content = c
+            };
         }
 
         public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
@@ -76,8 +72,8 @@ namespace ARMOrchestrationTest.Mock
 
         public TaskResult WhatIf(DeploymentContext context, string resourceName)
         {
-            var r = context.Template.Resources[resourceName];
-            var c = TestHelper.GetJsonFileContent("Mock/Response/getresourcegroup");
+            // var r = context.Template.Resources[resourceName];
+            var c = TestHelper.GetJsonFileContent($"Mock/Response/{resourceName}");
             return new TaskResult() { Content = c, Code = 200 };
         }
     }
