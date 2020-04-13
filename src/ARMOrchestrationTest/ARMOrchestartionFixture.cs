@@ -20,27 +20,7 @@ namespace ARMCreatorTest
 
         public ARMOrchestartionFixture()
         {
-            List<Type> orchestrationTypes = new List<Type>();
-            List<Type> activityTypes = new List<Type>();
-            Dictionary<Type, object> interfaceActivitys = new Dictionary<Type, object>();
-            workerHost = TestHelper.CreateHostBuilder(null,
-               orchestrationTypes,
-               activityTypes,
-               interfaceActivitys,
-               (hostContext, services) =>
-               {
-                   services.AddSingleton<IInfrastructure>(new MockInfrastructure());
-
-                   services.AddSingleton<ICommunicationProcessor>(new MockCommunicationProcessor());
-                   services.Configure<ARMOrchestrationOptions>((options) =>
-                   {
-                       options.Database = new DatabaseConfig()
-                       {
-                           HubName = TestHelper.HubName,
-                           ConnectionString = TestHelper.ConnectionString
-                       };
-                   });
-               }).Build();
+            workerHost = TestHelper.CreateHostBuilder(null).Build();
             workerHost.RunAsync();
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();
             OrchestrationWorkerClient = workerHost.Services.GetService<OrchestrationWorkerClient>();
@@ -50,8 +30,11 @@ namespace ARMCreatorTest
 
         public void Dispose()
         {
-            if (workerHost != null)
-                workerHost.StopAsync().Wait();
+            //if (workerHost != null)
+            //{
+            //    workerHost.StopAsync();
+            //    workerHost.WaitForShutdown();
+            //}
         }
     }
 

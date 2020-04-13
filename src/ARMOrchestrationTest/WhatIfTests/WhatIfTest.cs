@@ -22,9 +22,9 @@ namespace ARMOrchestrationTest.WhatIfTests
             new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
-                new Mock.MockInfrastructure()),
+                new Mock.MockInfrastructure(null)),
             null,
-            new Mock.MockInfrastructure());
+            new Mock.MockInfrastructure(null));
 
         [Fact(DisplayName = "WhatIfIncremental")]
         public void WhatIfIncremental()

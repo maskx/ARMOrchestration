@@ -136,10 +136,8 @@ namespace maskx.ARMOrchestration
                 return (false, error, null);
             foreach (var res in template.Resources)
             {
-                // TODO: remove deployment type  and resource with condition equal false
-                if (res.FullType == infrastructure.BuitinServiceTypes.Deployments)
-                {
-                }
+                // TODO: remove resource with condition equal false
+
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
                     if (!template.Resources.ContainsKey(res.DependsOn[i]))
@@ -178,9 +176,9 @@ namespace maskx.ARMOrchestration
             };
             string queryScope;
             if (input.ScopeType == ScopeType.ResourceGroup)
-                queryScope = $"subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
+                queryScope = $"subscription/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
             else
-                queryScope = $"subscriptions/{input.SubscriptionId}";
+                queryScope = $"subscription/{input.SubscriptionId}";
             var str = this.infrastructure.List(deploymentContext, queryScope, valid.Deployment.Template.ApiProfile, string.Empty, "resources");
             //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);

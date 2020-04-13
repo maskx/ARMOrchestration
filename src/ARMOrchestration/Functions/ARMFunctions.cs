@@ -844,7 +844,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/subscription/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string subscriptionResourceId(DeploymentContext input, params object[] pars)
@@ -873,7 +873,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/subscriptions/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/subscription/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string tenantResourceId(params object[] pars)

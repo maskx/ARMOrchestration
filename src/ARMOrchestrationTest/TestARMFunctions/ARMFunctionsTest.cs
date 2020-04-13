@@ -428,7 +428,7 @@ namespace ARMCreatorTest.TestARMFunctions
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
-                new MockInfrastructure());
+                new MockInfrastructure(null));
             object rtv = functions.Evaluate("[copyindex()]", cxt);
             Assert.Equal(2, (int)rtv);
             rtv = functions.Evaluate("[copyindex(1)]", cxt);
@@ -562,8 +562,8 @@ namespace ARMCreatorTest.TestARMFunctions
                 InstanceId = Guid.NewGuid().ToString("N"),
                 Orchestration = new OrchestrationSetting()
                 {
-                    Creator = "DICreator",
-                    Uri = typeof(DeploymentOrchestration).FullName + "_"
+                    Name = "DeploymentOrchestration",
+                    Version = "1.0"
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
@@ -728,7 +728,7 @@ namespace ARMCreatorTest.TestARMFunctions
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"lockResourceId",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Authorization/locks/lockname1/"}
+                {"lockResourceId",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Authorization/locks/lockname1/"}
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "extensionResourceId", result);
         }
@@ -739,10 +739,10 @@ namespace ARMCreatorTest.TestARMFunctions
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"sameRGOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Storage/storageAccounts/examplestorage"},
-                {"differentRGOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
-                {"differentSubOutput","/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
-                { "nestedResourceOutput",$"/subscriptions/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
+                {"sameRGOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                {"differentRGOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                {"differentSubOutput","/subscription/11111111-1111-1111-1111-111111111111/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                { "nestedResourceOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceid", result);
         }
@@ -754,7 +754,7 @@ namespace ARMCreatorTest.TestARMFunctions
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
-                new MockInfrastructure());
+                new MockInfrastructure(null));
             object rtv = functions.Evaluate(
                 "[listResource('resourceId','2019-01-02')]",
                 new Dictionary<string, object>() {
@@ -806,7 +806,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"resourceGroupOutput",
                     JObject
-                .Parse(TestHelper.GetJsonFileContent("mock/response/getresourcegroup"))
+                .Parse(TestHelper.GetJsonFileContent("mock/response/resourcegroup1"))
                 .ToString(Newtonsoft.Json.Formatting.None)}
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceGroup", result);

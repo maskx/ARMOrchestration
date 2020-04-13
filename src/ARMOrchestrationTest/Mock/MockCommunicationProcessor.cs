@@ -10,6 +10,7 @@ namespace ARMOrchestrationTest.Mock
     {
         public string Name { get; set; } = "MockCommunicationProcessor";
         public int MaxBatchCount { get; set; } = 1;
+        public CommunicationWorker CommunicationWorker { get; set; }
 
         public Task<CommunicationJob[]> ProcessAsync(params CommunicationJob[] jobs)
         {

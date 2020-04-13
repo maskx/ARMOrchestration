@@ -20,14 +20,14 @@ namespace ARMCreatorTest.TestARMFunctions
                     //    return new TaskResult() { Content = value };
                     //}
                 }), null,
-                new MockInfrastructure());
+                new MockInfrastructure(null));
             functions.SetFunction("resourcegroup", (args, cxt) =>
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))
                     return;
                 var input = armcxt as DeploymentOrchestrationInput;
                 JObject obj = new JObject();
-                obj.Add("id", $"/subscriptions/{input.SubscriptionId}/resourceGroups/{input.ResourceGroup}");
+                obj.Add("id", $"/subscription/{input.SubscriptionId}/resourceGroups/{input.ResourceGroup}");
                 obj.Add("name", input.ResourceGroup);
                 obj.Add("type", "xxxx.Resources/resourceGroups");
                 obj.Add("location", "");

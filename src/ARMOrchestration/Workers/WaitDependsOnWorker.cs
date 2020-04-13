@@ -89,11 +89,6 @@ namespace maskx.ARMOrchestration.Workers
             }
         }
 
-        public override Task StopAsync(CancellationToken cancellationToken)
-        {
-            return base.StopAsync(cancellationToken);
-        }
-
         public async Task DeleteARMOrchestrationTableAsync()
         {
             using (var db = new DbAccess(options.Database.ConnectionString))

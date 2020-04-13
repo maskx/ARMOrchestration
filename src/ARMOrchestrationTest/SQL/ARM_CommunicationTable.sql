@@ -7,7 +7,7 @@
 	[RequestOperation] [nvarchar](50) NULL,
 	[RequsetContent] [nvarchar](max) NULL,
 	[RequestProperty] [nvarchar](max) NULL,
-	[Status] [nvarchar](50) NULL,
+	[Status] [int] NULL,
 	[LockedUntilUtc] [datetime2](7) NULL,
 	[ResponseContent] [nvarchar](max) NULL,
 	[ResponseCode] [int] NULL,

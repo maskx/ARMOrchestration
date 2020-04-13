@@ -27,28 +27,27 @@ namespace maskx.ARMOrchestration.Extensions
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = config.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface;
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInOrchestrators = (sp) =>
             {
-                IList<Type> orchList;
+                IList<(string, string, Type)> orchList;
                 if (config.OrchestrationWorkerOptions.GetBuildInOrchestrators == null)
-                    orchList = new List<Type>();
+                    orchList = new List<(string, string, Type)>();
                 else
                     orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
-                orchList.Add(typeof(ResourceOrchestration));
-                orchList.Add(typeof(DeploymentOrchestration));
-                orchList.Add(typeof(WaitDependsOnOrchestration));
-                orchList.Add(typeof(RequestOrchestration));
+                orchList.Add(("ResourceOrchestration", "1.0", typeof(ResourceOrchestration)));
+                orchList.Add(("DeploymentOrchestration", "1.0", typeof(DeploymentOrchestration)));
+                orchList.Add(("WaitDependsOnOrchestration", "1.0", typeof(WaitDependsOnOrchestration)));
+                orchList.Add(("RequestOrchestration", "1.0", typeof(RequestOrchestration)));
                 return orchList;
             };
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>
             {
-                IList<Type> activityTypes;
+                IList<(string, string, Type)> activityTypes;
                 if (config.OrchestrationWorkerOptions.GetBuildInTaskActivities == null)
-                    activityTypes = new List<Type>();
+                    activityTypes = new List<(string, string, Type)>();
                 else
                     activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                activityTypes.Add(typeof(DeploymentOperationActivity));
-                activityTypes.Add(typeof(WaitDependsOnActivity));
-
-                activityTypes.Add(typeof(ValidateTemplateActivity));
+                activityTypes.Add(("DeploymentOperationActivity", "1.0", typeof(DeploymentOperationActivity)));
+                activityTypes.Add(("WaitDependsOnActivity", "1.0", typeof(WaitDependsOnActivity)));
+                activityTypes.Add(("ValidateTemplateActivity", "1.0", typeof(ValidateTemplateActivity)));
                 return activityTypes;
             };
             services.UsingOrchestration(sqlServerConfiguration);

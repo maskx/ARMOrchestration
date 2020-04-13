@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -48,19 +49,20 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Input = DataConverter.Serialize(input.Resource)
             };
 
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
 
             #region DependsOn
 
             if (resourceDeploy.DependsOn.Count > 0)
             {
                 operationArgs.Stage = ProvisioningStage.DependsOnWaited;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(WaitDependsOnOrchestration),
+                    typeof(WaitDependsOnOrchestration).Name,
+                    "1.0",
                     (input.Context.DeploymentId, resourceDeploy.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
             }
 
             #endregion DependsOn
@@ -72,81 +74,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 TaskResult createResourceResult = null;
                 if (resourceDeploy.Type == this.infrastructure.BuitinServiceTypes.Deployments)
                 {
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/cross-resource-group-deployment?tabs=azure-powershell
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates
-                    // deployment history is different to the Azure
-                    // we nest the history of the nest deployment template
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#deployment-history
-                    Dictionary<string, object> armContext = new Dictionary<string, object>() { { "armcontext", input.Context } };
-                    using var doc = JsonDocument.Parse(resourceDeploy.Properties);
-                    var rootElement = doc.RootElement;
-                    var mode = DeploymentMode.Incremental;
-                    if (rootElement.TryGetProperty("mode", out JsonElement _mode)
-                        && _mode.GetString().Equals(DeploymentMode.Complete.ToString(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        mode = DeploymentMode.Complete;
-                    }
-                    string template = string.Empty;
-                    if (rootElement.TryGetProperty("template", out JsonElement _template))
-                    {
-                        template = _template.GetRawText();
-                    }
-                    TemplateLink templateLink = null;
-                    if (rootElement.TryGetProperty("templateLink", out JsonElement _templateLink))
-                    {
-                        templateLink = new TemplateLink()
-                        {
-                            ContentVersion = _templateLink.GetProperty("contentVersion").GetString(),
-                            Uri = this.functions.Evaluate(_templateLink.GetProperty("uri").GetString(), armContext).ToString()
-                        };
-                    }
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
-                    string parameters = string.Empty;
-                    ParametersLink parametersLink = null;
-                    if (rootElement.TryGetProperty("expressionEvaluationOptions", out JsonElement _expressionEvaluationOptions)
-                        && _expressionEvaluationOptions.GetProperty("scope").GetString().Equals("inner", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (rootElement.TryGetProperty("parameters", out JsonElement _parameters))
-                        {
-                            parameters = _parameters.GetRawText();
-                        }
-                        if (rootElement.TryGetProperty("parametersLink", out JsonElement _parametersLink))
-                        {
-                            parametersLink = new ParametersLink()
-                            {
-                                ContentVersion = _parametersLink.GetProperty("contentVersion").GetString(),
-                                Uri = this.functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), armContext).ToString()
-                            };
-                        }
-                    }
-                    else
-                    {
-                        parameters = input.Context.Parameters;
-
-                        var jobj = JObject.Parse(rootElement.GetRawText());
-                        jobj["variables"] = input.Context.Template.Variables;
-                    }
-
-                    createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                        typeof(DeploymentOrchestration),
-                        DataConverter.Serialize(
-                        new DeploymentOrchestrationInput()
-                        {
-                            CorrelationId = input.Context.CorrelationId,
-                            DeploymentName = resourceDeploy.Name,
-                            SubscriptionId = resourceDeploy.SubscriptionId,
-                            ResourceGroup = resourceDeploy.ResourceGroup,
-                            Mode = mode,
-                            TemplateContent = template,
-                            TemplateLink = templateLink,
-                            Parameters = parameters,
-                            ParametersLink = parametersLink
-                        }));
+                    Debugger.Break();
                 }
                 else
                 {
                     createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                  typeof(RequestOrchestration),
+                                  typeof(RequestOrchestration).Name,
+                                  "1.0",
                                   new RequestOrchestrationInput()
                                   {
                                       RequestAction = RequestAction.CreateResource,
@@ -159,13 +93,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCreateSuccessed;
                     operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCreateFailed;
                     operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                     return createResourceResult;
                 }
             }
@@ -177,10 +111,11 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (resourceDeploy.Resources.Count > 0)
             {
                 await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(WaitDependsOnOrchestration),
+                    typeof(WaitDependsOnOrchestration).Name,
+                    "1.0",
                     (input.Context.DeploymentId, resourceDeploy.Resources));
                 operationArgs.Stage = ProvisioningStage.ChildResourceSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
             }
 
             #endregion wait for child resource completed
@@ -191,7 +126,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 #region Commit Quota
 
                 var commitQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
+                typeof(RequestOrchestration).Name,
+                "1.0",
                 new RequestOrchestrationInput()
                 {
                     RequestAction = RequestAction.CommitQuota,
@@ -201,12 +137,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (commitQoutaResult.Code == 200)
                 {
                     operationArgs.Stage = ProvisioningStage.QuotaCommitSuccesed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.QuotaCommitFailed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                     return commitQoutaResult;
                 }
 
@@ -222,7 +158,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 // 资产服务 里有 资源之间的关系，知道 具体资源可以包含其他资源，及其这些被包含的资源在报文中的路径，从而可以进行处理
 
                 var commitResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(RequestOrchestration),
+                    typeof(RequestOrchestration).Name,
+                    "1.0",
                     new RequestOrchestrationInput()
                     {
                         Resource = resourceDeploy,
@@ -233,13 +170,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCommitSuccessed;
                     operationArgs.Result = commitResourceResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ResourceCommitFailed;
                     operationArgs.Result = commitQoutaResult.Content;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                     return commitResourceResult;
                 }
 
@@ -253,7 +190,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 extenstionTasks.Add(
                     context.CreateSubOrchestrationInstance<TaskResult>(
-                        typeof(RequestOrchestration),
+                        typeof(RequestOrchestration).Name,
+                        "1.0",
                         new RequestOrchestrationInput()
                         {
                             Resource = resourceDeploy,
@@ -278,13 +216,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     operationArgs.Stage = ProvisioningStage.ExtensionResourceFailed;
                     operationArgs.Result = $"Extension resource successed: {successed}/{extenstionTasks.Count} ";
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                     return new TaskResult() { Code = 500, Content = operationArgs.Result };
                 }
                 else
                 {
                     operationArgs.Stage = ProvisioningStage.ExtensionResourceSuccessed;
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 }
             }
 
@@ -295,7 +233,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             // TODO: should start a orchestration
             // in communication
             var applyPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-              typeof(RequestOrchestration),
+              typeof(RequestOrchestration).Name,
+              "1.0",
               new RequestOrchestrationInput()
               {
                   RequestAction = RequestAction.ApplyPolicy,
@@ -305,13 +244,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (applyPolicyResult.Code == 200)
             {
                 operationArgs.Stage = ProvisioningStage.PolicyApplySuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
             }
             else
             {
                 operationArgs.Stage = ProvisioningStage.PolicyApplyFailed;
                 operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(applyPolicyResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 return applyPolicyResult;
             }
 
@@ -320,7 +259,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Ready Resource
 
             var readyResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
+                typeof(RequestOrchestration).Name,
+                "1.0",
                 new RequestOrchestrationInput()
                 {
                     Resource = resourceDeploy,
@@ -331,13 +271,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 operationArgs.Stage = ProvisioningStage.Successed;
                 operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(readyResourceResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
             }
             else
             {
                 operationArgs.Stage = ProvisioningStage.ResourceReadyFailed;
                 operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(readyResourceResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 return readyResourceResult;
             }
 

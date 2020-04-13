@@ -6,11 +6,19 @@ using maskx.OrchestrationService.Activity;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ARMOrchestrationTest.Mock
 {
     public class MockInfrastructure : IInfrastructure
     {
+        private IServiceProvider serviceProvider;
+
+        public MockInfrastructure(IServiceProvider serviceProvider)
+        {
+            this.serviceProvider = serviceProvider;
+        }
+
         public AsyncRequestInput GetRequestInput(RequestOrchestrationInput input)
         {
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
@@ -56,8 +64,24 @@ namespace ARMOrchestrationTest.Mock
 
         public TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false)
         {
+            string c = string.Empty;
             var pars = resourceName.TrimStart('/').Split('/');
-            var c = TestHelper.GetJsonFileContent($"Mock/Response/{pars[pars.Length - 1]}");
+            if (pars[pars.Length - 2].Equals("deployments", StringComparison.OrdinalIgnoreCase)
+                && pars[pars.Length - 3].Equals("Microsoft.Resources", StringComparison.OrdinalIgnoreCase))
+            {
+                var client = this.serviceProvider.GetService<ARMOrchestrationClient>();
+                var rs = client.GetAllResourceListAsync(context.RootId).Result;
+                foreach (var item in rs)
+                {
+                    if (item.ResourceId.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        c = item.Result;
+                        break;
+                    }
+                }
+            }
+            else
+                c = TestHelper.GetJsonFileContent($"Mock/Response/{pars[pars.Length - 1]}");
             if (!full)
                 c = JObject.Parse(c)["properties"].ToString(Newtonsoft.Json.Formatting.None);
             return new TaskResult()

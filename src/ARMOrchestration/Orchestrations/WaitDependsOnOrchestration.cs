@@ -14,7 +14,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, (string DeploymentId, List<string> DependsOn) input)
         {
             waitHandler = new TaskCompletionSource<string>();
-            await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity), input);
+            await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity).Name, "1.0", input);
             await waitHandler.Task;
             return new TaskResult() { Code = 200 };
         }

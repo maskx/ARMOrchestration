@@ -60,26 +60,27 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Input = DataConverter.Serialize(input)
             };
             if (!string.IsNullOrEmpty(input.SubscriptionId))
-                operationArgs.ResourceId = $"/subscripition/{input.SubscriptionId}";
+                operationArgs.ResourceId = $"/subscription/{input.SubscriptionId}";
             else if (!string.IsNullOrEmpty(input.ManagementGroupId))
                 operationArgs.ResourceId = $"/managementgroup/{input.ManagementGroupId}";
             if (!string.IsNullOrEmpty(input.ResourceGroup))
                 operationArgs.ResourceId += $"/resourceGroups/{input.ResourceGroup}";
             operationArgs.ResourceId += $"/providers/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
 
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
 
             #region DependsOn
 
             if (input.DependsOn.Count > 0)
             {
                 operationArgs.Stage = ProvisioningStage.DependsOnWaited;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
                 await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(WaitDependsOnOrchestration),
+                    typeof(WaitDependsOnOrchestration).Name,
+                    "1.0",
                     (input.ParentId, input.DependsOn));
                 operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
             }
 
             #endregion DependsOn
@@ -88,8 +89,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region validate template
 
-            var valid = await context.ScheduleTask<TaskResult>(
-                typeof(ValidateTemplateActivity), input);
+            var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity).Name, "1.0", input);
             if (valid.Code != 200)
                 return valid;
 
@@ -101,87 +101,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 { "armcontext", input as DeploymentContext}
             };
 
-            #region check permission
-
-            var permissionResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(RequestOrchestration),
-                            new RequestOrchestrationInput()
-                            {
-                                DeploymentContext = input,
-                                RequestAction = RequestAction.CheckPermission
-                            });
-            if (permissionResult.Code != 200)
-            {
-                return permissionResult;
-            }
-
-            #endregion check permission
-
-            #region ReadOnly Lock Check,ResourceGroup or Subscription level
-
-            var readonlyLockCheckResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(RequestOrchestration),
-                    new RequestOrchestrationInput()
-                    {
-                        DeploymentContext = input,
-                        RequestAction = RequestAction.CheckLock
-                    });
-            if (readonlyLockCheckResult.Code != 404)
-                return readonlyLockCheckResult;
-
-            #endregion ReadOnly Lock Check,ResourceGroup or Subscription level
-
-            #region check policy
-
-            var checkPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(RequestOrchestration),
-                            new RequestOrchestrationInput()
-                            {
-                                RequestAction = RequestAction.CheckPolicy,
-                                DeploymentContext = input
-                            });
-            if (checkPolicyResult.Code != 200)
-                return checkPolicyResult;
-
-            #endregion check policy
-
-            #region Check Resource
-
-            ///////////////////////////////
-            // In communication Processor:
-            // TODO: when resource in Provisioning, we need wait
-            // communication should return the resource status until  resource  available to be Provisioning
-            //////////////////////////////
-            // In resource service
-            // TODO: should check authorization. Create or Update permission
-            // TODO: should check lock
-            // communication should return 503 when no authorization
-            var beginCreateResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
-                new RequestOrchestrationInput()
-                {
-                    DeploymentContext = input,
-                    RequestAction = RequestAction.CheckResource
-                });
-
-            if (beginCreateResourceResult.Code != 200)
-                return beginCreateResourceResult;
-
-            #endregion Check Resource
-
-            #region Check Quota
-
-            var checkQoutaResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                typeof(RequestOrchestration),
-                new RequestOrchestrationInput()
-                {
-                    DeploymentContext = input,
-                    RequestAction = RequestAction.CheckQuota,
-                });
-            if (checkQoutaResult.Code != 200)
-                return checkPolicyResult;
-
-            #endregion Check Quota
+            // TODO: add BeforeDeployment
 
             #region Provisioning resources
 
@@ -189,8 +109,13 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             foreach (var resource in input.Template.Resources)
             {
+                if (resource.FullType == infrastructure.BuitinServiceTypes.Deployments)
+                {
+                    continue;
+                }
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(ResourceOrchestration),
+                    typeof(ResourceOrchestration).Name,
+                    "1.0",
                     new ResourceOrchestrationInput()
                     {
                         Resource = resource,
@@ -200,7 +125,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             foreach (var deploy in input.Deployments)
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(DeploymentOrchestration),
+                    typeof(DeploymentOrchestration).Name,
+                    "1.0",
                    DataConverter.Serialize(deploy.Value)));
             }
             await Task.WhenAll(tasks.ToArray());
@@ -223,7 +149,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             operationArgs.Result = rtv;
             operationArgs.Stage = ProvisioningStage.Successed;
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity), operationArgs);
+            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
 
             return new TaskResult() { Code = 200, Content = rtv };
         }

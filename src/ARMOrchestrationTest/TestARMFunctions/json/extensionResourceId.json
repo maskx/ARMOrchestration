@@ -12,7 +12,7 @@
   "outputs": {
     "lockResourceId": {
       "type": "string",
-      "value": "[extensionResourceId('/subscriptions/C1FA36C2-4D58-45E8-9C51-498FADB4D8BF/resourceGroups/ResourceGroup1' , 'Microsoft.Authorization/locks', parameters('lockName'))]"
+      "value": "[extensionResourceId('/subscription/C1FA36C2-4D58-45E8-9C51-498FADB4D8BF/resourceGroups/ResourceGroup1' , 'Microsoft.Authorization/locks', parameters('lockName'))]"
     }
   }
 }

@@ -44,7 +44,7 @@ namespace ARMOrchestrationTest
                     });
                     services.AddSingleton<IInfrastructure>((sp) =>
                     {
-                        return new MockInfrastructure();
+                        return new MockInfrastructure(sp);
                     });
                 })
                 .Build();
@@ -54,11 +54,17 @@ namespace ARMOrchestrationTest
             var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
                 new DeploymentOrchestrationInput()
                 {
+                    ApiVersion = "1.0",
+                    DeploymentName = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     TemplateContent = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
-                    CorrelationId = Guid.NewGuid().ToString("N")
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005",
+                    TenantId = "TenantId"
                 }).Result;
             while (true)
             {

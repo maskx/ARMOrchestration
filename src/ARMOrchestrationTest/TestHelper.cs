@@ -5,6 +5,7 @@ using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.Workers;
@@ -144,8 +145,8 @@ namespace ARMCreatorTest
                 InstanceId = Guid.NewGuid().ToString("N"),
                 Orchestration = new OrchestrationSetting()
                 {
-                    Creator = "DICreator",
-                    Uri = typeof(DeploymentOrchestration).FullName + "_"
+                    Name = "DeploymentOrchestration",
+                    Version = "1.0"
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
@@ -204,9 +205,9 @@ namespace ARMCreatorTest
 
         public static IHostBuilder CreateHostBuilder(
             CommunicationWorkerOptions communicationWorkerOptions = null,
-            List<Type> orchestrationTypes = null,
-            List<Type> activityTypes = null,
-            IDictionary<Type, object> interfaceActivitys = null,
+            List<(string, string, Type)> orchestrationTypes = null,
+            List<(string, string, Type)> activityTypes = null,
+            IDictionary<Type, (string, object)> interfaceActivitys = null,
             Action<HostBuilderContext, IServiceCollection> config = null)
         {
             return Host.CreateDefaultBuilder()
@@ -220,102 +221,51 @@ namespace ARMCreatorTest
              {
                  config?.Invoke(hostContext, services);
                  services.AddHttpClient();
-                 services.AddSingleton((sp) =>
+                 CommunicationWorkerOptions options = new CommunicationWorkerOptions();
+                 options.AutoCreate = true;
+                 if (communicationWorkerOptions != null)
                  {
-                     return CreateOrchestrationClient();
-                 });
-                 services.AddSingleton((sp) =>
+                     options.GetFetchRules = communicationWorkerOptions.GetFetchRules;
+                     options.HubName = communicationWorkerOptions.HubName;
+                     options.MaxConcurrencyRequest = communicationWorkerOptions.MaxConcurrencyRequest;
+                     options.RuleFields.AddRange(communicationWorkerOptions.RuleFields);
+                     options.SchemaName = communicationWorkerOptions.SchemaName;
+                 }
+                 options.RuleFields.Add("ApiVersion");
+                 options.RuleFields.Add("Type");
+                 options.RuleFields.Add("Name");
+                 options.RuleFields.Add("Location");
+                 options.RuleFields.Add("SKU");
+                 options.RuleFields.Add("Kind");
+                 options.RuleFields.Add("Plan");
+                 options.RuleFields.Add("SubscriptionId");
+                 options.RuleFields.Add("TenantId");
+                 options.RuleFields.Add("ResourceGroup");
+                 var sqlConfig = new ARMOrchestrationSqlServerConfig()
                  {
-                     return CreateOrchestrationService();
-                 });
-                 services.Configure<ARMOrchestrationOptions>((opt) =>
-                 {
-                     opt.Database = new DatabaseConfig()
+                     Database = new DatabaseConfig()
                      {
-                         ConnectionString = TestHelper.ConnectionString
-                     };
-                 });
-
-                 #region OrchestrationWorker
-
-                 services.AddSingleton<IOrchestrationCreatorFactory>((sp) =>
+                         ConnectionString = TestHelper.ConnectionString,
+                         AutoCreate = true
+                     },
+                     CommunicationWorkerOptions = options
+                 };
+                 if (orchestrationTypes != null)
+                     sqlConfig.OrchestrationWorkerOptions.GetBuildInOrchestrators = (sp) => orchestrationTypes;
+                 if (activityTypes != null)
+                     sqlConfig.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) => activityTypes;
+                 if (interfaceActivitys != null)
+                     sqlConfig.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
+                 services.UsingARMOrchestration(sqlConfig);
+                 services.AddSingleton<IInfrastructure>((sp) => new MockInfrastructure(sp));
+                 services.AddSingleton<ICommunicationProcessor>((sp) =>
                  {
-                     OrchestrationCreatorFactory orchestrationCreatorFactory = new OrchestrationCreatorFactory(sp);
-                     orchestrationCreatorFactory.RegistCreator("DICreator", typeof(DICreator<TaskOrchestration>));
-                     orchestrationCreatorFactory.RegistCreator("DefaultObjectCreator", typeof(DefaultObjectCreator<TaskOrchestration>));
-                     return orchestrationCreatorFactory;
+                     return new MockCommunicationProcessor();
                  });
-                 if (orchestrationTypes == null)
-                     orchestrationTypes = new List<Type>();
-                 if (activityTypes == null)
-                     activityTypes = new List<Type>();
-
-                 orchestrationTypes.Add(typeof(AsyncRequestOrchestration));
-                 orchestrationTypes.Add(typeof(ResourceOrchestration));
-                 orchestrationTypes.Add(typeof(DeploymentOrchestration));
-                 orchestrationTypes.Add(typeof(WaitDependsOnOrchestration));
-                 orchestrationTypes.Add(typeof(RequestOrchestration));
-                 activityTypes.Add(typeof(AsyncRequestActivity));
-                 activityTypes.Add(typeof(HttpRequestActivity));
-                 activityTypes.Add(typeof(DeploymentOperationActivity));
-                 activityTypes.Add(typeof(WaitDependsOnActivity));
-
-                 activityTypes.Add(typeof(ValidateTemplateActivity));
-                 services.Configure<OrchestrationWorkerOptions>(options =>
+                 services.AddSingleton<IInfrastructure>((sp) =>
                  {
-                     options.IncludeDetails = true;
-                     options.GetBuildInOrchestrators = (sp) => orchestrationTypes;
-                     options.GetBuildInTaskActivities = (sp) => activityTypes;
-                     if (interfaceActivitys != null)
-                         options.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
+                     return new MockInfrastructure(sp);
                  });
-
-                 services.AddSingleton<OrchestrationWorker>();
-                 services.AddSingleton<IHostedService>(p => p.GetService<OrchestrationWorker>());
-
-                 #endregion OrchestrationWorker
-
-                 #region CommunicationWorker
-
-                 services.Configure<CommunicationWorkerOptions>((options) =>
-               {
-                   TestHelper.Configuration.GetSection("CommunicationWorker").Bind(options);
-                   options.AutoCreate = true;
-                   if (communicationWorkerOptions != null)
-                   {
-                       options.GetFetchRules = communicationWorkerOptions.GetFetchRules;
-                       options.HubName = communicationWorkerOptions.HubName;
-                       options.MaxConcurrencyRequest = communicationWorkerOptions.MaxConcurrencyRequest;
-                       options.RuleFields.AddRange(communicationWorkerOptions.RuleFields);
-                       options.SchemaName = communicationWorkerOptions.SchemaName;
-                   }
-                   options.RuleFields.Add("ApiVersion");
-                   options.RuleFields.Add("Type");
-                   options.RuleFields.Add("Name");
-                   options.RuleFields.Add("Location");
-                   options.RuleFields.Add("SKU");
-                   options.RuleFields.Add("Kind");
-                   options.RuleFields.Add("Plan");
-                   options.RuleFields.Add("SubscriptionId");
-                   options.RuleFields.Add("TenantId");
-                   options.RuleFields.Add("ResourceGroup");
-               });
-                 services.AddHostedService<CommunicationWorker>();
-
-                 #endregion CommunicationWorker
-
-                 #region WaitDependsOnWorker
-
-                 services.AddSingleton<WaitDependsOnWorker>();
-                 services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker>());
-
-                 #endregion WaitDependsOnWorker
-
-                 services.AddSingleton<OrchestrationWorkerClient>();
-                 services.AddSingleton<ARMTemplateHelper>();
-                 services.AddSingleton<ARMFunctions>();
-                 services.AddSingleton<IInfrastructure>(new MockInfrastructure());
-                 services.AddSingleton<ARMOrchestrationClient>();
              });
         }
 
@@ -329,8 +279,8 @@ namespace ARMCreatorTest
                 InstanceId = Guid.NewGuid().ToString("N"),
                 Orchestration = new OrchestrationSetting()
                 {
-                    Creator = "DICreator",
-                    Uri = typeof(DeploymentOrchestration).FullName + "_"
+                    Name = "DeploymentOrchestration",
+                    Version = "1.0"
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {

@@ -22,9 +22,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
-                new MockInfrastructure()),
+                new MockInfrastructure(null)),
             null,
-            new MockInfrastructure());
+            new MockInfrastructure(null));
 
         private string GetTemplate(string filename)
         {
@@ -246,7 +246,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.True(r.Result);
             var t = r.Deployment.Template;
             Assert.Equal(2, t.Resources.Count);
-            var res = t.Resources["completed2020-3-11"];
+            var res = t.Resources["Succeeded2020-3-11"];
             Assert.Single(res.DependsOn);
             Assert.Equal("examplestorage", res.DependsOn[0]);
         }
