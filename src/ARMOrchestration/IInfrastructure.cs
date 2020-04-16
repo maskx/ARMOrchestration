@@ -1,8 +1,6 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Orchestrations;
+﻿using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
-using System;
 using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration
@@ -18,6 +16,31 @@ namespace maskx.ARMOrchestration
         TaskResult WhatIf(DeploymentContext context, string resourceName);
 
         BuiltinServiceTypes BuitinServiceTypes { get; set; }
+        BuiltinPathSegment BuiltinPathSegment { get; set; }
         List<string> ExtensionResources { get; set; }
+
+        /// <summary>
+        /// The Orchestration should be register in OrchestartionService
+        /// should inherit TaskOrchestration<TaskResult, DeploymentOrchestrationInput>
+        /// </summary>
+        List<(string Name, string Version)> BeforeDeploymentOrchestration { get; set; }
+
+        /// <summary>
+        /// The Orchestration should be register in OrchestartionService
+        /// should inherit TaskOrchestration<TaskResult, DeploymentOrchestrationInput>
+        /// </summary>
+        List<(string Name, string Version)> AfterDeploymentOrhcestration { get; set; }
+
+        /// <summary>
+        /// The Orchestration should be register in OrchestartionService
+        /// should inherit TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+        /// </summary>
+        List<(string Name, string Version)> BeforeResourceProvisioningOrchestation { get; set; }
+
+        /// <summary>
+        /// The Orchestration should be register in OrchestartionService
+        /// should inherit TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+        /// </summary>
+        List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; }
     }
 }

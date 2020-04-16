@@ -3,10 +3,10 @@ using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ARMOrchestrationTest.Mock
 {
@@ -93,6 +93,11 @@ namespace ARMOrchestrationTest.Mock
 
         public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
         public List<string> ExtensionResources { get; set; } = new List<string>() { "tags" };
+        public BuiltinPathSegment BuiltinPathSegment { get; set; } = new BuiltinPathSegment();
+        public List<(string Name, string Version)> BeforeDeploymentOrchestration { get; set; }
+        public List<(string Name, string Version)> AfterDeploymentOrhcestration { get; set; }
+        public List<(string Name, string Version)> BeforeResourceProvisioningOrchestation { get; set; }
+        public List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; }
 
         public TaskResult WhatIf(DeploymentContext context, string resourceName)
         {

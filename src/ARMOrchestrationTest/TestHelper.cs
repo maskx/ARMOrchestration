@@ -4,21 +4,18 @@ using DurableTask.Core.Common;
 using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
-using maskx.ARMOrchestration.Workers;
 using maskx.DurableTask.SQLServer;
 using maskx.DurableTask.SQLServer.Settings;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.DurableTask.SQLServer.Tracking;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
-using maskx.OrchestrationService.Orchestration;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
@@ -208,7 +205,8 @@ namespace ARMCreatorTest
             List<(string, string, Type)> orchestrationTypes = null,
             List<(string, string, Type)> activityTypes = null,
             IDictionary<Type, (string, object)> interfaceActivitys = null,
-            Action<HostBuilderContext, IServiceCollection> config = null)
+            Action<HostBuilderContext, IServiceCollection> config = null,
+            IInfrastructure infrastructure = null)
         {
             return Host.CreateDefaultBuilder()
              .ConfigureAppConfiguration((hostingContext, config) =>
@@ -264,7 +262,9 @@ namespace ARMCreatorTest
                  });
                  services.AddSingleton<IInfrastructure>((sp) =>
                  {
-                     return new MockInfrastructure(sp);
+                     if (infrastructure == null)
+                         return new MockInfrastructure(sp);
+                     return infrastructure;
                  });
              });
         }

@@ -1,7 +1,7 @@
 # ARMOrchestration
 
 NOT SUPPORT:
-* [implicit-dependency](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency): you should use the dependsOn property
+
 
 ## [ARM Functions](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions)
 
@@ -15,7 +15,7 @@ The context need 1 value:
 |armcontext|DeploymentContext||
 |copyindex|Dictionary<string,int>|the key is loopname,and the value is current loop index|
 |currentloopname|string|If no value is provided for loopName, this loopname is used |
-|validatetime|bool|default is true|
+|isprepare|bool|if this key is exist, then process for prepare, not care the value is true or false|
 ### [Array and object](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-array)
 
 ### [Comparison](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-comparison)
@@ -24,6 +24,7 @@ The context need 1 value:
 
 TODO£º
 * environment
+* deployment
 
 ### [Logical](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-logical)
 
@@ -41,14 +42,6 @@ copyIndex need two item in context:
 
 
 ### [Resource](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-resource)
-
-TODO:
-* extensionResourceId
-* list*
-* providers
-* reference
-* resourceGroup
-* subscription
 
 
 ### [String](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-string)

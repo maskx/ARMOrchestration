@@ -174,11 +174,9 @@ namespace maskx.ARMOrchestration
                 TenantId = input.TenantId,
                 Parameters = input.Parameters
             };
-            string queryScope;
+            string queryScope = $"/{infrastructure.BuiltinPathSegment.Subscription}/{input.SubscriptionId}";
             if (input.ScopeType == ScopeType.ResourceGroup)
-                queryScope = $"subscription/{input.SubscriptionId}/resourceGroups/{input.ResourceGroupName}";
-            else
-                queryScope = $"subscription/{input.SubscriptionId}";
+                queryScope += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{input.ResourceGroupName}";
             var str = this.infrastructure.List(deploymentContext, queryScope, valid.Deployment.Template.ApiProfile, string.Empty, "resources");
             //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);
@@ -293,12 +291,12 @@ namespace maskx.ARMOrchestration
                 copy.Input = input.GetRawText();
             }
             if (string.IsNullOrEmpty(deployContext.SubscriptionId))
-                copy.Id = $"/subscription/{deployContext.SubscriptionId}";
+                copy.Id = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deployContext.SubscriptionId}";
             if (string.IsNullOrEmpty(deployContext.ManagementGroupId))
-                copy.Id = $"/manamgementgroup/{deployContext.ManagementGroupId}";
+                copy.Id = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deployContext.ManagementGroupId}";
             if (string.IsNullOrEmpty(deployContext.ResourceGroup))
-                copy.Id += $"/resourceGroups/{deployContext.ResourceGroup}";
-            copy.Id += $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/copy/{copy.Name}";
+                copy.Id += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deployContext.ResourceGroup}";
+            copy.Id += $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/{infrastructure.BuitinServiceTypes.Copy}/{copy.Name}";
             return (true, string.Empty, copy);
         }
 

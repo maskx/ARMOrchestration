@@ -1,21 +1,15 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
-using Microsoft.Extensions.Options;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
     public class ValidateTemplateActivity : TaskActivity<DeploymentOrchestrationInput, TaskResult>
     {
-        private ARMOrchestrationOptions ARMOptions;
         private ARMTemplateHelper templateHelper;
 
-        public ValidateTemplateActivity(
-            IOptions<ARMOrchestrationOptions> options,
-            ARMTemplateHelper templateHelper)
+        public ValidateTemplateActivity(ARMTemplateHelper templateHelper)
         {
-            this.ARMOptions = options?.Value;
             this.templateHelper = templateHelper;
         }
 

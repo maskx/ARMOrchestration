@@ -60,14 +60,27 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Input = DataConverter.Serialize(input)
             };
             if (!string.IsNullOrEmpty(input.SubscriptionId))
-                operationArgs.ResourceId = $"/subscription/{input.SubscriptionId}";
+                operationArgs.ResourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{input.SubscriptionId}";
             else if (!string.IsNullOrEmpty(input.ManagementGroupId))
-                operationArgs.ResourceId = $"/managementgroup/{input.ManagementGroupId}";
+                operationArgs.ResourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{input.ManagementGroupId}";
             if (!string.IsNullOrEmpty(input.ResourceGroup))
-                operationArgs.ResourceId += $"/resourceGroups/{input.ResourceGroup}";
-            operationArgs.ResourceId += $"/providers/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
+                operationArgs.ResourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{input.ResourceGroup}";
+            operationArgs.ResourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
 
             await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
+
+            #region validate template
+
+            // when Template had value, this orchestration call by internal,the template string content already be parsed
+            if (input.Template == null)
+            {
+                var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity).Name, "1.0", input);
+                if (valid.Code != 200)
+                    return valid;
+                input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+            }
+
+            #endregion validate template
 
             #region DependsOn
 
@@ -85,23 +98,20 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion DependsOn
 
-            string rtv = string.Empty;
+            #region Before Deployment
 
-            #region validate template
+            if (infrastructure.BeforeDeploymentOrchestration != null)
+            {
+                foreach (var t in infrastructure.BeforeDeploymentOrchestration)
+                {
+                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                    if (r.Code != 200)
+                        return r;
+                    input = DataConverter.Deserialize<DeploymentOrchestrationInput>(r.Content);
+                }
+            }
 
-            var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity).Name, "1.0", input);
-            if (valid.Code != 200)
-                return valid;
-
-            #endregion validate template
-
-            input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
-
-            Dictionary<string, object> armContext = new Dictionary<string, object>() {
-                { "armcontext", input as DeploymentContext}
-            };
-
-            // TODO: add BeforeDeployment
+            #endregion Before Deployment
 
             #region Provisioning resources
 
@@ -137,6 +147,22 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 // TODO: complete mode, delete resource not exist in template
             }
+            string rtv = string.Empty;
+
+            #region After Deployment
+
+            if (infrastructure.AfterDeploymentOrhcestration != null)
+            {
+                foreach (var t in infrastructure.AfterDeploymentOrhcestration)
+                {
+                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                    if (r.Code != 200)
+                        return r;
+                    input = DataConverter.Deserialize<DeploymentOrchestrationInput>(r.Content);
+                }
+            }
+
+            #endregion After Deployment
 
             #region get template outputs
 

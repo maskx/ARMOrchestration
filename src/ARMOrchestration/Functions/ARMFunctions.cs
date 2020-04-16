@@ -1,15 +1,14 @@
-﻿using maskx.Expression;
+﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Orchestrations;
+using maskx.DurableTask.SQLServer.SQL;
+using maskx.Expression;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using maskx.ARMOrchestration.Orchestrations;
-using maskx.ARMOrchestration.ARMTemplate;
-using Microsoft.Extensions.Options;
-using maskx.DurableTask.SQLServer.SQL;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Functions
 {
@@ -669,13 +668,12 @@ namespace maskx.ARMOrchestration.Functions
                 var fullnames = pars[1].ToString().Split('/');
                 string nestr = "";
                 int typeIndex = 2;
-                IEnumerable<object> nestResources = pars.Skip(3);
-                foreach (var item in nestResources)
+                foreach (var item in pars.Skip(3))
                 {
                     nestr += $"/{fullnames[typeIndex]}/{item}";
                     typeIndex++;
                 }
-                args.Result = $"{pars[0]}/providers/{fullnames[0]}/{fullnames[1]}/{pars[2]}/{nestr}";
+                args.Result = $"{pars[0]}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{pars[2]}/{nestr}";
             });
             Functions.Add("resourceid", (args, cxt) =>
             {
@@ -766,7 +764,7 @@ namespace maskx.ARMOrchestration.Functions
                 var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 var taskResult = this.infrastructure.Reference(
                     context,
-                    $"/subscription/{context.SubscriptionId}/resourceGroups/{context.ResourceGroup}",
+                    $"/{infrastructure.BuiltinPathSegment.Subscription}/{context.SubscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{context.ResourceGroup}",
                     string.Empty,
                     true);
                 if (taskResult.Code == 200)
@@ -844,7 +842,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/subscription/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string subscriptionResourceId(DeploymentContext input, params object[] pars)
@@ -873,7 +871,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/subscription/{subscriptionId}/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string tenantResourceId(params object[] pars)
@@ -892,7 +890,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/providers/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         /// <summary>
@@ -939,32 +937,6 @@ namespace maskx.ARMOrchestration.Functions
                         }
                     }
                 };
-                //if (context.ContainsKey(ContextKeys.IS_PREPARE))
-                //{
-                //    FunctionVisitor v = new FunctionVisitor(EvaluateOptions.None);
-                //    v.EvaluateFunction = expression.EvaluateFunction;
-                //    v.Parameters = expression.Parameters;
-                //    v.TryGetType = expression.TryGetType;
-                //    v.TryGetObject = expression.TryGetObject;
-                //    expression.ParsedExpression.Accept(v, context);
-                //    if (v.ReferenceFunction.Count > 0)
-                //    {
-                //        List<string> dependsOn;
-                //        if (context.TryGetValue(ContextKeys.DEPENDSON, out object d))
-                //        {
-                //            dependsOn = d as List<string>;
-                //        }
-                //        else
-                //        {
-                //            dependsOn = new List<string>();
-                //            context.Add(ContextKeys.DEPENDSON, dependsOn);
-                //        }
-                //        foreach (var item in v.ReferenceFunction)
-                //        {
-                //            dependsOn.Add("");
-                //        }
-                //    }
-                //}
                 return expression.Evaluate(context);
             }
             return function;

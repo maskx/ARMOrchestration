@@ -6,6 +6,7 @@ using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,11 +18,14 @@ namespace maskx.ARMOrchestration.Workers
         private ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
         private DataConverter dataConverter = new JsonDataConverter();
+        private IServiceProvider serviceProvider;
 
         public WaitDependsOnWorker(
+             IServiceProvider serviceProvider,
             IOrchestrationServiceClient orchestrationServiceClient,
             IOptions<ARMOrchestrationOptions> options)
         {
+            this.serviceProvider = serviceProvider;
             this.options = options?.Value;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
             this.fetchCommandString = string.Format(fetchCommandTemplate,

@@ -67,6 +67,21 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion DependsOn
 
+            #region Before Resource Provisioning
+
+            if (infrastructure.BeforeResourceProvisioningOrchestation != null)
+            {
+                foreach (var t in infrastructure.BeforeResourceProvisioningOrchestation)
+                {
+                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                    if (r.Code != 200)
+                        return r;
+                    input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
+                }
+            }
+
+            #endregion Before Resource Provisioning
+
             #region Create or Update Resource
 
             if (resourceDeploy.Type != Copy.ServiceType)
@@ -228,33 +243,20 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Extension Resources
 
-            #region Apply Policy
+            #region After Resource Provisioning
 
-            // TODO: should start a orchestration
-            // in communication
-            var applyPolicyResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-              typeof(RequestOrchestration).Name,
-              "1.0",
-              new RequestOrchestrationInput()
-              {
-                  RequestAction = RequestAction.ApplyPolicy,
-                  Resource = resourceDeploy,
-                  DeploymentContext = input.Context
-              });
-            if (applyPolicyResult.Code == 200)
+            if (infrastructure.AfterResourceProvisioningOrchestation != null)
             {
-                operationArgs.Stage = ProvisioningStage.PolicyApplySuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
-            }
-            else
-            {
-                operationArgs.Stage = ProvisioningStage.PolicyApplyFailed;
-                operationArgs.Result = DataConverter.Deserialize<CommunicationResult>(applyPolicyResult.Content).ResponseContent;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
-                return applyPolicyResult;
+                foreach (var t in infrastructure.AfterResourceProvisioningOrchestation)
+                {
+                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                    if (r.Code != 200)
+                        return r;
+                    input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
+                }
             }
 
-            #endregion Apply Policy
+            #endregion After Resource Provisioning
 
             #region Ready Resource
 

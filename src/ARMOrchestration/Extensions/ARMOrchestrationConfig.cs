@@ -1,5 +1,4 @@
 ﻿using maskx.OrchestrationService.Extensions;
-using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Extensions
 {
@@ -12,7 +11,5 @@ namespace maskx.ARMOrchestration.Extensions
 
         public OrchestrationWorkerOptions OrchestrationWorkerOptions { get; set; } = new OrchestrationWorkerOptions();
         public CommunicationWorkerOptions CommunicationWorkerOptions { get; set; } = new CommunicationWorkerOptions();
-        public List<string> ExtensionResources { get; set; } = new List<string>();
-        public BuiltinServiceTypes BuitinServiceTypes { get; set; } = new BuiltinServiceTypes();
     }
 }
