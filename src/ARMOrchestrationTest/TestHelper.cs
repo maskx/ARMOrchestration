@@ -323,15 +323,15 @@ namespace ARMCreatorTest
             return instance;
         }
 
-        public static async Task<List<DeploymentOperationActivityInput>> GetDeploymentOpetions(string deploymentId)
+        public static async Task<List<DeploymentOperation>> GetDeploymentOpetions(string deploymentId)
         {
-            List<DeploymentOperationActivityInput> r = new List<DeploymentOperationActivityInput>();
+            List<DeploymentOperation> r = new List<DeploymentOperation>();
             using (var db = new DbAccess(TestHelper.ConnectionString))
             {
                 db.AddStatement($"select * from arm_DeploymentOperations where deploymentId=N'{deploymentId}'");
                 await db.ExecuteReaderAsync((reader, index) =>
                   {
-                      r.Add(new DeploymentOperationActivityInput()
+                      r.Add(new DeploymentOperation()
                       {
                           Name = reader["Resource"].ToString(),
                           ResourceId = reader["ResourceId"].ToString(),

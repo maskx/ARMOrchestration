@@ -3,9 +3,12 @@ using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
+using maskx.OrchestrationService.Activity;
+using maskx.OrchestrationService.SQL;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -20,6 +23,8 @@ namespace maskx.ARMOrchestration
         private readonly IServiceProvider serviceProvider;
         private readonly IInfrastructure infrastructure;
 
+        private readonly string _saveDeploymentOperationCommandString;
+
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions functions,
@@ -30,6 +35,36 @@ namespace maskx.ARMOrchestration
             this.ARMfunctions = functions;
             this.serviceProvider = service;
             this.infrastructure = infrastructure;
+            this._saveDeploymentOperationCommandString = string.Format(@"
+MERGE {0} with (serializable) [Target]
+USING (VALUES (@InstanceId,@ExecutionId)) as [Source](InstanceId,ExecutionId)
+ON [Target].InstanceId = [Source].InstanceId AND [Target].ExecutionId = [Source].ExecutionId
+WHEN NOT MATCHED THEN
+	INSERT
+	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input])
+	VALUES
+	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input)
+WHEN MATCHED THEN
+	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=@Result;
+", this.options.Database.DeploymentOperationsTableName);
+        }
+
+        public async void SaveDeploymentOperation(DeploymentOperation deploymentOperation)
+        {
+            TraceActivityEventSource.Log.TraceEvent(
+                TraceEventType.Information,
+                "DeploymentOperationsActivity",
+               deploymentOperation.InstanceId,
+                deploymentOperation.ExecutionId,
+                $"{deploymentOperation.ResourceId}-{deploymentOperation.Stage}",
+                deploymentOperation.Input,
+                deploymentOperation.Stage.ToString());
+
+            using (var db = new DbAccess(this.options.Database.ConnectionString))
+            {
+                db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
+                await db.ExecuteNonQueryAsync();
+            }
         }
 
         public (bool Result, string Message, DeploymentOrchestrationInput Deployment) ParseDeployment(DeploymentOrchestrationInput input)
@@ -256,7 +291,7 @@ namespace maskx.ARMOrchestration
         public async Task<(bool Result, string Message, Copy Copy)> ParseCopy(string jsonString, Dictionary<string, object> context)
         {
             var copy = new Copy();
-            var deployContext = context["armcontext"] as DeploymentContext;
+            var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
             using var doc = JsonDocument.Parse(jsonString);
             var root = doc.RootElement;
             if (root.TryGetProperty("name", out JsonElement name))
@@ -429,7 +464,7 @@ namespace maskx.ARMOrchestration
             string parentName = "",
             string parentType = "")
         {
-            DeploymentContext deploymentContext = context["armcontext"] as DeploymentContext;
+            DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
             Resource r = new Resource();
             List<Resource> resources = new List<Resource>();
             List<DeploymentOrchestrationInput> deployments = new List<DeploymentOrchestrationInput>();

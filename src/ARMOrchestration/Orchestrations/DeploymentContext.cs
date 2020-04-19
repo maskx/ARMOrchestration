@@ -1,5 +1,4 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
-using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -57,8 +56,5 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// </summary>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error"/>
         public bool RollbackToLastDeployment { get; set; } = false;
-
-        public List<string> DependsOn { get; set; } = new List<string>();
-        public Dictionary<string, DeploymentOrchestrationInput> Deployments { get; set; } = new Dictionary<string, DeploymentOrchestrationInput>();
     }
 }

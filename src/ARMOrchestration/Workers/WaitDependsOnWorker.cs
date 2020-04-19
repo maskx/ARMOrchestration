@@ -41,15 +41,18 @@ namespace maskx.ARMOrchestration.Workers
             await base.StartAsync(cancellationToken);
         }
 
-        private async Task<List<(string InstanceId, string ExecutionId)>> GetResolvedDependsOn()
+        private async Task<List<(string InstanceId, string ExecutionId, string EventName)>> GetResolvedDependsOn()
         {
-            List<(string InstanceId, string ExecutionId)> rtv = new List<(string InstanceId, string ExecutionId)>();
+            List<(string InstanceId, string ExecutionId, string EventName)> rtv = new List<(string InstanceId, string ExecutionId, string EventName)>();
             using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement(this.fetchCommandString);
                 await db.ExecuteReaderAsync((reader, index) =>
                 {
-                    rtv.Add((reader["InstanceId"].ToString(), reader["ExecutionId"].ToString()));
+                    rtv.Add((
+                        reader["InstanceId"].ToString(),
+                        reader["ExecutionId"].ToString(),
+                        reader["EventName"].ToString()));
                 });
             }
             return rtv;
@@ -62,7 +65,7 @@ namespace maskx.ARMOrchestration.Workers
                 List<Task> tasks = new List<Task>();
                 foreach (var item in await GetResolvedDependsOn())
                 {
-                    tasks.Add(ResolveDependsOn(item.InstanceId, item.ExecutionId));
+                    tasks.Add(ResolveDependsOn(item.InstanceId, item.ExecutionId, item.EventName));
                 }
                 await Task.WhenAll(tasks.ToArray());
                 if (tasks.Count == 0)
@@ -70,7 +73,7 @@ namespace maskx.ARMOrchestration.Workers
             }
         }
 
-        private async Task ResolveDependsOn(string instanceId, string executionId)
+        private async Task ResolveDependsOn(string instanceId, string executionId, string eventName)
         {
             await this.taskHubClient.RaiseEventAsync(
                                            new OrchestrationInstance()
@@ -78,7 +81,7 @@ namespace maskx.ARMOrchestration.Workers
                                                InstanceId = instanceId,
                                                ExecutionId = executionId
                                            },
-                                           WaitDependsOnOrchestration.eventName,
+                                           eventName,
                                            dataConverter.Serialize(new TaskResult() { Code = 200 })
                                            );
             using (var db = new DbAccess(this.options.Database.ConnectionString))
@@ -87,7 +90,8 @@ namespace maskx.ARMOrchestration.Workers
                    new
                    {
                        InstanceId = instanceId,
-                       ExecutionId = executionId
+                       ExecutionId = executionId,
+                       EventName = eventName
                    });
                 await db.ExecuteNonQueryAsync();
             }
@@ -120,6 +124,7 @@ BEGIN
         [DeploymentId] [nvarchar](50) NOT NULL,
         [InstanceId] [nvarchar](50) NOT NULL,
 	    [ExecutionId] [nvarchar](50) NOT NULL,
+        [EventName] [nvarchar](50) NOT NULL,
         [DependsOnName] [nvarchar](500) NOT NULL,
 	    [CompletedTime] [datetime2](7) NULL,
 	    [CreateTime] [datetime2](7) NULL
@@ -162,7 +167,7 @@ END", new { table = options.Database.DeploymentOperationsTableName });
         private readonly string removeCommandString;
 
         private const string removeCommandTemplate = @"
-delete {0} where InstanceId=@InstanceId and ExecutionId=@ExecutionId
+delete {0} where InstanceId=@InstanceId and ExecutionId=@ExecutionId and EventName=@EventName
 ";
 
         private readonly string fetchCommandString;
@@ -174,13 +179,14 @@ delete {0} where InstanceId=@InstanceId and ExecutionId=@ExecutionId
         /// {3}: ConditionCheckFailed
         /// </summary>
         private const string fetchCommandTemplate = @"
-select t.InstanceId,t.ExecutionId
+select t.InstanceId,t.ExecutionId,t.EventName
 from(
 	select
 		w.InstanceId
 		, w.ExecutionId
-		,COUNT(0) OVER (PARTITION BY w.InstanceId , w.ExecutionId) as count1
-		,COUNT(d.Stage) OVER (PARTITION BY w.InstanceId , w.ExecutionId) as count2
+        ,w.EventName
+		,COUNT(0) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as count1
+		,COUNT(d.Stage) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as count2
 	from {0} as w
 		left join {1} as d
 			on w.DeploymentId=d.DeploymentId

@@ -1,6 +1,8 @@
 # ARMOrchestration
 
-NOT SUPPORT:
+TODO:
+* WhatIf suppport
+* [uniqueString](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-string#uniquestring)
 
 
 ## [ARM Functions](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions)
@@ -46,5 +48,3 @@ copyIndex need two item in context:
 
 ### [String](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-string)
 
-TODO:
-* [uniqueString](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-string#uniquestring)

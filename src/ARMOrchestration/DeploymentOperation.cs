@@ -1,9 +1,52 @@
 ﻿using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Orchestrations;
 
 namespace maskx.ARMOrchestration
 {
     public class DeploymentOperation
     {
+        public DeploymentOperation()
+        {
+        }
+
+        public DeploymentOperation(DeploymentContext deploymentContext, IInfrastructure infrastructure, Resource resource = null)
+        {
+            this.GroupType = deploymentContext.GroupType;
+            this.GroupId = deploymentContext.GroupId;
+            this.HierarchyId = deploymentContext.HierarchyId;
+            this.RootId = deploymentContext.RootId;
+            this.DeploymentId = deploymentContext.DeploymentId;
+            this.CorrelationId = deploymentContext.CorrelationId;
+            if (resource == null)
+            {
+                if (!string.IsNullOrEmpty(deploymentContext.SubscriptionId))
+                {
+                    this.SubscriptionId = deploymentContext.SubscriptionId;
+                    this.ResourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deploymentContext.SubscriptionId}";
+                }
+                if (!string.IsNullOrEmpty(deploymentContext.ManagementGroupId))
+                {
+                    this.ManagementGroupId = deploymentContext.ManagementGroupId;
+                    this.ResourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deploymentContext.ManagementGroupId}";
+                }
+                if (!string.IsNullOrEmpty(deploymentContext.ResourceGroup))
+                    this.ResourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deploymentContext.ResourceGroup}";
+                this.ResourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuitinServiceTypes.Deployments}/{deploymentContext.DeploymentName}";
+
+                this.Type = infrastructure.BuitinServiceTypes.Deployments;
+                this.Name = deploymentContext.DeploymentName;
+                this.ParentResourceId = deploymentContext.ParentId;
+            }
+            else
+            {
+                this.ResourceId = resource.ResouceId;
+                this.Name = resource.Name;
+                this.Type = resource.Type;
+                this.ParentResourceId = string.IsNullOrEmpty(resource.CopyId) ? deploymentContext.DeploymentId : resource.CopyId;
+            }
+        }
+
         /// <summary>
         /// Orchestration InstanceId
         /// </summary>

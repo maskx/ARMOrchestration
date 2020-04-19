@@ -1,5 +1,6 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
@@ -48,27 +49,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                 input.ParentId = $"{context.OrchestrationInstance.InstanceId}:{ context.OrchestrationInstance.ExecutionId}";
             }
 
-            var operationArgs = new DeploymentOperationActivityInput()
-            {
-                DeploymentContext = input,
-                InstanceId = context.OrchestrationInstance.InstanceId,
-                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Name = input.DeploymentName,
-                Type = infrastructure.BuitinServiceTypes.Deployments,
-                ParentId = input.ParentId,
-                Stage = ProvisioningStage.StartProcessing,
-                Input = DataConverter.Serialize(input)
-            };
-            if (!string.IsNullOrEmpty(input.SubscriptionId))
-                operationArgs.ResourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{input.SubscriptionId}";
-            else if (!string.IsNullOrEmpty(input.ManagementGroupId))
-                operationArgs.ResourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{input.ManagementGroupId}";
-            if (!string.IsNullOrEmpty(input.ResourceGroup))
-                operationArgs.ResourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{input.ResourceGroup}";
-            operationArgs.ResourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuitinServiceTypes.Deployments}/{input.DeploymentName}";
-
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
-
             #region validate template
 
             // when Template had value, this orchestration call by internal,the template string content already be parsed
@@ -79,6 +59,16 @@ namespace maskx.ARMOrchestration.Orchestrations
                     return valid;
                 input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
             }
+            else
+            {
+                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", new DeploymentOperation(input, infrastructure, null)
+                {
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Stage = ProvisioningStage.StartProcessing,
+                    Input = DataConverter.Serialize(input)
+                });
+            }
 
             #endregion validate template
 
@@ -86,14 +76,16 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (input.DependsOn.Count > 0)
             {
-                operationArgs.Stage = ProvisioningStage.DependsOnWaited;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
-                await context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(WaitDependsOnOrchestration).Name,
-                    "1.0",
-                    (input.ParentId, input.DependsOn));
-                operationArgs.Stage = ProvisioningStage.DependsOnSuccessed;
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
+                waitHandler = new TaskCompletionSource<string>();
+                await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity).Name, "1.0",
+                    new WaitDependsOnActivityInput()
+                    {
+                        EventName = eventName,
+                        DeploymentContext = input,
+                        Resource = null,
+                        DependsOn = input.DependsOn
+                    });
+                await waitHandler.Task;
             }
 
             #endregion DependsOn
@@ -173,11 +165,26 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion get template outputs
 
-            operationArgs.Result = rtv;
-            operationArgs.Stage = ProvisioningStage.Successed;
-            await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", operationArgs);
-
+            helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+            {
+                InstanceId = context.OrchestrationInstance.InstanceId,
+                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                Stage = ProvisioningStage.Successed,
+                Result = rtv
+            });
             return new TaskResult() { Code = 200, Content = rtv };
+        }
+
+        internal const string eventName = "WaitDependsOn";
+        private TaskCompletionSource<string> waitHandler = null;
+
+        public override void OnEvent(OrchestrationContext context, string name, string input)
+        {
+            if (this.waitHandler != null && name == eventName && this.waitHandler.Task.Status == TaskStatus.WaitingForActivation)
+            {
+                this.waitHandler.SetResult(input);
+            }
+            base.OnEvent(context, name, input);
         }
 
         private string GetOutputs(DeploymentContext deploymentContext)

@@ -6,17 +6,8 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public enum RequestAction
     {
-        CheckPermission,
-        CheckLock,
-        CheckPolicy,
-        CheckResource,
-        CheckQuota,
-        CreateResource,
-        UpdateResource,
+        ProvisioningResource,
         CreateExtensionResource,
-        CommitQuota,
-        CommitResource,
-        ApplyPolicy,
         ReadyResource
     }
 }

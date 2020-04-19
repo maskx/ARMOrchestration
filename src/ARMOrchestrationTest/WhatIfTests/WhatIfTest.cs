@@ -2,6 +2,7 @@
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
+using maskx.ARMOrchestration.WhatIf;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;

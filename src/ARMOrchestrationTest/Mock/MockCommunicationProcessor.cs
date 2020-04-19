@@ -17,7 +17,7 @@ namespace ARMOrchestrationTest.Mock
             List<CommunicationJob> rtv = new List<CommunicationJob>();
             foreach (var job in jobs)
             {
-                job.ResponseCode = job.RequestTo == RequestAction.CheckLock.ToString() ? 404 : 200;
+                job.ResponseCode = 200;
                 job.ResponseContent = "MockCommunicationProcessor";
                 if (job.RequestTo == RequestAction.ReadyResource.ToString())
                 {

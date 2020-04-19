@@ -1,7 +1,7 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.WhatIf;
+using maskx.ARMOrchestration;
 
-namespace maskx.ARMOrchestration.Orchestrations
+namespace maskx.ARMOrchestration.WhatIf
 {
     /// <summary>
     ///
