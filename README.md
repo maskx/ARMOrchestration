@@ -18,6 +18,7 @@ The context need 1 value:
 |copyindex|Dictionary<string,int>|the key is loopname,and the value is current loop index|
 |currentloopname|string|If no value is provided for loopName, this loopname is used |
 |isprepare|bool|if this key is exist, then process for prepare, not care the value is true or false|
+
 ### [Array and object](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-array)
 
 ### [Comparison](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-template-functions-comparison)

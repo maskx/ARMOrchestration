@@ -20,6 +20,11 @@ namespace ARMOrchestrationTest.Mock
             this.serviceProvider = serviceProvider;
         }
 
+        public TaskResult Providers(string providerNamespace, string resourceType)
+        {
+            return new TaskResult();
+        }
+
         public AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input)
         {
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
