@@ -1,11 +1,7 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
-using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -16,22 +12,14 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestration : TaskOrchestration<TaskResult, string>
     {
-        private readonly ARMOrchestrationOptions ARMOptions;
-        private readonly IServiceProvider serviceProvider;
-        private readonly ARMFunctions functions;
+        public static string Name { get { return "DeploymentOrchestration"; } }
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
 
         public DeploymentOrchestration(
-            IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider,
-            ARMFunctions functions,
             ARMTemplateHelper helper,
             IInfrastructure infrastructure)
         {
-            this.ARMOptions = options?.Value;
-            this.serviceProvider = serviceProvider;
-            this.functions = functions;
             this.helper = helper;
             this.infrastructure = infrastructure;
         }
@@ -49,46 +37,26 @@ namespace maskx.ARMOrchestration.Orchestrations
                 input.ParentId = $"{context.OrchestrationInstance.InstanceId}:{ context.OrchestrationInstance.ExecutionId}";
             }
 
-            #region validate template
+            #region InjectBeforeDeployment
 
-            // when Template had value, this orchestration call by internal,the template string content already be parsed
-            if (input.Template == null)
+            if (infrastructure.InjectBeforeDeployment)
             {
-                var valid = await context.ScheduleTask<TaskResult>(typeof(ValidateTemplateActivity).Name, "1.0", input);
-                if (valid.Code != 200)
-                    return valid;
-                input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
-            }
-            else
-            {
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", new DeploymentOperation(input, infrastructure, null)
+                var injectBeforeDeploymenteResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                             "RequestOrchestration",
+                             "1.0",
+                             new AsyncRequestActivityInput()
+                             {
+                                 ProvisioningStage = ProvisioningStage.InjectBeforeDeployment,
+                                 DeploymentContext = input,
+                                 Resource = null
+                             });
+                if (injectBeforeDeploymenteResult.Code != 200)
                 {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.StartProcessing,
-                    Input = DataConverter.Serialize(input)
-                });
+                    return injectBeforeDeploymenteResult;
+                }
             }
 
-            #endregion validate template
-
-            #region DependsOn
-
-            if (input.DependsOn.Count > 0)
-            {
-                waitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity).Name, "1.0",
-                    new WaitDependsOnActivityInput()
-                    {
-                        EventName = eventName,
-                        DeploymentContext = input,
-                        Resource = null,
-                        DependsOn = input.DependsOn
-                    });
-                await waitHandler.Task;
-            }
-
-            #endregion DependsOn
+            #endregion InjectBeforeDeployment
 
             #region Before Deployment
 
@@ -105,6 +73,37 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Before Deployment
 
+            #region validate template
+
+            // when Template had value, this orchestration call by internal or processed by BeforeDeployment,the template string content already be parsed
+            if (input.Template == null)
+            {
+                var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
+                if (valid.Code != 200)
+                    return valid;
+                input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+            }
+
+            #endregion validate template
+
+            #region DependsOn
+
+            if (input.DependsOn.Count > 0)
+            {
+                waitHandler = new TaskCompletionSource<string>();
+                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
+                    new WaitDependsOnActivityInput()
+                    {
+                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
+                        DeploymentContext = input,
+                        Resource = null,
+                        DependsOn = input.DependsOn
+                    });
+                await waitHandler.Task;
+            }
+
+            #endregion DependsOn
+
             #region Provisioning resources
 
             List<Task> tasks = new List<Task>();
@@ -116,7 +115,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     continue;
                 }
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(ResourceOrchestration).Name,
+                    ResourceOrchestration.Name,
                     "1.0",
                     new ResourceOrchestrationInput()
                     {
@@ -127,7 +126,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             foreach (var deploy in input.Deployments)
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                    typeof(DeploymentOrchestration).Name,
+                   DeploymentOrchestration.Name,
                     "1.0",
                    DataConverter.Serialize(deploy.Value)));
             }
@@ -156,6 +155,26 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion After Deployment
 
+            if (infrastructure.InjectAfterDeployment)
+            {
+                if (infrastructure.InjectBeforeDeployment)
+                {
+                    var injectAfterDeploymenteResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                 RequestOrchestration.Name,
+                                 "1.0",
+                                 new AsyncRequestActivityInput()
+                                 {
+                                     ProvisioningStage = ProvisioningStage.InjectAfterDeployment,
+                                     DeploymentContext = input,
+                                     Resource = null
+                                 });
+                    if (injectAfterDeploymenteResult.Code != 200)
+                    {
+                        return injectAfterDeploymenteResult;
+                    }
+                }
+            }
+
             #region get template outputs
 
             if (!string.IsNullOrEmpty(input.Template.Outputs))
@@ -175,16 +194,14 @@ namespace maskx.ARMOrchestration.Orchestrations
             return new TaskResult() { Code = 200, Content = rtv };
         }
 
-        internal const string eventName = "WaitDependsOn";
         private TaskCompletionSource<string> waitHandler = null;
 
         public override void OnEvent(OrchestrationContext context, string name, string input)
         {
-            if (this.waitHandler != null && name == eventName && this.waitHandler.Task.Status == TaskStatus.WaitingForActivation)
+            if (this.waitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.waitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.waitHandler.SetResult(input);
             }
-            base.OnEvent(context, name, input);
         }
 
         private string GetOutputs(DeploymentContext deploymentContext)

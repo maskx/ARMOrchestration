@@ -5,7 +5,7 @@
 	[Processor] [nvarchar](50) NULL,
 	[RequestTo] [nvarchar](50) NULL,
 	[RequestOperation] [nvarchar](50) NULL,
-	[RequsetContent] [nvarchar](max) NULL,
+	[RequestContent] [nvarchar](max) NULL,
 	[RequestProperty] [nvarchar](max) NULL,
 	[Status] [int] NULL,
 	[LockedUntilUtc] [datetime2](7) NULL,

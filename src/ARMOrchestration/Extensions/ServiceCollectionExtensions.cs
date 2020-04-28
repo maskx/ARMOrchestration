@@ -32,10 +32,9 @@ namespace maskx.ARMOrchestration.Extensions
                     orchList = new List<(string, string, Type)>();
                 else
                     orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
-                orchList.Add(("ResourceOrchestration", "1.0", typeof(ResourceOrchestration)));
-                orchList.Add(("DeploymentOrchestration", "1.0", typeof(DeploymentOrchestration)));
-                orchList.Add(("WaitDependsOnOrchestration", "1.0", typeof(WaitDependsOnOrchestration)));
-                orchList.Add(("RequestOrchestration", "1.0", typeof(RequestOrchestration)));
+                orchList.Add((ResourceOrchestration.Name, "1.0", typeof(ResourceOrchestration)));
+                orchList.Add((DeploymentOrchestration.Name, "1.0", typeof(DeploymentOrchestration)));
+                orchList.Add((RequestOrchestration.Name, "1.0", typeof(RequestOrchestration)));
                 return orchList;
             };
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>
@@ -45,9 +44,10 @@ namespace maskx.ARMOrchestration.Extensions
                     activityTypes = new List<(string, string, Type)>();
                 else
                     activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                activityTypes.Add(("DeploymentOperationActivity", "1.0", typeof(DeploymentOperationActivity)));
-                activityTypes.Add(("WaitDependsOnActivity", "1.0", typeof(WaitDependsOnActivity)));
-                activityTypes.Add(("ValidateTemplateActivity", "1.0", typeof(ValidateTemplateActivity)));
+                activityTypes.Add((DeploymentOperationActivity.Name, "1.0", typeof(DeploymentOperationActivity)));
+                activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
+                activityTypes.Add((ValidateTemplateActivity.Name, "1.0", typeof(ValidateTemplateActivity)));
+                activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
                 return activityTypes;
             };
             services.UsingOrchestration(sqlServerConfiguration);

@@ -95,5 +95,7 @@ namespace maskx.ARMOrchestration
         /// the result of provisioning the resource
         /// </summary>
         public string Result { get; set; }
+
+        public string Comments { get; set; }
     }
 }

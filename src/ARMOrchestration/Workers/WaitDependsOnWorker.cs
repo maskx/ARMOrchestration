@@ -153,6 +153,7 @@ BEGIN
         [ParentResourceId] [nvarchar](1024)  NULL,
         [Input] [nvarchar](max) NULL,
 	    [Result] [nvarchar](max) NULL,
+        [Comments] [nvarchar](max) NULL,
      CONSTRAINT [PK_{options.Database.SchemaName}_{options.Database.HubName}_{DatabaseConfig.DeploymentOperationsTable}] PRIMARY KEY CLUSTERED
     (
 	    [InstanceId] ASC,

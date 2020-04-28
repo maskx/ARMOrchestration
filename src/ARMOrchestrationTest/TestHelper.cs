@@ -279,7 +279,7 @@ namespace ARMCreatorTest
                 InstanceId = Guid.NewGuid().ToString("N"),
                 Orchestration = new OrchestrationSetting()
                 {
-                    Name = "DeploymentOrchestration",
+                    Name = DeploymentOrchestration.Name,
                     Version = "1.0"
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()

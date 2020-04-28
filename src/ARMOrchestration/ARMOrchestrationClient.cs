@@ -1,8 +1,6 @@
 ﻿using DurableTask.Core;
 using DurableTask.Core.Serializing;
-using Dynamitey.DynamicObjects;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.SQL;
@@ -10,7 +8,6 @@ using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
@@ -18,7 +15,6 @@ namespace maskx.ARMOrchestration
     public class ARMOrchestrationClient
     {
         private readonly OrchestrationWorkerClient orchestrationWorkerClient;
-        private readonly string TemplateOrchestrationUri = "DeploymentOrchestration";
         private readonly DataConverter DataConverter = new JsonDataConverter();
         private string getResourceListCommandString = "select * from {0} where deploymentId=@deploymentId";
         private string getAllResourceListCommandString = "select * from {0} where RootId=@RootId";
@@ -56,7 +52,7 @@ namespace maskx.ARMOrchestration
                 InstanceId = args.DeploymentId,
                 Orchestration = new OrchestrationSetting()
                 {
-                    Name = TemplateOrchestrationUri,
+                    Name = DeploymentOrchestration.Name,
                     Version = args.ApiVersion
                 },
                 Input = DataConverter.Serialize(args)

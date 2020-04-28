@@ -1,11 +1,13 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
+using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class ValidateTemplateActivity : TaskActivity<DeploymentOrchestrationInput, TaskResult>
+    public class ValidateTemplateActivity : AsyncTaskActivity<DeploymentOrchestrationInput, TaskResult>
     {
+        public static string Name { get { return "ValidateTemplateActivity"; } }
         private readonly ARMTemplateHelper templateHelper;
         private readonly IInfrastructure infrastructure;
 
@@ -15,21 +17,24 @@ namespace maskx.ARMOrchestration.Activities
             this.infrastructure = infrastructure;
         }
 
-        protected override TaskResult Execute(TaskContext context, DeploymentOrchestrationInput input)
+        protected override async Task<TaskResult> ExecuteAsync(TaskContext context, DeploymentOrchestrationInput input)
         {
+            var r = templateHelper.ParseDeployment(input);
+            TaskResult tr = null;
+            if (r.Result)
+                tr = new TaskResult(200, DataConverter.Serialize(r.Deployment));
+            else
+                tr = new TaskResult() { Code = 400, Content = r.Message };
             DeploymentOperation deploymentOperation = new DeploymentOperation(input, this.infrastructure)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = ProvisioningStage.StartProcessing,
-                Input = DataConverter.Serialize(input)
+                Stage = ProvisioningStage.ValidateTemplate,
+                Input = DataConverter.Serialize(input),
+                Result = DataConverter.Serialize(tr)
             };
             templateHelper.SaveDeploymentOperation(deploymentOperation);
-            var r = templateHelper.ParseDeployment(input);
-            if (r.Result)
-                return new TaskResult(200, DataConverter.Serialize(r.Deployment));
-            else
-                return new TaskResult() { Code = 400, Content = r.Message };
+            return tr;
         }
     }
 }

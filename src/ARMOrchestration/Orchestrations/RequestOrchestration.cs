@@ -1,46 +1,46 @@
 ﻿using DurableTask.Core;
+using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
-using maskx.OrchestrationService.Worker;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class RequestOrchestration : TaskOrchestration<TaskResult, RequestOrchestrationInput>
+    public class RequestOrchestration : TaskOrchestration<TaskResult, AsyncRequestActivityInput>
     {
-        private const string eventName = "CommunicationEvent";
+        public static string Name { get { return "RequestOrchestration"; } }
+        private string eventName = string.Empty;
         private TaskCompletionSource<string> waitHandler = null;
-        private ARMOrchestrationOptions options;
-        private IServiceProvider serviceProvider;
         private IInfrastructure infrastructure;
+        private readonly ARMTemplateHelper templateHelper;
 
         public RequestOrchestration(
-            IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            ARMTemplateHelper templateHelper)
         {
-            this.serviceProvider = serviceProvider;
-            this.options = options?.Value;
             this.infrastructure = infrastructure;
+            this.templateHelper = templateHelper;
         }
 
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, RequestOrchestrationInput input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, AsyncRequestActivityInput input)
         {
+            this.eventName = input.ProvisioningStage.ToString();
             this.waitHandler = new TaskCompletionSource<string>();
-            AsyncRequestInput requestInput = this.infrastructure.GetRequestInput(input);
-            requestInput.EventName = eventName;
-            await context.ScheduleTask<TaskResult>(typeof(AsyncRequestActivity), requestInput);
+            await context.ScheduleTask<TaskResult>(AsyncRequestActivity.Name, "1.0", input);
             await waitHandler.Task;
-            return DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
+            var r = DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentContext, infrastructure, input.Resource)
+            {
+                InstanceId = input.InstanceId,
+                ExecutionId = input.ExecutionId,
+                Stage = input.ProvisioningStage,
+                Result = waitHandler.Task.Result
+            });
+            return r;
         }
 
         public override void OnEvent(OrchestrationContext context, string name, string input)
         {
-            if (this.waitHandler != null && name == eventName && this.waitHandler.Task.Status == TaskStatus.WaitingForActivation)
+            if (this.waitHandler != null && name == this.eventName && this.waitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.waitHandler.SetResult(input);
             }

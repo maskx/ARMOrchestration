@@ -1,17 +1,12 @@
 ﻿using DurableTask.Core;
-using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
     public class DeploymentOperationActivity : TaskActivity<DeploymentOperation, TaskResult>
     {
+        public static string Name { get { return "DeploymentOperationActivity"; } }
         private readonly ARMTemplateHelper templateHelper;
 
         public DeploymentOperationActivity(ARMTemplateHelper templateHelper)

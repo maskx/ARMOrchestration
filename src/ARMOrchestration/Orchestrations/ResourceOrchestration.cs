@@ -1,37 +1,23 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Worker;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
     public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
-        private readonly ARMOrchestrationOptions ARMOptions;
-        private readonly IServiceProvider serviceProvider;
-        private readonly ARMFunctions functions;
+        public static string Name { get { return "ResourceOrchestration"; } }
         private readonly IInfrastructure infrastructure;
+
         private readonly ARMTemplateHelper templateHelper;
 
         public ResourceOrchestration(
-            IServiceProvider serviceProvider,
-            IOptions<ARMOrchestrationOptions> armOptions,
-            ARMFunctions functions,
             IInfrastructure infrastructure,
             ARMTemplateHelper templateHelper)
         {
-            this.ARMOptions = armOptions?.Value;
-            this.serviceProvider = serviceProvider;
-            this.functions = functions;
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
         }
@@ -45,32 +31,37 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (resourceDeploy.DependsOn.Count > 0)
             {
                 dependsOnWaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity).Name, "1.0",
+                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
                     new WaitDependsOnActivityInput()
                     {
-                        EventName = dependsOnEventName,
+                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
                         DeploymentContext = input.Context,
                         Resource = resourceDeploy,
                         DependsOn = resourceDeploy.DependsOn
                     });
                 await dependsOnWaitHandler.Task;
             }
-            else
-            {
-                await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0", new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.StartProcessing,
-                    Input = DataConverter.Serialize(input)
-                });
-            }
 
             #endregion DependsOn
 
             if (resourceDeploy.Type != Copy.ServiceType)
             {
-                #region Before Resource Provisioning
+                if (infrastructure.InjectBefroeProvisioning)
+                {
+                    var injectBefroeProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                 RequestOrchestration.Name,
+                                 "1.0",
+                                 new AsyncRequestActivityInput()
+                                 {
+                                     ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning,
+                                     DeploymentContext = input.Context,
+                                     Resource = resourceDeploy
+                                 });
+                    if (injectBefroeProvisioningResult.Code != 200)
+                    {
+                        return injectBefroeProvisioningResult;
+                    }
+                }
 
                 if (infrastructure.BeforeResourceProvisioningOrchestation != null)
                 {
@@ -83,41 +74,21 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                 }
 
-                #endregion Before Resource Provisioning
-
                 #region Provisioning Resource
 
-                TaskResult createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                              typeof(RequestOrchestration).Name,
+                var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                              RequestOrchestration.Name,
                               "1.0",
-                              new RequestOrchestrationInput()
+                              new AsyncRequestActivityInput()
                               {
-                                  RequestAction = RequestAction.ProvisioningResource,
+                                  InstanceId = context.OrchestrationInstance.InstanceId,
+                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                  ProvisioningStage = ProvisioningStage.ProvisioningResource,
                                   DeploymentContext = input.Context,
                                   Resource = resourceDeploy
                               });
-
-                if (createResourceResult.Code == 200)
+                if (createResourceResult.Code != 200)
                 {
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0",
-                     new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                     {
-                         InstanceId = context.OrchestrationInstance.InstanceId,
-                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                         Stage = ProvisioningStage.ResourceCreateSuccessed,
-                         Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent
-                     });
-                }
-                else
-                {
-                    await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0",
-                    new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                    {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.ResourceCreateFailed,
-                        Result = DataConverter.Deserialize<CommunicationResult>(createResourceResult.Content).ResponseContent
-                    });
                     return createResourceResult;
                 }
 
@@ -129,10 +100,10 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (resourceDeploy.Resources.Count > 0)
             {
                 childWaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<TaskResult>(typeof(WaitDependsOnActivity).Name, "1.0",
+                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
                     new WaitDependsOnActivityInput()
                     {
-                        EventName = childEventName,
+                        ProvisioningStage = ProvisioningStage.WaitChildCompleted,
                         DeploymentContext = input.Context,
                         Resource = resourceDeploy,
                         DependsOn = resourceDeploy.Resources
@@ -151,49 +122,45 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     extenstionTasks.Add(
                         context.CreateSubOrchestrationInstance<TaskResult>(
-                            typeof(RequestOrchestration).Name,
+                            RequestOrchestration.Name,
                             "1.0",
-                            new RequestOrchestrationInput()
-                            {
-                                Resource = resourceDeploy,
-                                RequestAction = RequestAction.CreateExtensionResource,
-                                DeploymentContext = input.Context,
-                                Context = new Dictionary<string, object>() {
-                                {"extenstion",item.Value }
+                             new AsyncRequestActivityInput()
+                             {
+                                 InstanceId = context.OrchestrationInstance.InstanceId,
+                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                 ProvisioningStage = ProvisioningStage.CreateExtensionResource,
+                                 DeploymentContext = input.Context,
+                                 Resource = resourceDeploy,
+                                 Context = new Dictionary<string, object>() {
+                                    {"extenstion",item.Value }
                                 }
-                            }));
+                             }
+                            ));
                 }
                 if (extenstionTasks.Count != 0)
                 {
                     await Task.WhenAll(extenstionTasks);
-                    int successed = 0;
+                    int succeed = 0;
                     int failed = 0;
+                    List<string> extensionResult = new List<string>();
                     foreach (var t in extenstionTasks)
                     {
-                        if (t.Result.Code == 200) successed++;
+                        if (t.Result.Code == 200) succeed++;
                         else failed++;
+                        extensionResult.Add(t.Result.Content);
                     }
                     if (failed > 0)
                     {
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0",
+                        await context.ScheduleTask<TaskResult>(DeploymentOperationActivity.Name, "1.0",
                             new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
                             {
                                 InstanceId = context.OrchestrationInstance.InstanceId,
                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                Stage = ProvisioningStage.ExtensionResourceFailed,
-                                Result = $"Extension resource successed: {successed}/{extenstionTasks.Count}"
+                                Stage = ProvisioningStage.CreateExtensionResource,
+                                Comments = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}",
+                                Result = $"[{string.Join(',', extensionResult)}]"
                             });
-                        return new TaskResult() { Code = 500, Content = $"Extension resource successed: {successed}/{extenstionTasks.Count}" };
-                    }
-                    else
-                    {
-                        await context.ScheduleTask<TaskResult>(typeof(DeploymentOperationActivity).Name, "1.0",
-                           new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                           {
-                               InstanceId = context.OrchestrationInstance.InstanceId,
-                               ExecutionId = context.OrchestrationInstance.ExecutionId,
-                               Stage = ProvisioningStage.ExtensionResourceSuccessed
-                           });
+                        return new TaskResult() { Code = 500, Content = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}" };
                     }
                 }
 
@@ -213,6 +180,26 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
 
                 #endregion After Resource Provisioning
+
+                if (infrastructure.InjectAfterProvisioning)
+                {
+                    if (infrastructure.InjectBeforeDeployment)
+                    {
+                        var injectAfterProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                     RequestOrchestration.Name,
+                                     "1.0",
+                                     new AsyncRequestActivityInput()
+                                     {
+                                         ProvisioningStage = ProvisioningStage.InjectAfterProvisioning,
+                                         DeploymentContext = input.Context,
+                                         Resource = resourceDeploy
+                                     });
+                        if (injectAfterProvisioningResult.Code != 200)
+                        {
+                            return injectAfterProvisioningResult;
+                        }
+                    }
+                }
             }
 
             #region Ready Resource
@@ -230,22 +217,19 @@ namespace maskx.ARMOrchestration.Orchestrations
             return new TaskResult() { Code = 200 };
         }
 
-        internal const string dependsOnEventName = "WaitDependsOn";
         private TaskCompletionSource<string> dependsOnWaitHandler = null;
-        internal const string childEventName = "child";
         private TaskCompletionSource<string> childWaitHandler = null;
 
         public override void OnEvent(OrchestrationContext context, string name, string input)
         {
-            if (name == dependsOnEventName && this.dependsOnWaitHandler != null && this.dependsOnWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
+            if (this.dependsOnWaitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.dependsOnWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.dependsOnWaitHandler.SetResult(input);
             }
-            if (name == childEventName && this.childWaitHandler != null && this.childWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
+            else if (this.childWaitHandler != null && name == ProvisioningStage.WaitChildCompleted.ToString() && this.childWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.childWaitHandler.SetResult(input);
             }
-            base.OnEvent(context, name, input);
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using ARMCreatorTest;
 using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
@@ -19,7 +20,7 @@ namespace ARMOrchestrationTest.Mock
             this.serviceProvider = serviceProvider;
         }
 
-        public AsyncRequestInput GetRequestInput(RequestOrchestrationInput input)
+        public AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input)
         {
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
             if (input.Resource != null)
@@ -48,9 +49,10 @@ namespace ARMOrchestrationTest.Mock
             ruleField.Add("ResourceGroup", deploymentContext.ResourceGroup);
             var r = new AsyncRequestInput()
             {
-                RequestTo = input.RequestAction.ToString(),
+                EventName = input.ProvisioningStage.ToString(),
+                RequestTo = input.Resource.FullType,
                 RequestOperation = "PUT",
-                RequsetContent = input.Resource?.ToString(),
+                RequestContent = input.Resource?.ToString(),
                 RuleField = ruleField,
                 Processor = "MockCommunicationProcessor"
             };
@@ -98,6 +100,10 @@ namespace ARMOrchestrationTest.Mock
         public List<(string Name, string Version)> AfterDeploymentOrhcestration { get; set; }
         public List<(string Name, string Version)> BeforeResourceProvisioningOrchestation { get; set; }
         public List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; }
+        public bool InjectBeforeDeployment { get; set; } = false;
+        public bool InjectAfterDeployment { get; set; } = false;
+        public bool InjectBefroeProvisioning { get; set; } = false;
+        public bool InjectAfterProvisioning { get; set; } = false;
 
         public TaskResult WhatIf(DeploymentContext context, string resourceName)
         {

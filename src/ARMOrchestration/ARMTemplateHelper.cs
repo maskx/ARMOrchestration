@@ -41,15 +41,16 @@ USING (VALUES (@InstanceId,@ExecutionId)) as [Source](InstanceId,ExecutionId)
 ON [Target].InstanceId = [Source].InstanceId AND [Target].ExecutionId = [Source].ExecutionId
 WHEN NOT MATCHED THEN
 	INSERT
-	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input])
+	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments])
 	VALUES
-	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input)
+	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Result,@Comments)
 WHEN MATCHED THEN
-	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=@Result;
+	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(@Result,[Result]),[Comments]=@Comments;
 ", this.options.Database.DeploymentOperationsTableName);
         }
 
-        public async void SaveDeploymentOperation(DeploymentOperation deploymentOperation)
+        // TODO: when this is a async task, in orchestration await this will make orchestration cannot be completed, need investigation
+        public void SaveDeploymentOperation(DeploymentOperation deploymentOperation)
         {
             TraceActivityEventSource.Log.TraceEvent(
                 TraceEventType.Information,
@@ -63,7 +64,7 @@ WHEN MATCHED THEN
             using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
-                await db.ExecuteNonQueryAsync();
+                db.ExecuteNonQueryAsync().Wait();
             }
         }
 

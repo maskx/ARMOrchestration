@@ -1,4 +1,5 @@
 ﻿using ARMCreatorTest;
+using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService.Activity;
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             bool tagsAdded = false;
             var _ = new TraceActivityEventListener((args) =>
             {
-                if (args.EventType.Equals("ExtensionResourceSuccessed"))
+                if (args.EventType == ProvisioningStage.CreateExtensionResource.ToString())
                 {
                     tagsAdded = true;
                 }

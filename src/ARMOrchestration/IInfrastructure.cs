@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
+﻿using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ namespace maskx.ARMOrchestration
 {
     public interface IInfrastructure
     {
-        AsyncRequestInput GetRequestInput(RequestOrchestrationInput input);
+        AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input);
 
         TaskResult List(DeploymentContext context, string resourceId, string apiVersion, string functionValues = "", string value = "");
 
@@ -18,6 +19,10 @@ namespace maskx.ARMOrchestration
         BuiltinServiceTypes BuitinServiceTypes { get; set; }
         BuiltinPathSegment BuiltinPathSegment { get; set; }
         List<string> ExtensionResources { get; set; }
+        bool InjectBeforeDeployment { get; set; }
+        bool InjectAfterDeployment { get; set; }
+        bool InjectBefroeProvisioning { get; set; }
+        bool InjectAfterProvisioning { get; set; }
 
         /// <summary>
         /// The Orchestration should be register in OrchestartionService

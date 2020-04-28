@@ -1,16 +1,15 @@
 ﻿using DurableTask.Core;
-using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class WaitDependsOnActivity : TaskActivity<WaitDependsOnActivityInput, TaskResult>
+    public class WaitDependsOnActivity : AsyncTaskActivity<WaitDependsOnActivityInput, TaskResult>
     {
+        public static string Name { get { return "WaitDependsOnActivity"; } }
+
         private const string commandTemplate = @"
 insert into {0}
 (DeploymentId,InstanceId,ExecutionId,EventName,DependsOnName,CreateTime)
@@ -32,18 +31,13 @@ values
             this.commandText = string.Format(commandTemplate, this.options.Database.WaitDependsOnTableName);
         }
 
-        protected override TaskResult Execute(TaskContext context, WaitDependsOnActivityInput input)
-        {
-            return ExecuteAsync(context, input).Result;
-        }
-
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, WaitDependsOnActivityInput input)
         {
             DeploymentOperation deploymentOperation = new DeploymentOperation(input.DeploymentContext, this.infrastructure, input.Resource)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = ProvisioningStage.DependsOnWaited,
+                Stage = input.ProvisioningStage,
                 Input = DataConverter.Serialize(input)
             };
             templateHelper.SaveDeploymentOperation(deploymentOperation);
@@ -51,15 +45,14 @@ values
             {
                 foreach (var item in input.DependsOn)
                 {
-                    Dictionary<string, object> pars = new Dictionary<string, object>()
+                    db.AddStatement(this.commandText, new
                     {
-                        {"DeploymentId",input.DeploymentContext.DeploymentId },
-                        {"InstanceId",context.OrchestrationInstance.InstanceId },
-                        { "ExecutionId",context.OrchestrationInstance.ExecutionId},
-                        { "EventName",input.EventName},
-                        { "DependsOnName",item}
-                    };
-                    db.AddStatement(this.commandText, pars);
+                        DeploymentId = input.DeploymentContext.DeploymentId,
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        EventName = input.ProvisioningStage.ToString(),
+                        DependsOnName = item
+                    });
                 }
                 await db.ExecuteNonQueryAsync();
             }
