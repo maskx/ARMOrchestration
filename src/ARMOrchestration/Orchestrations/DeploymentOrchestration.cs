@@ -37,6 +37,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                 input.ParentId = $"{context.OrchestrationInstance.InstanceId}:{ context.OrchestrationInstance.ExecutionId}";
             }
 
+            #region validate template
+
+            // when Template had value, this orchestration call by internal or processed by BeforeDeployment,the template string content already be parsed
+            if (input.Template == null)
+            {
+                var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
+                if (valid.Code != 200)
+                    return valid;
+                input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+            }
+
+            #endregion validate template
+
             #region InjectBeforeDeployment
 
             if (infrastructure.InjectBeforeDeployment)
@@ -73,19 +86,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Before Deployment
 
-            #region validate template
-
-            // when Template had value, this orchestration call by internal or processed by BeforeDeployment,the template string content already be parsed
-            if (input.Template == null)
-            {
-                var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
-                if (valid.Code != 200)
-                    return valid;
-                input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
-            }
-
-            #endregion validate template
-
             #region DependsOn
 
             if (input.DependsOn.Count > 0)
@@ -100,6 +100,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DependsOn = input.DependsOn
                     });
                 await waitHandler.Task;
+                // TODO: dependsOn resource create fail
             }
 
             #endregion DependsOn

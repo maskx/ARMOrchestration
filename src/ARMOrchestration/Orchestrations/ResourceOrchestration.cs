@@ -26,23 +26,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             var resourceDeploy = input.Resource;
 
-            #region DependsOn
-
-            if (resourceDeploy.DependsOn.Count > 0)
-            {
-                dependsOnWaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
-                    new WaitDependsOnActivityInput()
-                    {
-                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
-                        DeploymentContext = input.Context,
-                        Resource = resourceDeploy,
-                        DependsOn = resourceDeploy.DependsOn
-                    });
-                await dependsOnWaitHandler.Task;
-            }
-
-            #endregion DependsOn
+            #region plugin
 
             if (resourceDeploy.Type != Copy.ServiceType)
             {
@@ -73,27 +57,50 @@ namespace maskx.ARMOrchestration.Orchestrations
                         input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
                     }
                 }
+            }
 
-                #region Provisioning Resource
+            #endregion plugin
 
+            #region DependsOn
+
+            if (resourceDeploy.DependsOn.Count > 0)
+            {
+                dependsOnWaitHandler = new TaskCompletionSource<string>();
+                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
+                    new WaitDependsOnActivityInput()
+                    {
+                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
+                        DeploymentContext = input.Context,
+                        Resource = resourceDeploy,
+                        DependsOn = resourceDeploy.DependsOn
+                    });
+                await dependsOnWaitHandler.Task;
+            }
+
+            #endregion DependsOn
+
+            #region Provisioning Resource
+
+            if (resourceDeploy.Type != Copy.ServiceType)
+            {
                 var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                              RequestOrchestration.Name,
-                              "1.0",
-                              new AsyncRequestActivityInput()
-                              {
-                                  InstanceId = context.OrchestrationInstance.InstanceId,
-                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                  ProvisioningStage = ProvisioningStage.ProvisioningResource,
-                                  DeploymentContext = input.Context,
-                                  Resource = resourceDeploy
-                              });
+                          RequestOrchestration.Name,
+                          "1.0",
+                          new AsyncRequestActivityInput()
+                          {
+                              InstanceId = context.OrchestrationInstance.InstanceId,
+                              ExecutionId = context.OrchestrationInstance.ExecutionId,
+                              ProvisioningStage = ProvisioningStage.ProvisioningResource,
+                              DeploymentContext = input.Context,
+                              Resource = resourceDeploy
+                          });
                 if (createResourceResult.Code != 200)
                 {
                     return createResourceResult;
                 }
-
-                #endregion Provisioning Resource
             }
+
+            #endregion Provisioning Resource
 
             #region wait for child resource completed
 
