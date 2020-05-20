@@ -26,7 +26,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             var resourceDeploy = input.Resource;
 
-            #region plugin
+            #region plug-in
 
             if (resourceDeploy.Type != Copy.ServiceType)
             {
@@ -53,13 +53,24 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                         if (r.Code != 200)
+                        {
+                            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                            {
+                                InstanceId = context.OrchestrationInstance.InstanceId,
+                                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                Stage = ProvisioningStage.BeforeResourceProvisioningFailed,
+                                Input = DataConverter.Serialize(input),
+                                Result = DataConverter.Serialize(r)
+                            });
                             return r;
+                        }
+
                         input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
                     }
                 }
             }
 
-            #endregion plugin
+            #endregion plug-in
 
             #region DependsOn
 
@@ -75,6 +86,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DependsOn = resourceDeploy.DependsOn
                     });
                 await dependsOnWaitHandler.Task;
+                var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
+                if (r.Code != 200)
+                {
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.DependsOnWaitedFailed,
+                        Input = DataConverter.Serialize(input),
+                        Result = DataConverter.Serialize(r)
+                    });
+                    return r;
+                }
             }
 
             #endregion DependsOn
@@ -96,6 +120,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                           });
                 if (createResourceResult.Code != 200)
                 {
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.ProvisioningResourceFailed,
+                        Input = DataConverter.Serialize(input),
+                        Result = DataConverter.Serialize(createResourceResult)
+                    });
                     return createResourceResult;
                 }
             }
@@ -116,6 +148,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DependsOn = resourceDeploy.Resources
                     });
                 await childWaitHandler.Task;
+                var r = DataConverter.Deserialize<TaskResult>(childWaitHandler.Task.Result);
+                if (r.Code != 200)
+                {
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.WaitChildCompletedFailed,
+                        Input = DataConverter.Serialize(input),
+                        Result = r.Content
+                    });
+                    return r;
+                }
             }
 
             #endregion wait for child resource completed
@@ -158,15 +203,15 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                     if (failed > 0)
                     {
-                        await context.ScheduleTask<TaskResult>(DeploymentOperationActivity.Name, "1.0",
-                            new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                            {
-                                InstanceId = context.OrchestrationInstance.InstanceId,
-                                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                Stage = ProvisioningStage.CreateExtensionResource,
-                                Comments = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}",
-                                Result = $"[{string.Join(',', extensionResult)}]"
-                            });
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.CreateExtensionResourceFailed,
+                            Input = DataConverter.Serialize(input),
+                            Comments = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}",
+                            Result = $"[{string.Join(',', extensionResult)}]"
+                        });
                         return new TaskResult() { Code = 500, Content = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}" };
                     }
                 }
@@ -181,7 +226,18 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                         if (r.Code != 200)
+                        {
+                            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                            {
+                                InstanceId = context.OrchestrationInstance.InstanceId,
+                                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                Stage = ProvisioningStage.CreateExtensionResourceFailed,
+                                Input = DataConverter.Serialize(input),
+                                Result = DataConverter.Serialize(r)
+                            });
                             return r;
+                        }
+
                         input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
                     }
                 }

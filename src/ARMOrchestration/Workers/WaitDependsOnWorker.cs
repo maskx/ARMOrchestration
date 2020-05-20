@@ -41,9 +41,9 @@ namespace maskx.ARMOrchestration.Workers
             await base.StartAsync(cancellationToken);
         }
 
-        private async Task<List<(string InstanceId, string ExecutionId, string EventName)>> GetResolvedDependsOn()
+        private async Task<List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>> GetResolvedDependsOn()
         {
-            List<(string InstanceId, string ExecutionId, string EventName)> rtv = new List<(string InstanceId, string ExecutionId, string EventName)>();
+            List<(string InstanceId, string ExecutionId, string EventName, int FailCount)> rtv = new List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>();
             using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement(this.fetchCommandString);
@@ -52,7 +52,8 @@ namespace maskx.ARMOrchestration.Workers
                     rtv.Add((
                         reader["InstanceId"].ToString(),
                         reader["ExecutionId"].ToString(),
-                        reader["EventName"].ToString()));
+                        reader["EventName"].ToString(),
+                        reader.GetInt32(3)));
                 });
             }
             return rtv;
@@ -65,7 +66,7 @@ namespace maskx.ARMOrchestration.Workers
                 List<Task> tasks = new List<Task>();
                 foreach (var item in await GetResolvedDependsOn())
                 {
-                    tasks.Add(ResolveDependsOn(item.InstanceId, item.ExecutionId, item.EventName));
+                    tasks.Add(ResolveDependsOn(item.InstanceId, item.ExecutionId, item.EventName, item.FailCount));
                 }
                 await Task.WhenAll(tasks.ToArray());
                 if (tasks.Count == 0)
@@ -73,7 +74,7 @@ namespace maskx.ARMOrchestration.Workers
             }
         }
 
-        private async Task ResolveDependsOn(string instanceId, string executionId, string eventName)
+        private async Task ResolveDependsOn(string instanceId, string executionId, string eventName, int failCount)
         {
             await this.taskHubClient.RaiseEventAsync(
                                            new OrchestrationInstance()
@@ -82,7 +83,7 @@ namespace maskx.ARMOrchestration.Workers
                                                ExecutionId = executionId
                                            },
                                            eventName,
-                                           dataConverter.Serialize(new TaskResult() { Code = 200 })
+                                           dataConverter.Serialize(new TaskResult() { Code = failCount > 0 ? 500 : 200 })
                                            );
             using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
@@ -177,24 +178,23 @@ delete {0} where InstanceId=@InstanceId and ExecutionId=@ExecutionId and EventNa
         /// {0}: WaitDependsOn table name
         /// {1}: DeploymentOperations
         /// {2}: ResourceCommitSuccessed
-        /// {3}: ConditionCheckFailed
         /// </summary>
         private const string fetchCommandTemplate = @"
-select t.InstanceId,t.ExecutionId,t.EventName
+select t.InstanceId,t.ExecutionId,t.EventName,t.FailCount
 from(
 	select
 		w.InstanceId
 		, w.ExecutionId
         ,w.EventName
-		,COUNT(0) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as count1
-		,COUNT(d.Stage) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as count2
+		,COUNT(0) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as WaitCount
+		,COUNT(case when d.Stage={2} then 1 else null end) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as SuccessCount
+        ,COUNT(case when d.Stage<0 then 1 else null end) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as FailCount
 	from {0} as w
 		left join {1} as d
 			on w.DeploymentId=d.DeploymentId
-                and d.Stage={2}
                 and d.ResourceId like N'%'+w.DependsOnName
 ) as t
-where t.count1=t.count2
+where t.WaitCount=t.SuccessCount or FailCount>0
 ";
     }
 }

@@ -44,7 +44,9 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
                 if (valid.Code != 200)
+                {
                     return valid;
+                }
                 input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
             }
 
@@ -55,7 +57,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (infrastructure.InjectBeforeDeployment)
             {
                 var injectBeforeDeploymenteResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                             "RequestOrchestration",
+                             RequestOrchestration.Name,
                              "1.0",
                              new AsyncRequestActivityInput()
                              {
@@ -79,7 +81,17 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
+                    {
+                        helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.BeforeDeploymentFailed,
+                            Result = DataConverter.Serialize(r)
+                        });
                         return r;
+                    }
+
                     input = DataConverter.Deserialize<DeploymentOrchestrationInput>(r.Content);
                 }
             }
@@ -100,7 +112,18 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DependsOn = input.DependsOn
                     });
                 await waitHandler.Task;
-                // TODO: dependsOn resource create fail
+                var r = DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
+                if (r.Code != 200)
+                {
+                    helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.DependsOnWaitedFailed,
+                        Result = DataConverter.Serialize(r)
+                    });
+                    return r;
+                }
             }
 
             #endregion DependsOn
@@ -149,7 +172,16 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
+                    {
+                        helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.AfterDeploymentOrhcestrationFailed,
+                            Result = DataConverter.Serialize(r)
+                        });
                         return r;
+                    }
                     input = DataConverter.Deserialize<DeploymentOrchestrationInput>(r.Content);
                 }
             }

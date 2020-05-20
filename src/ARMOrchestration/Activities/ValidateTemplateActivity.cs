@@ -22,14 +22,19 @@ namespace maskx.ARMOrchestration.Activities
             var r = templateHelper.ParseDeployment(input);
             TaskResult tr = null;
             if (r.Result)
+            {
                 tr = new TaskResult(200, DataConverter.Serialize(r.Deployment));
+            }
             else
+            {
                 tr = new TaskResult() { Code = 400, Content = r.Message };
+            }
+
             DeploymentOperation deploymentOperation = new DeploymentOperation(input, this.infrastructure)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = ProvisioningStage.ValidateTemplate,
+                Stage = r.Result ? ProvisioningStage.ValidateTemplate : ProvisioningStage.ValidateTemplateFailed,
                 Input = DataConverter.Serialize(input),
                 Result = DataConverter.Serialize(tr)
             };
