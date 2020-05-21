@@ -67,11 +67,29 @@ namespace maskx.ARMOrchestration
         BuiltinServiceTypes BuitinServiceTypes { get; set; }
         BuiltinPathSegment BuiltinPathSegment { get; set; }
 
+        /// <summary>
+        /// the list of extension resource. the value is the name of extension resource, which will show in ARM template
+        /// </summary>
         List<string> ExtensionResources { get; set; }
 
+        /// <summary>
+        /// Inject a request to communicationworker at the begin of deployment
+        /// </summary>
         bool InjectBeforeDeployment { get; set; }
+
+        /// <summary>
+        /// Inject a request to communicationworker at the end of deployment
+        /// </summary>
         bool InjectAfterDeployment { get; set; }
+
+        /// <summary>
+        /// Inject a request to communicationworker at the begin of provisioning a resource
+        /// </summary>
         bool InjectBefroeProvisioning { get; set; }
+
+        /// <summary>
+        /// Inject a request to communicationworker at the end of provisioning a resource
+        /// </summary>
         bool InjectAfterProvisioning { get; set; }
 
         /// <summary>

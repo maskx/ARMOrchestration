@@ -32,7 +32,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 InstanceId = input.InstanceId,
                 ExecutionId = input.ExecutionId,
-                Stage = input.ProvisioningStage,
+                Stage = r.Code == 200 ? input.ProvisioningStage : (ProvisioningStage)(0 - input.ProvisioningStage),
                 Result = waitHandler.Task.Result
             });
             return r;
