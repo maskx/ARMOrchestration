@@ -1,0 +1,36 @@
+﻿{
+  "values": [
+    {
+      "id": "/subscriptions/a73fec29-dcd5-48e8-b62e-a1f3b14c53d0/resourceGroups/Default-Networking/providers/Microsoft.ClassicNetwork/virtualNetworks/testVRN",
+      "name": "testVRN",
+      "type": "Microsoft.ClassicNetwork/virtualNetworks",
+      "location": "southcentralus"
+    },
+    {
+      "id": "/subscriptions/a73fec29-dcd5-48e8-b62e-a1f3b14c53d0/resourceGroups/Default-Networking/providers/Microsoft.Network/loadBalancers/LB-lhp",
+      "name": "LB-lhp",
+      "type": "Microsoft.Network/loadBalancers",
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "location": "southcentralus"
+    },
+    {
+      "id": "/subscriptions/a73fec29-dcd5-48e8-b62e-a1f3b14c53d0/resourceGroups/Default-Networking/providers/Microsoft.Network/publicIPAddresses/lb-ip",
+      "name": "lb-ip",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "location": "southcentralus"
+    },
+    {
+      "id": "/subscriptions/a73fec29-dcd5-48e8-b62e-a1f3b14c53d0/resourceGroups/Default-Networking/providers/Microsoft.Network/virtualNetworks/CMBVN",
+      "name": "CMBVN",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "centralus"
+    }
+  ]
+}

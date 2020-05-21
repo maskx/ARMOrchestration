@@ -1,6 +1,7 @@
 ﻿using ARMCreatorTest;
 using DurableTask.Core;
 using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
@@ -42,6 +43,7 @@ namespace ARMOrchestrationTest.PluginTests
                     ApiVersion = "1.0",
                     DeploymentName = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
+                    Template=new Template(),
                     TemplateContent = TestHelper.GetJsonFileContent("PluginTests/NestTemplate"),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,

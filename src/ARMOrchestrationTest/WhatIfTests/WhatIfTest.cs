@@ -19,7 +19,14 @@ namespace ARMOrchestrationTest.WhatIfTests
         private readonly string resource1Id = "";
 
         private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
-            Options.Create(new ARMOrchestrationOptions()),
+            Options.Create(new ARMOrchestrationOptions
+            {
+                Database = new DatabaseConfig()
+                {
+                    ConnectionString = TestHelper.ConnectionString,
+                    AutoCreate = true
+                }
+            }),
             new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
@@ -39,7 +46,7 @@ namespace ARMOrchestrationTest.WhatIfTests
                 SubscriptionId = TestHelper.SubscriptionId,
                 ScopeType = maskx.ARMOrchestration.WhatIf.ScopeType.ResourceGroup,
                 ResultFormat = maskx.ARMOrchestration.WhatIf.WhatIfResultFormat.ResourceIdOnly,
-                Template = TestHelper.GetTemplateContent("templates/condition/truecondition")
+                Template = TestHelper.GetTemplateContent("condition/truecondition")
             });
             Assert.NotNull(result);
         }

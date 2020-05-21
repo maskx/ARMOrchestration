@@ -66,7 +66,8 @@ namespace ARMOrchestrationTest.Mock
 
         public TaskResult List(DeploymentContext context, string resourceId, string apiVersion, string functionValues = "", string value = "")
         {
-            return new TaskResult() { Content = value };
+            var ret= TestHelper.GetJsonFileContent($"Mock/Response/list");
+            return new TaskResult() { Content = ret };
         }
 
         public TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false)
