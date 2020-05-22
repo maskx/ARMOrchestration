@@ -61,6 +61,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                              "1.0",
                              new AsyncRequestActivityInput()
                              {
+                                 InstanceId = context.OrchestrationInstance.InstanceId,
+                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
                                  ProvisioningStage = ProvisioningStage.InjectBeforeDeployment,
                                  DeploymentContext = input,
                                  Resource = null
@@ -197,6 +199,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                                  "1.0",
                                  new AsyncRequestActivityInput()
                                  {
+                                     InstanceId = context.OrchestrationInstance.InstanceId,
+                                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                                      ProvisioningStage = ProvisioningStage.InjectAfterDeployment,
                                      DeploymentContext = input,
                                      Resource = null
