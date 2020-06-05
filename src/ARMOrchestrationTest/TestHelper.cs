@@ -274,9 +274,10 @@ namespace ARMCreatorTest
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
             Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
         {
+            var id = Guid.NewGuid().ToString("N");
             var instance = worker.JumpStartOrchestrationAsync(new Job()
             {
-                InstanceId = Guid.NewGuid().ToString("N"),
+                InstanceId = id,
                 Orchestration = new OrchestrationSetting()
                 {
                     Name = DeploymentOrchestration.Name,
@@ -290,7 +291,7 @@ namespace ARMCreatorTest
                     DeploymentName = filename.Replace('/', '-'),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
-                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    DeploymentId = id,
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
                     HierarchyId = "001002003004005"

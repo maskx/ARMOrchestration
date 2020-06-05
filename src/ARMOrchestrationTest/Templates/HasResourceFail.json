@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "resources": [
+    {
+      "apiVersion": "2019-12-25",
+      "type": "Test.Mock/HasResourceFail",
+      "name": "storage1"
+    },
+    {
+      "apiVersion": "2019-12-25",
+      "type": "Test.Mock/HasResourceFail",
+      "name": "fail"
+    },
+    {
+      "apiVersion": "2019-12-25",
+      "type": "Test.Mock/HasResourceFail",
+      "name": "storage2"
+    }
+  ],
+  "outputs": {
+    "addResult": {
+      "type": "bool",
+      "value": true
+    }
+  }
+}

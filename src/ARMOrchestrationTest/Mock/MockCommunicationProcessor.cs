@@ -15,9 +15,20 @@ namespace ARMOrchestrationTest.Mock
             List<CommunicationJob> rtv = new List<CommunicationJob>();
             foreach (var job in jobs)
             {
-                job.ResponseCode = 200;
-                job.ResponseContent = "MockCommunicationProcessor";
-                job.Status = CommunicationJob.JobStatus.Completed;
+                if (job.RuleField["Type"].ToString() == "Test.Mock/HasResourceFail"
+                    && job.RuleField["Name"].ToString() == "fail")
+                {
+                    job.ResponseCode = 500;
+                    job.ResponseContent = "MockCommunicationProcessor";
+                    job.Status = CommunicationJob.JobStatus.Completed;
+                }
+                else
+                {
+                    job.ResponseCode = 200;
+                    job.ResponseContent = "MockCommunicationProcessor";
+                    job.Status = CommunicationJob.JobStatus.Completed;
+                }
+
                 rtv.Add(job);
             }
 

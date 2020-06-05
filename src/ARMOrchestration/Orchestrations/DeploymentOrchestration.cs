@@ -130,9 +130,11 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion DependsOn
 
+            bool hasFailResource = false;
+
             #region Provisioning resources
 
-            List<Task> tasks = new List<Task>();
+            List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
 
             foreach (var resource in input.Template.Resources)
             {
@@ -157,6 +159,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                    DataConverter.Serialize(deploy.Value)));
             }
             await Task.WhenAll(tasks.ToArray());
+            foreach (var t in tasks)
+            {
+                if (t.Result.Code != 200)
+                {
+                    hasFailResource = true;
+                    break;
+                }
+            }
 
             #endregion Provisioning resources
 
@@ -225,7 +235,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = ProvisioningStage.Successed,
+                Stage = hasFailResource ? ProvisioningStage.Failed : ProvisioningStage.Successed,
                 Result = rtv
             });
             return new TaskResult() { Code = 200, Content = rtv };
