@@ -1,4 +1,4 @@
-﻿drop table arm_Communication
+﻿truncate table arm_Communication
 drop table ARM_DeploymentOperations
 drop table arm_Message
 drop table arm_OrchestrationState

@@ -20,7 +20,12 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
             Options.Create(new ARMOrchestrationOptions()),
             new ARMFunctions(
-                Options.Create(new ARMOrchestrationOptions()),
+                Options.Create(new ARMOrchestrationOptions()
+                {
+                    Database = new DatabaseConfig()
+                    {
+                    }
+                }),
                 null,
                 new MockInfrastructure(null)),
             null,
@@ -227,28 +232,6 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Single(t.Resources);
             var res = t.Resources.First();
             Assert.Equal("from parent template", res.FullName);
-        }
-
-        [Fact(DisplayName = "ReferenceDependsOn")]
-        public void ReferenceDependsOn()
-        {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
-            {
-                SubscriptionId = TestHelper.SubscriptionId,
-                ResourceGroup = TestHelper.ResourceGroup,
-                DeploymentName = "ValidateTemplate-ReferenceDependsOn",
-                DeploymentId = Guid.NewGuid().ToString("N"),
-                GroupId = Guid.NewGuid().ToString("N"),
-                GroupType = "ResourceGroup",
-                HierarchyId = "001002003004005",
-                TemplateContent = GetTemplate("referenceDependsOn")
-            });
-            Assert.True(r.Result);
-            var t = r.Deployment.Template;
-            Assert.Equal(2, t.Resources.Count);
-            var res = t.Resources["Succeeded2020-3-11"];
-            Assert.Single(res.DependsOn);
-            Assert.Equal("examplestorage", res.DependsOn[0]);
         }
     }
 }

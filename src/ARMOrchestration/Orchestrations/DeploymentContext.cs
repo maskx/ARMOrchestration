@@ -56,5 +56,15 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// </summary>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error"/>
         public bool RollbackToLastDeployment { get; set; } = false;
+
+        /// <summary>
+        /// the user id of create this deployment
+        /// </summary>
+        public string CreateByUserId { get; set; }
+
+        /// <summary>
+        /// the user Id of last run this deployment
+        /// </summary>
+        public string LastRunUserId { get; set; }
     }
 }

@@ -605,7 +605,7 @@ namespace maskx.ARMOrchestration.Functions
                 int offset = 0;
                 if (pars.Length == 0)
                 {
-                    loopName = cxt["currentloopname"].ToString();
+                    loopName = cxt[ContextKeys.CURRENT_LOOP_NAME].ToString();
                 }
                 else if (pars.Length == 1)
                 {
@@ -615,7 +615,7 @@ namespace maskx.ARMOrchestration.Functions
                     }
                     else
                     {
-                        loopName = cxt["currentloopname"].ToString();
+                        loopName = cxt[ContextKeys.CURRENT_LOOP_NAME].ToString();
                         offset = (int)pars[0];
                     }
                 }
@@ -624,7 +624,7 @@ namespace maskx.ARMOrchestration.Functions
                     loopName = pars[0] as string;
                     offset = (int)pars[1];
                 }
-                args.Result = (cxt["copyindex"] as Dictionary<string, int>)[loopName] + offset;
+                args.Result = (cxt[ContextKeys.COPY_INDEX] as Dictionary<string, int>)[loopName] + offset;
             });
             Functions.Add("div", (args, cxt) =>
             {
@@ -698,7 +698,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 args.Result = tenantResourceId(args.EvaluateParameters(cxt));
             });
-            // TODO: reference
+            // TODO: in validate template stage, using fake resource result instead of using whatif
             Functions.Add("reference", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);

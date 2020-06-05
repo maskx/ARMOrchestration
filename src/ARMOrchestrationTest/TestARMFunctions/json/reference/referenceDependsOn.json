@@ -9,7 +9,7 @@
   },
   "resources": [
     {
-      "name": "[concat(reference(parameters('storageAccountName')).provisioningState,'2020-3-11')]",
+      "name": "ReferenceInProperty",
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2016-12-01",
       "sku": {
@@ -19,6 +19,7 @@
       "location": "[resourceGroup().location]",
       "tags": {},
       "properties": {
+        "comment": "[concat(reference(parameters('storageAccountName')).provisioningState,'2020-3-11')]"
       }
     },
     {
@@ -36,13 +37,5 @@
     }
   ],
   "outputs": {
-    "referenceOutput": {
-      "type": "object",
-      "value": "[reference(concat(reference(parameters('storageAccountName')).provisioningState,'2020-3-11'))]"
-    },
-    "fullReferenceOutput": {
-      "type": "object",
-      "value": "[reference(concat(reference(parameters('storageAccountName')).provisioningState,'2020-3-11'), '2016-12-01', 'Full')]"
-    }
   }
 }

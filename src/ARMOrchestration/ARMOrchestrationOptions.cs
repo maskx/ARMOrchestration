@@ -7,6 +7,6 @@
         /// </summary>
         public int DependsOnIdelMilliseconds { get; set; } = 500;
 
-        public DatabaseConfig Database { get; set; }
+        public DatabaseConfig Database { get; set; } = new DatabaseConfig();
     }
 }

@@ -72,9 +72,12 @@ namespace maskx.ARMOrchestration.Extensions
                     using JsonDocument doc = JsonDocument.Parse(copy.Input);
                     var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
                     Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                    copyContext.Add("armcontext", context["armcontext"]);
                     copyContext.Add("copyindex", copyindex);
                     copyContext.Add("currentloopname", copy.Name);
+                    foreach (var k in context.Keys)
+                    {
+                        copyContext.Add(k, context[k]);
+                    }
                     writer.WritePropertyName(copy.Name);
                     writer.WriteStartArray();
                     for (int i = 0; i < copy.Count; i++)
@@ -83,6 +86,20 @@ namespace maskx.ARMOrchestration.Extensions
                         writer.WriteElement(doc.RootElement, copyContext, helper);
                     }
                     writer.WriteEndArray();
+                    if (copyContext.TryGetValue(ContextKeys.DEPENDSON, out object copyDependsOn))
+                    {
+                        List<string> dependsOn;
+                        if (context.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                        {
+                            dependsOn = d as List<string>;
+                        }
+                        else
+                        {
+                            dependsOn = new List<string>();
+                            context.Add(ContextKeys.DEPENDSON, dependsOn);
+                        }
+                        dependsOn.AddRange(copyDependsOn as List<string>);
+                    }
                 }
             }
             else

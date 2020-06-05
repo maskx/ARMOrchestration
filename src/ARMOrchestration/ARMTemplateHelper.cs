@@ -35,6 +35,7 @@ namespace maskx.ARMOrchestration
             this.ARMfunctions = functions;
             this.serviceProvider = service;
             this.infrastructure = infrastructure;
+
             this._saveDeploymentOperationCommandString = string.Format(@"
 MERGE {0} with (serializable) [Target]
 USING (VALUES (@InstanceId,@ExecutionId)) as [Source](InstanceId,ExecutionId)
@@ -308,6 +309,9 @@ WHEN MATCHED THEN
                     copy.Count = (int)ARMfunctions.Evaluate(count.GetString(), context);
                 else
                     return (false, "the value of count property should be Number in copy node", null);
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
+                if (context.ContainsKey(ContextKeys.DEPENDSON))
+                    return (false, "You can't use the reference function to set the value of the count property in a copy loop.", null);
             }
             else
                 return (false, "not find count in copy node", null);
@@ -449,13 +453,27 @@ WHEN MATCHED THEN
             return (true, string.Empty, t.Deployment);
         }
 
-        private void HandleDependsOn(Resource r, Dictionary<string, object> context)
+        private bool HandleDependsOn(Resource r, Dictionary<string, object> context)
         {
             if (context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
             {
                 r.DependsOn.AddRange(conditionDep as List<string>);
                 context.Remove(ContextKeys.DEPENDSON);
+                return true;
             }
+            return false;
+        }
+
+        private object Evaluate(Resource r, string expression, Dictionary<string, object> context)
+        {
+            var rtv = ARMfunctions.Evaluate(expression, context);
+            if (context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
+            {
+                r.DependsOn.AddRange(conditionDep as List<string>);
+                context.Remove(ContextKeys.DEPENDSON);
+                return rtv;
+            }
+            return expression;
         }
 
         public async Task<(bool Result, string Message, List<Resource> Resources, List<DeploymentOrchestrationInput> deployments)>
@@ -475,10 +493,7 @@ WHEN MATCHED THEN
                 if (condition.ValueKind == JsonValueKind.False)
                     r.Condition = false;
                 else if (condition.ValueKind == JsonValueKind.String)
-                {
                     r.Condition = (bool)ARMfunctions.Evaluate(condition.GetString(), context);
-                    HandleDependsOn(r, context);
-                }
             }
 
             if (resourceElement.TryGetProperty("apiVersion", out JsonElement apiVersion))
@@ -493,12 +508,8 @@ WHEN MATCHED THEN
                 r.FullType = $"{parentType}/{r.Type}";
             else
                 r.FullType = r.Type;
-
             if (resourceElement.TryGetProperty("name", out JsonElement name))
-            {
                 r.Name = ARMfunctions.Evaluate(name.GetString(), context).ToString();
-                HandleDependsOn(r, context);
-            }
             else
                 return (false, "not find name in resource node", null, null);
             if (!string.IsNullOrEmpty(parentName))
@@ -512,31 +523,21 @@ WHEN MATCHED THEN
             if (resourceElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
             {
                 r.ResourceGroup = ARMfunctions.Evaluate(resourceGroup.GetString(), context).ToString();
-                HandleDependsOn(r, context);
             }
             else
                 r.ResourceGroup = deploymentContext.ResourceGroup;
             if (resourceElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
-            {
                 r.SubscriptionId = ARMfunctions.Evaluate(subscriptionId.GetString(), context).ToString();
-                HandleDependsOn(r, context);
-            }
             else
                 r.SubscriptionId = deploymentContext.SubscriptionId;
             // TODO: need support deployment resource in managementGroup
             // subscriptionId and managementGroupId should be only one have value
             if (resourceElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
-            {
                 r.ManagementGroupId = ARMfunctions.Evaluate(managementGroupId.GetString(), context).ToString();
-                HandleDependsOn(r, context);
-            }
             else
                 r.ManagementGroupId = deploymentContext.ManagementGroupId;
             if (resourceElement.TryGetProperty("location", out JsonElement location))
-            {
                 r.Location = ARMfunctions.Evaluate(location.GetString(), context).ToString();
-                HandleDependsOn(r, context);
-            }
 
             if (resourceElement.TryGetProperty("comments", out JsonElement comments))
                 r.Comments = comments.GetString();
@@ -546,7 +547,6 @@ WHEN MATCHED THEN
                 foreach (var item in dd.RootElement.EnumerateArray())
                 {
                     r.DependsOn.Add(ARMfunctions.Evaluate(item.GetString(), context).ToString());
-                    HandleDependsOn(r, context);
                 }
             }
 
@@ -572,7 +572,11 @@ WHEN MATCHED THEN
                 r.Kind = kind.GetString();
             if (resourceElement.TryGetProperty("plan", out JsonElement plan))
                 r.Plan = plan.GetRawText();
-
+            if (context.ContainsKey(ContextKeys.DEPENDSON))
+            {
+                //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
+                return (false, "The reference function can only be used in the properties of a resource definition and the outputs section of a template or deployment.", resources, deployments);
+            }
             if (!r.Condition)
                 return (true, "Condition equal false", resources, deployments);
 
@@ -581,7 +585,14 @@ WHEN MATCHED THEN
                 if (r.FullType == infrastructure.BuitinServiceTypes.Deployments)
                     r.Properties = properties.GetRawText();
                 else
+                {
                     r.Properties = properties.ExpandObject(context, this);
+                    // if there has Implicit dependency by reference function in properties
+                    // the reference function should be evaluate at provisioning time
+                    // so keep the original text
+                    if (HandleDependsOn(r, context))
+                        r.Properties = properties.GetRawText();
+                }
             }
             if (resourceElement.TryGetProperty("resources", out JsonElement _resources))
             {
@@ -653,7 +664,9 @@ WHEN MATCHED THEN
                 var r = await ParseResource(resource, copyContext);
                 if (r.Result)
                 {
+                    r.Resources[0].CopyIndex = i;
                     r.Resources[0].CopyId = copy.Id;
+                    r.Resources[0].CopyName = copy.Name;
                     CopyResource.Resources.Add(r.Resources[0].Name);
                     resources.AddRange(r.Resources);
                     if (copy.Mode == Copy.SerialMode

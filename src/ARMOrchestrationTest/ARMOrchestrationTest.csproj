@@ -75,13 +75,19 @@
     <None Update="Templates\NestTemplate\NestTemplate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="TestARMFunctions\json\referenceDependsOn.json">
+    <None Update="TestARMFunctions\json\reference\referenceDependsOn.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestARMFunctions\json\reference\PropertyIteration.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestARMFunctions\json\reference\ResourceIteration.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestARMFunctions\json\resourceGroup.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="TestARMFunctions\json\reference.json">
+    <None Update="TestARMFunctions\json\reference\reference.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestARMFunctions\json\extensionResourceId.json">
@@ -273,9 +279,6 @@
     <None Update="ValidateTemplateTests\Template\Empty.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="ValidateTemplateTests\Template\referenceDependsOn.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -286,4 +289,6 @@
     <Folder Include="Mock\Response\Resource\" />
     <Folder Include="WhatIfTests\Template\" />
   </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties mock_4response_4referenceexample_1json__JsonSchema="https://bucklescript.github.io/bucklescript/docson/build-schema.json" /></VisualStudio></ProjectExtensions>
 </Project>

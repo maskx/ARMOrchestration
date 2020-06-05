@@ -72,6 +72,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string ResouceId { get; set; }
         public string CopyId { get; set; }
+        public int CopyIndex { get; set; }
+        public string CopyName { get; set; }
 
         public override string ToString()
         {
