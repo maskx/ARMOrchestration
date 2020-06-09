@@ -41,8 +41,8 @@ namespace ARMCreatorTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                        "Condition/FunctionConditionFalse");
-            var r = TestHelper.GetDeploymentOpetions(instance.InstanceId).Result;
-            Assert.Empty(r);
+            var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
+            Assert.Single(r);
         }
     }
 }

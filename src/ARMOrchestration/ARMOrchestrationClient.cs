@@ -78,6 +78,11 @@ namespace maskx.ARMOrchestration
             return instance;
         }
 
+        /// <summary>
+        /// get the resources provisioned in this deployment, not include the nest deployment
+        /// </summary>
+        /// <param name="deploymentId"></param>
+        /// <returns></returns>
         public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
@@ -107,13 +112,20 @@ namespace maskx.ARMOrchestration
                         ManagementGroupId = reader["ManagementGroupId"].ToString(),
                         ParentResourceId = reader["ParentResourceId"]?.ToString(),
                         Input = reader["Input"].ToString(),
-                        Result = reader["Result"]?.ToString()
+                        Result = reader["Result"]?.ToString(),
+                        CreateByUserId = reader["CreateByUserId"].ToString(),
+                        LastRunUserId = reader["LastRunUserId"].ToString()
                     });
                 });
             }
             return rs;
         }
 
+        /// <summary>
+        /// get the resources provisioned in this deployment, include the nest deployment
+        /// </summary>
+        /// <param name="rootId"></param>
+        /// <returns></returns>
         public async Task<List<DeploymentOperation>> GetAllResourceListAsync(string rootId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
@@ -143,7 +155,9 @@ namespace maskx.ARMOrchestration
                         ManagementGroupId = reader["ManagementGroupId"].ToString(),
                         ParentResourceId = reader["ParentResourceId"]?.ToString(),
                         Input = reader["Input"].ToString(),
-                        Result = reader["Result"]?.ToString()
+                        Result = reader["Result"]?.ToString(),
+                        CreateByUserId = reader["CreateByUserId"].ToString(),
+                        LastRunUserId = reader["LastRunUserId"].ToString()
                     });
                 });
             }

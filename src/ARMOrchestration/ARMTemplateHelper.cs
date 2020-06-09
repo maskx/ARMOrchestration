@@ -161,7 +161,10 @@ WHEN MATCHED THEN
                     }
                     foreach (var item in resResult.Resources)
                     {
-                        template.Resources.TryAdd(item);
+                        if (!item.Condition)
+                            template.ConditionFalseResources.Add(item.Name);
+                        else
+                            template.Resources.TryAdd(item);
                     }
                     foreach (var d in resResult.deployments)
                     {
@@ -171,16 +174,21 @@ WHEN MATCHED THEN
             });
             if (!string.IsNullOrEmpty(error))
                 return (false, error, null);
+            string dependsOnName = string.Empty;
             foreach (var res in template.Resources)
             {
-                // TODO: remove resource with condition equal false
-
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
-                    if (!template.Resources.ContainsKey(res.DependsOn[i]))
-                        res.DependsOn.RemoveAt(i);
-                    // TODO: check circular dependencies
+                    dependsOnName = res.DependsOn[i];
+                    if (!template.Resources.ContainsKey(dependsOnName))
+                    {
+                        if (template.ConditionFalseResources.Contains(dependsOnName))
+                            res.DependsOn.RemoveAt(i);
+                        else
+                            throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
+                    }
                 }
+                // TODO: check circular dependencies
             }
             return (true, string.Empty, input);
         }
@@ -579,6 +587,7 @@ WHEN MATCHED THEN
                 //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
                 return (false, "The reference function can only be used in the properties of a resource definition and the outputs section of a template or deployment.", resources, deployments);
             }
+            resources.Add(r);
             if (!r.Condition)
                 return (true, "Condition equal false", resources, deployments);
 
@@ -619,7 +628,7 @@ WHEN MATCHED THEN
                 else
                     return (false, d.Message, null, null);
             }
-            resources.Add(r);
+            // resources.Add(r);
             foreach (var item in this.infrastructure.ExtensionResources)
             {
                 if (resourceElement.TryGetProperty(item, out JsonElement e))

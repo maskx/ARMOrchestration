@@ -31,5 +31,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             // TODO: Templae.ToString();
             return string.Empty;
         }
+
+        internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
     }
 }

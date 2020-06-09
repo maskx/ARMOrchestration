@@ -43,7 +43,7 @@ namespace ARMOrchestrationTest.PluginTests
                     ApiVersion = "1.0",
                     DeploymentName = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
-                    Template=new Template(),
+                    Template = new Template(),
                     TemplateContent = TestHelper.GetJsonFileContent("PluginTests/NestTemplate"),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
@@ -51,7 +51,8 @@ namespace ARMOrchestrationTest.PluginTests
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
                     HierarchyId = "001002003004005",
-                    TenantId = "TenantId"
+                    TenantId = "TenantId",
+                    CreateByUserId = TestHelper.CreateByUserId
                 }).Result;
             while (true)
             {
