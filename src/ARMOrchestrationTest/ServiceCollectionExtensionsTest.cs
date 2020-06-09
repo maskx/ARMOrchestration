@@ -64,7 +64,8 @@ namespace ARMOrchestrationTest
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
                     HierarchyId = "001002003004005",
-                    TenantId = "TenantId"
+                    TenantId = "TenantId",
+                    CreateByUserId = TestHelper.CreateByUserId
                 }).Result;
             while (true)
             {

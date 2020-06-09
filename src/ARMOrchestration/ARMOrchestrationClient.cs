@@ -46,7 +46,8 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentException("SubscriptionId and ManagementGroupId must set one");
             if (!string.IsNullOrEmpty(args.SubscriptionId) && !string.IsNullOrEmpty(args.ManagementGroupId))
                 throw new ArgumentException("SubscriptionId and ManagementGroupId only one can be set value");
-
+            if (string.IsNullOrEmpty(args.CreateByUserId))
+                throw new ArgumentNullException("CreateByUserId");
             return await orchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,

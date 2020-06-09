@@ -149,6 +149,8 @@ BEGIN
 	    [Stage] [int] NOT NULL,
 	    [CreateTimeUtc] [datetime2](7) NOT NULL,
 	    [UpdateTimeUtc] [datetime2](7) NOT NULL,
+        [CreateByUserId] [nvarchar](50) NOT NULL,
+        [LastRunUserId] [nvarchar](50) NOT NULL,
         [SubscriptionId] [nvarchar](50)  NULL,
         [ManagementGroupId] [nvarchar](50)  NULL,
         [ParentResourceId] [nvarchar](1024)  NULL,

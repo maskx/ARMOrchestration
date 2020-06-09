@@ -15,7 +15,7 @@ namespace ARMOrchestrationTest.Mock
             List<CommunicationJob> rtv = new List<CommunicationJob>();
             foreach (var job in jobs)
             {
-                if (job.RuleField["Type"].ToString() == "Test.Mock/HasResourceFail"
+                if (job.RuleField.ContainsKey("Type") && job.RuleField["Type"].ToString() == "Test.Mock/HasResourceFail"
                     && job.RuleField["Name"].ToString() == "fail")
                 {
                     job.ResponseCode = 500;

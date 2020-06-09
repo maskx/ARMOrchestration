@@ -51,6 +51,7 @@ namespace ARMCreatorTest
         public static DataConverter DataConverter { get; private set; } = new JsonDataConverter();
         public static string SubscriptionId = "C1FA36C2-4D58-45E8-9C51-498FADB4D8BF";
         public static string ResourceGroup = "ResourceGroup1";
+        public static string CreateByUserId = "bob@163.com";
 
         public static string ConnectionString
         {
@@ -155,7 +156,8 @@ namespace ARMCreatorTest
                     ResourceGroup = TestHelper.ResourceGroup,
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
-                    HierarchyId = "001002003004005"
+                    HierarchyId = "001002003004005",
+                    CreateByUserId = TestHelper.CreateByUserId
                 })
             }).Result;
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();
@@ -294,7 +296,8 @@ namespace ARMCreatorTest
                     DeploymentId = id,
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
-                    HierarchyId = "001002003004005"
+                    HierarchyId = "001002003004005",
+                    CreateByUserId = TestHelper.CreateByUserId
                 })
             }).Result;
             TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();
@@ -334,7 +337,7 @@ namespace ARMCreatorTest
                   {
                       r.Add(new DeploymentOperation()
                       {
-                          Name = reader["Resource"].ToString(),
+                          Name = reader["Name"].ToString(),
                           ResourceId = reader["ResourceId"].ToString(),
                           Result = reader["Result"]?.ToString()
                       });

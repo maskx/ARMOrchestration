@@ -18,6 +18,11 @@ namespace maskx.ARMOrchestration
             this.RootId = deploymentContext.RootId;
             this.DeploymentId = deploymentContext.DeploymentId;
             this.CorrelationId = deploymentContext.CorrelationId;
+            this.CreateByUserId = deploymentContext.CreateByUserId;
+            if (string.IsNullOrEmpty(deploymentContext.LastRunUserId))
+                this.LastRunUserId = this.CreateByUserId;
+            else
+                this.LastRunUserId = deploymentContext.LastRunUserId;
             if (resource == null)
             {
                 if (!string.IsNullOrEmpty(deploymentContext.SubscriptionId))
@@ -97,5 +102,15 @@ namespace maskx.ARMOrchestration
         public string Result { get; set; }
 
         public string Comments { get; set; }
+
+        /// <summary>
+        /// the user id of create this deployment
+        /// </summary>
+        public string CreateByUserId { get; set; }
+
+        /// <summary>
+        /// the user Id of last run this deployment
+        /// </summary>
+        public string LastRunUserId { get; set; }
     }
 }
