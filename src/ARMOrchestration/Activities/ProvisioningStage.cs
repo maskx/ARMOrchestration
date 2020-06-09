@@ -2,6 +2,7 @@
 {
     public enum ProvisioningStage
     {
+        Pending = 0,
         // begin deployment special
 
         InjectBeforeDeployment = 100,

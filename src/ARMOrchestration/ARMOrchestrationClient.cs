@@ -19,11 +19,19 @@ namespace maskx.ARMOrchestration
         private string getResourceListCommandString = "select * from {0} where deploymentId=@deploymentId";
         private string getAllResourceListCommandString = "select * from {0} where RootId=@RootId";
         private readonly ARMOrchestrationOptions options;
+        private readonly ARMTemplateHelper _ARMTemplateHelper;
+        private readonly IInfrastructure _Infrastructure;
 
-        public ARMOrchestrationClient(OrchestrationWorkerClient orchestrationWorkerClient, IOptions<ARMOrchestrationOptions> options)
+        public ARMOrchestrationClient(
+            OrchestrationWorkerClient orchestrationWorkerClient,
+            IOptions<ARMOrchestrationOptions> options,
+            ARMTemplateHelper aRMTemplateHelper,
+            IInfrastructure infrastructure)
         {
             this.orchestrationWorkerClient = orchestrationWorkerClient;
             this.options = options?.Value;
+            this._ARMTemplateHelper = aRMTemplateHelper;
+            this._Infrastructure = infrastructure;
         }
 
         public async Task<OrchestrationInstance> Run(DeploymentOrchestrationInput args)
@@ -48,7 +56,7 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentException("SubscriptionId and ManagementGroupId only one can be set value");
             if (string.IsNullOrEmpty(args.CreateByUserId))
                 throw new ArgumentNullException("CreateByUserId");
-            return await orchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+            var instance = await orchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
                 Orchestration = new OrchestrationSetting()
@@ -58,6 +66,16 @@ namespace maskx.ARMOrchestration
                 },
                 Input = DataConverter.Serialize(args)
             });
+            this._ARMTemplateHelper.SaveDeploymentOperation(new DeploymentOperation(args, this._Infrastructure)
+            {
+                RootId = args.DeploymentId,
+                ParentResourceId = $"{instance.InstanceId}:{instance.ExecutionId}",
+                InstanceId = instance.InstanceId,
+                ExecutionId = instance.ExecutionId,
+                Stage = ProvisioningStage.Pending,
+                Input = DataConverter.Serialize(args)
+            });
+            return instance;
         }
 
         public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
