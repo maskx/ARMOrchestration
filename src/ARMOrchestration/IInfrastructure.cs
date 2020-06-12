@@ -68,11 +68,6 @@ namespace maskx.ARMOrchestration
         BuiltinPathSegment BuiltinPathSegment { get; set; }
 
         /// <summary>
-        /// the list of extension resource. the value is the name of extension resource, which will show in ARM template
-        /// </summary>
-        List<string> ExtensionResources { get; set; }
-
-        /// <summary>
         /// Inject a request to communicationworker at the begin of deployment
         /// </summary>
         bool InjectBeforeDeployment { get; set; }

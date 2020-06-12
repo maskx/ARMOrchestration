@@ -143,15 +143,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                           });
                 if (createResourceResult.Code != 200)
                 {
-                    // TODO: 这块代码应该可以移除，在RequestOrchestration里面应该已经记录stage信息了
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                    {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.ProvisioningResourceFailed,
-                        Input = DataConverter.Serialize(input),
-                        Result = DataConverter.Serialize(createResourceResult)
-                    });
                     return createResourceResult;
                 }
             }
@@ -160,57 +151,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (resourceDeploy.Type != Copy.ServiceType)
             {
-                #region Extension Resources
-
-                List<Task<TaskResult>> extenstionTasks = new List<Task<TaskResult>>();
-                foreach (var item in resourceDeploy.ExtensionResource)
-                {
-                    extenstionTasks.Add(
-                        context.CreateSubOrchestrationInstance<TaskResult>(
-                            RequestOrchestration.Name,
-                            "1.0",
-                             new AsyncRequestActivityInput()
-                             {
-                                 InstanceId = context.OrchestrationInstance.InstanceId,
-                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                 ProvisioningStage = ProvisioningStage.CreateExtensionResource,
-                                 DeploymentContext = input.Context,
-                                 Resource = resourceDeploy,
-                                 Context = new Dictionary<string, object>() {
-                                    {"extenstion",item.Value }
-                                }
-                             }
-                            ));
-                }
-                if (extenstionTasks.Count != 0)
-                {
-                    await Task.WhenAll(extenstionTasks);
-                    int succeed = 0;
-                    int failed = 0;
-                    List<string> extensionResult = new List<string>();
-                    foreach (var t in extenstionTasks)
-                    {
-                        if (t.Result.Code == 200) succeed++;
-                        else failed++;
-                        extensionResult.Add(t.Result.Content);
-                    }
-                    if (failed > 0)
-                    {
-                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                        {
-                            InstanceId = context.OrchestrationInstance.InstanceId,
-                            ExecutionId = context.OrchestrationInstance.ExecutionId,
-                            Stage = ProvisioningStage.CreateExtensionResourceFailed,
-                            Input = DataConverter.Serialize(input),
-                            Comments = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}",
-                            Result = $"[{string.Join(',', extensionResult)}]"
-                        });
-                        return new TaskResult() { Code = 500, Content = $"Extension resource succeed/total: {succeed}/{extenstionTasks.Count}" };
-                    }
-                }
-
-                #endregion Extension Resources
-
                 #region After Resource Provisioning
 
                 if (infrastructure.AfterResourceProvisioningOrchestation != null)
@@ -224,7 +164,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             {
                                 InstanceId = context.OrchestrationInstance.InstanceId,
                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                Stage = ProvisioningStage.CreateExtensionResourceFailed,
+                                Stage = ProvisioningStage.AfterResourceProvisioningOrchestation,
                                 Input = DataConverter.Serialize(input),
                                 Result = DataConverter.Serialize(r)
                             });
@@ -276,17 +216,12 @@ namespace maskx.ARMOrchestration.Orchestrations
         }
 
         private TaskCompletionSource<string> dependsOnWaitHandler = null;
-        private TaskCompletionSource<string> childWaitHandler = null;
 
         public override void OnEvent(OrchestrationContext context, string name, string input)
         {
             if (this.dependsOnWaitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.dependsOnWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.dependsOnWaitHandler.SetResult(input);
-            }
-            else if (this.childWaitHandler != null && name == ProvisioningStage.WaitChildCompleted.ToString() && this.childWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
-            {
-                this.childWaitHandler.SetResult(input);
             }
         }
     }

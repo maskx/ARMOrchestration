@@ -637,15 +637,6 @@ WHEN MATCHED THEN
                 else
                     return (false, d.Message, null, null);
             }
-            // resources.Add(r);
-            foreach (var item in this.infrastructure.ExtensionResources)
-            {
-                if (resourceElement.TryGetProperty(item, out JsonElement e))
-                {
-                    r.ExtensionResource.Add(item, e.GetRawText());
-                }
-            }
-
             return (true, string.Empty, resources, deployments);
         }
 

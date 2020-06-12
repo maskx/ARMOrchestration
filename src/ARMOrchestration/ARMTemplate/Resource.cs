@@ -63,7 +63,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string Kind { get; set; }
 
         public string Plan { get; set; }
-        public Dictionary<string, string> ExtensionResource { get; set; } = new Dictionary<string, string>();
 
         public string ResourceGroup { get; set; }
 
@@ -120,22 +119,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
             writer.WriteString("resourceGroup", this.ResourceGroup);
             writer.WriteString("subscriptionId", this.SubscriptionId);
-            //if (this.Resources.Count > 0)
-            //{
-            //    writer.WritePropertyName("resources");
-            //    writer.WriteStartArray();
-            //    foreach (var r in this.Resources)
-            //    {
-            //        JsonDocument.Parse(r.ToString()).RootElement.WriteTo(writer);
-            //    }
-            //    writer.WriteEndArray();
-            //}
-
-            foreach (var ex in this.ExtensionResource)
-            {
-                writer.WritePropertyName(ex.Key);
-                JsonDocument.Parse(ex.Value).RootElement.WriteTo(writer);
-            }
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());

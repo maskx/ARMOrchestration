@@ -30,12 +30,6 @@
         ProvisioningResource = 700,
         ProvisioningResourceFailed = -700,
 
-        WaitChildCompleted = 800,
-        WaitChildCompletedFailed = -800,
-
-        CreateExtensionResource = 900,
-        CreateExtensionResourceFailed = -900,
-
         AfterResourceProvisioningOrchestation = 1000,
         AfterResourceProvisioningOrchestationFailed = -1000,
 
