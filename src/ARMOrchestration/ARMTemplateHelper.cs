@@ -180,6 +180,8 @@ WHEN MATCHED THEN
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
                     dependsOnName = res.DependsOn[i];
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
+                    // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
                     if (!template.Resources.ContainsKey(dependsOnName))
                     {
                         if (template.ConditionFalseResources.Contains(dependsOnName))
@@ -525,6 +527,10 @@ WHEN MATCHED THEN
             if (!string.IsNullOrEmpty(parentName))
             {
                 r.FullName = $"{parentName}/{r.Name}";
+
+                // TODO: 要移除该代码，因为childresource 不产生隐式依赖
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#child-resources
+                // It's important to note that an implicit deployment dependency isn't created between a child resource and the parent resource. If you need the child resource to be deployed after the parent resource, you must explicitly state that dependency with the dependsOn property.
                 r.DependsOn.Add(parentName);
             }
             else
@@ -562,6 +568,7 @@ WHEN MATCHED THEN
 
             #region ResouceId
 
+            // TODO: resourceId 函数使用错误， nest servicetype 不能传FullName，需要拆分独立传参
             if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
                 r.ResouceId = ARMfunctions.resourceId(
                     deploymentContext,
@@ -582,6 +589,13 @@ WHEN MATCHED THEN
                 r.Kind = kind.GetString();
             if (resourceElement.TryGetProperty("plan", out JsonElement plan))
                 r.Plan = plan.GetRawText();
+            if (resourceElement.TryGetProperty("zones", out JsonElement zones))
+            {
+                foreach (var z in zones.EnumerateArray())
+                {
+                    r.Zones.Add(ARMfunctions.Evaluate(z.GetString(), context).ToString());
+                }
+            }
             if (context.ContainsKey(ContextKeys.DEPENDSON))
             {
                 //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
@@ -601,6 +615,8 @@ WHEN MATCHED THEN
                     // if there has Implicit dependency by reference function in properties
                     // the reference function should be evaluate at provisioning time
                     // so keep the original text
+                    // TODO: List 函数同样会参数隐式依赖，这块功能需要实现
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/conditional-resource-deployment#runtime-functions
                     if (HandleDependsOn(r, context))
                         r.Properties = properties.GetRawText();
                 }

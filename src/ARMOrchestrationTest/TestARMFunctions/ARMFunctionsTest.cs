@@ -354,6 +354,16 @@ namespace ARMCreatorTest.TestARMFunctions
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "variables", result);
         }
 
+        [Trait("ARMFunctions", "Deployment")]
+        [Fact(DisplayName = "Deployment")]
+        public void Deployment()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+            };
+            var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "deployment", result);
+        }
+
         #endregion Deployment
 
         #region Logical

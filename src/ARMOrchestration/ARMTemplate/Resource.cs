@@ -145,5 +145,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         ///  the resources dependsOn me
         /// </summary>
         public List<string> Subsequent { get; set; } = new List<string>();
+
+        public List<string> Zones { get; set; } = new List<string>();
     }
 }

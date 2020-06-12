@@ -143,6 +143,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                           });
                 if (createResourceResult.Code != 200)
                 {
+                    // TODO: 这块代码应该可以移除，在RequestOrchestration里面应该已经记录stage信息了
                     templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,

@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
+﻿using DurableTask.Core.Serializing;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.Expression;
@@ -18,6 +19,7 @@ namespace maskx.ARMOrchestration.Functions
         private readonly ARMOrchestrationOptions options;
         private readonly IServiceProvider serviceProvider;
         private readonly IInfrastructure infrastructure;
+        private readonly DataConverter _DataConverter = new JsonDataConverter();
 
         public ARMFunctions(IOptions<ARMOrchestrationOptions> options,
             IServiceProvider serviceProvider,
@@ -396,19 +398,35 @@ namespace maskx.ARMOrchestration.Functions
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
-            // TODO: deployment Functions
+
             Functions.Add("deployment", (args, cxt) =>
             {
                 var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                int stage = 0;
+                DeploymentOrchestrationInput deploymentOrchestrationInput = null;
+                using (var db = new DbAccess(options.Database.ConnectionString))
+                {
+                    db.AddStatement($"select Stage,Input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
+                              new
+                              {
+                                  DeploymentId = input.DeploymentId,
+                                  Name = input.DeploymentName
+                              });
+                    db.ExecuteReaderAsync((r) =>
+                    {
+                        stage = (int)r["Stage"];
+                        deploymentOrchestrationInput = _DataConverter.Deserialize<DeploymentOrchestrationInput>(r["Input"].ToString());
+                    }).Wait();
+                }
+                if (deploymentOrchestrationInput == null)
+                    throw new Exception("cannot find deployment recorder in database in deployment function");
                 JObject obj = new JObject();
                 obj.Add("name", input.DeploymentName);
                 JObject properties = new JObject();
-                properties.Add("template", JObject.Parse(input.Template.ToString()));
+                properties.Add("template", deploymentOrchestrationInput.TemplateContent);
                 properties.Add("parameters", JObject.Parse(input.Parameters));
                 properties.Add("mode", input.Mode.ToString().ToLower());
-                // TODO: Set provisioningState
-                properties.Add("provisioningState", "Accepted");
-
+                properties.Add("provisioningState", stage);
                 obj.Add("properties", properties);
                 args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));
             });
