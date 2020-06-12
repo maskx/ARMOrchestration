@@ -1,4 +1,5 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -66,5 +67,10 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// the user Id of last run this deployment
         /// </summary>
         public string LastRunUserId { get; set; }
+
+        /// <summary>
+        /// some extension settings
+        /// </summary>
+        public Dictionary<string, object> Extensions { get; set; }
     }
 }
