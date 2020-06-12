@@ -360,6 +360,7 @@ namespace ARMCreatorTest.TestARMFunctions
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
+                {"deploymentOutput",TestHelper.GetJsonFileContent("TestARMFunctions/json/deployment") }
             };
             var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "deployment", result);
         }

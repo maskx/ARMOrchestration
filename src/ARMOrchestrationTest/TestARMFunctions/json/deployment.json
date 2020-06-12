@@ -4,7 +4,7 @@
   "resources": [],
   "outputs": {
     "deploymentOutput": {
-      "value": "[deployment()]",
+      "value": "[deployment().properties.template]",
       "type": "object"
     }
   }

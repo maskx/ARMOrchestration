@@ -412,7 +412,7 @@ namespace maskx.ARMOrchestration.Functions
                                   DeploymentId = input.DeploymentId,
                                   Name = input.DeploymentName
                               });
-                    db.ExecuteReaderAsync((r) =>
+                    db.ExecuteReaderAsync((r, resultSet) =>
                     {
                         stage = (int)r["Stage"];
                         deploymentOrchestrationInput = _DataConverter.Deserialize<DeploymentOrchestrationInput>(r["Input"].ToString());
@@ -423,8 +423,11 @@ namespace maskx.ARMOrchestration.Functions
                 JObject obj = new JObject();
                 obj.Add("name", input.DeploymentName);
                 JObject properties = new JObject();
-                properties.Add("template", deploymentOrchestrationInput.TemplateContent);
-                properties.Add("parameters", JObject.Parse(input.Parameters));
+                properties.Add("template", JObject.Parse(deploymentOrchestrationInput.TemplateContent));
+                if (string.IsNullOrEmpty(input.Parameters))
+                    properties.Add("parameters", new JObject());
+                else
+                    properties.Add("parameters", JObject.Parse(input.Parameters));
                 properties.Add("mode", input.Mode.ToString().ToLower());
                 properties.Add("provisioningState", stage);
                 obj.Add("properties", properties);

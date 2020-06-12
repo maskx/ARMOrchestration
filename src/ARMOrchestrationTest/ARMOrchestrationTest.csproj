@@ -66,9 +66,6 @@
     <None Update="Templates\dependsOn\OneResourceName.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Templates\ExtensionResource\tags.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Templates\NestTemplate\ExpressionsInNestedTemplates-inner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
