@@ -158,37 +158,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Provisioning Resource
 
-            #region wait for child resource completed
-
-            if (resourceDeploy.Resources.Count > 0)
-            {
-                childWaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
-                    new WaitDependsOnActivityInput()
-                    {
-                        ProvisioningStage = ProvisioningStage.WaitChildCompleted,
-                        DeploymentContext = input.Context,
-                        Resource = resourceDeploy,
-                        DependsOn = resourceDeploy.Resources
-                    });
-                await childWaitHandler.Task;
-                var r = DataConverter.Deserialize<TaskResult>(childWaitHandler.Task.Result);
-                if (r.Code != 200)
-                {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                    {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.WaitChildCompletedFailed,
-                        Input = DataConverter.Serialize(input),
-                        Result = r.Content
-                    });
-                    return r;
-                }
-            }
-
-            #endregion wait for child resource completed
-
             if (resourceDeploy.Type != Copy.ServiceType)
             {
                 #region Extension Resources
