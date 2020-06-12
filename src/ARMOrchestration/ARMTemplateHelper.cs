@@ -525,14 +525,7 @@ WHEN MATCHED THEN
             else
                 return (false, "not find name in resource node", null, null);
             if (!string.IsNullOrEmpty(parentName))
-            {
                 r.FullName = $"{parentName}/{r.Name}";
-
-                // TODO: 要移除该代码，因为childresource 不产生隐式依赖
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#child-resources
-                // It's important to note that an implicit deployment dependency isn't created between a child resource and the parent resource. If you need the child resource to be deployed after the parent resource, you must explicitly state that dependency with the dependsOn property.
-                r.DependsOn.Add(parentName);
-            }
             else
                 r.FullName = r.Name;
 
