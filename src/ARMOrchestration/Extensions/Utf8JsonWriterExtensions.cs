@@ -1,5 +1,6 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -49,6 +50,8 @@ namespace maskx.ARMOrchestration.Extensions
                         writer.WriteStringValue(s);
                     else if (r is Int32 i)
                         writer.WriteNumberValue(i);
+                    else if (r is FakeJsonValue)
+                        writer.WriteStringValue("fakeString");
                     else
                         writer.WriteNullValue();
                     break;

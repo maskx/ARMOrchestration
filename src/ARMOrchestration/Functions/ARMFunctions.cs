@@ -740,11 +740,6 @@ namespace maskx.ARMOrchestration.Functions
                     // 因此要先处理 dependsOn 的 Resource
                     // 如果DependsOn的是 Deployment 怎么处理？
                     context.Template.Resources.WaitDependsOn(resourceName);
-                    var wi = infrastructure.WhatIf(context, resourceName);
-                    if (wi.Code != 200)
-                    {
-                        throw new Exception($"reference function run WhatIf fail:deployment id is {context.DeploymentId} ; resourceName is {resourceName}");
-                    }
                     List<string> dependsOn;
                     if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
                     {
@@ -756,17 +751,7 @@ namespace maskx.ARMOrchestration.Functions
                         cxt.Add(ContextKeys.DEPENDSON, dependsOn);
                     }
                     dependsOn.Add(resourceName);
-
-                    if (full)
-                        args.Result = new JsonValue(wi.Content);
-                    else
-                    {
-                        using var doc = JsonDocument.Parse(wi.Content);
-                        if (doc.RootElement.TryGetProperty("properties", out JsonElement _properties))
-                        {
-                            args.Result = new JsonValue(_properties.GetRawText());
-                        }
-                    }
+                    args.Result = new FakeJsonValue();
                 }
                 else
                 {
@@ -799,24 +784,6 @@ namespace maskx.ARMOrchestration.Functions
             });
 
             #endregion Resource
-        }
-
-        private string GetResourceWithinTemplate(string resourceName, DeploymentContext cxt)
-        {
-            using (var db = new DbAccess(options.Database.ConnectionString))
-            {
-                db.AddStatement($"select Result from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
-                          new
-                          {
-                              DeploymentId = cxt.DeploymentId,
-                              Name = resourceName
-                          });
-
-                var r = db.ExecuteScalarAsync().Result;
-                if (r == null)
-                    return string.Empty;
-                return r.ToString();
-            }
         }
 
         public string resourceId(DeploymentContext input, params object[] pars)
@@ -948,6 +915,7 @@ namespace maskx.ARMOrchestration.Functions
                         else if (name.StartsWith("list", StringComparison.OrdinalIgnoreCase))
                         {
                             var pars = args.EvaluateParameters(context);
+
                             var r = this.infrastructure.List(
                                  cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext,
                                  pars[0].ToString(),
