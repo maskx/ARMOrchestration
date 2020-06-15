@@ -570,7 +570,7 @@ WHEN MATCHED THEN
                 r.ResouceId = ARMfunctions.resourceId(
                    deploymentContext,
                    pars.ToArray());
-            }               
+            }
             else if (deploymentContext.Template.DeployLevel == DeployLevel.Subscription)
             {
                 List<object> pars = new List<object>();
@@ -621,8 +621,6 @@ WHEN MATCHED THEN
                     // if there has Implicit dependency by reference function in properties
                     // the reference function should be evaluate at provisioning time
                     // so keep the original text
-                    // TODO: List 函数同样会参数隐式依赖，这块功能需要实现
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/conditional-resource-deployment#runtime-functions
                     if (HandleDependsOn(r, context))
                         r.Properties = properties.GetRawText();
                 }

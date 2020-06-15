@@ -736,10 +736,6 @@ namespace maskx.ARMOrchestration.Functions
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 if (resourceName.IndexOf('/') < 0 && cxt.ContainsKey(ContextKeys.IS_PREPARE))
                 {
-                    // 这个时候 dependsOn 的 resource， 也许还未被处理，在Template.Reosurces 里面还不存在
-                    // 因此要先处理 dependsOn 的 Resource
-                    // 如果DependsOn的是 Deployment 怎么处理？
-                    context.Template.Resources.WaitDependsOn(resourceName);
                     List<string> dependsOn;
                     if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
                     {
