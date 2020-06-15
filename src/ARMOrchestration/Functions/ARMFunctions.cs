@@ -719,7 +719,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 args.Result = tenantResourceId(args.EvaluateParameters(cxt));
             });
-            // TODO: in validate template stage, using fake resource result instead of using whatif
+            
             Functions.Add("reference", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);

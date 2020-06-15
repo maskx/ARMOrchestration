@@ -1,6 +1,7 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using System.Collections.Generic;
 using System.IO;
@@ -15,11 +16,14 @@ namespace maskx.ARMOrchestration.Orchestrations
         public static string Name { get { return "DeploymentOrchestration"; } }
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
+        private readonly ARMFunctions _ARMFunctions;
 
         public DeploymentOrchestration(
             ARMTemplateHelper helper,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            ARMFunctions aRMFunctions)
         {
+            this._ARMFunctions = aRMFunctions;
             this.helper = helper;
             this.infrastructure = infrastructure;
         }
@@ -275,6 +279,15 @@ namespace maskx.ARMOrchestration.Orchestrations
             writer.WriteStartObject();
             foreach (var item in outputDefineElement.EnumerateObject())
             {
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-outputs?tabs=azure-powershell#conditional-output
+                if (item.Value.TryGetProperty("condition", out JsonElement condition))
+                {
+                    if (condition.ValueKind == JsonValueKind.False)
+                        continue;
+                    if (condition.ValueKind == JsonValueKind.String &&
+                        !(bool)this._ARMFunctions.Evaluate(condition.GetString(), context))
+                        continue;
+                }
                 writer.WritePropertyName(item.Name);
                 writer.WriteStartObject();
                 writer.WriteString("type", item.Value.GetProperty("type").GetString());
