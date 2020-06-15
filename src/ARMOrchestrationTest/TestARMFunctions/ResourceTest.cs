@@ -5,11 +5,10 @@ using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using Xunit;
 
@@ -48,7 +47,19 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceid", result);
         }
-
+        [Fact(DisplayName = "resourceidInternl")]
+        public void resourceidInternl()
+        {
+            var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
+            DeploymentContext context = new DeploymentContext();
+            List<object> pars = new List<object>();
+            pars.Add(TestHelper.SubscriptionId);
+            pars.Add(TestHelper.ResourceGroup);
+            pars.Add("rp/t1/t2/t3/t4");
+            pars.AddRange("r1/r2/r3/r4".Split('/'));
+            var id = func.resourceId(context, pars.ToArray());
+            Assert.Equal("/subscription/c1fa36c2-4d58-45e8-9c51-498fadb4d8bf/resourceGroups/ResourceGroup1/providers/rp/t1/r1/t2/r2/t3/r3/t4/r4",id);
+        }
         [Fact(DisplayName = "list*")]
         public void ListResource()
         {

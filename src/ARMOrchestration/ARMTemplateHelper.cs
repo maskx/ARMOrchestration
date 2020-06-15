@@ -559,20 +559,33 @@ WHEN MATCHED THEN
                 }
             }
 
-            #region ResouceId
-
-            // TODO: resourceId 函数使用错误， nest servicetype 不能传FullName，需要拆分独立传参
+            #region ResouceId            
             if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
+            {
+                List<object> pars = new List<object>();
+                pars.Add(r.SubscriptionId);
+                pars.Add(r.ResourceGroup);
+                pars.Add(r.FullType);
+                pars.AddRange(r.FullName.Split('/'));
                 r.ResouceId = ARMfunctions.resourceId(
-                    deploymentContext,
-                    r.SubscriptionId,
-                    r.ResourceGroup,
-                    r.FullType,
-                    r.FullName);
+                   deploymentContext,
+                   pars.ToArray());
+            }               
             else if (deploymentContext.Template.DeployLevel == DeployLevel.Subscription)
-                r.ResouceId = ARMfunctions.subscriptionResourceId(deploymentContext, r.SubscriptionId, r.Type, r.Name);
+            {
+                List<object> pars = new List<object>();
+                pars.Add(r.SubscriptionId);
+                pars.Add(r.FullType);
+                pars.AddRange(r.FullName.Split('/'));
+                r.ResouceId = ARMfunctions.subscriptionResourceId(deploymentContext, pars.ToArray());
+            }
             else
-                r.ResouceId = ARMfunctions.tenantResourceId(r.Type, r.Name);
+            {
+                List<object> pars = new List<object>();
+                pars.Add(r.FullType);
+                pars.AddRange(r.FullName.Split('/'));
+                r.ResouceId = ARMfunctions.tenantResourceId(pars.ToArray());
+            }
 
             #endregion ResouceId
 

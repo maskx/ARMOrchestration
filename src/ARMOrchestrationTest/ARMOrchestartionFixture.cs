@@ -11,6 +11,7 @@ namespace ARMCreatorTest
     public class ARMOrchestartionFixture : IDisposable
     {
         private IHost workerHost = null;
+        public IServiceProvider ServiceProvider { get; private set; }
         public OrchestrationWorker OrchestrationWorker { get; private set; }
         public OrchestrationWorkerClient OrchestrationWorkerClient { get; private set; }
         public ARMFunctions ARMFunctions { get; set; }
@@ -24,6 +25,7 @@ namespace ARMCreatorTest
             OrchestrationWorkerClient = workerHost.Services.GetService<OrchestrationWorkerClient>();
             this.ARMFunctions = workerHost.Services.GetService<ARMFunctions>();
             this.ARMOrchestrationClient = workerHost.Services.GetService<ARMOrchestrationClient>();
+            this.ServiceProvider = workerHost.Services;
         }
 
         public void Dispose()
