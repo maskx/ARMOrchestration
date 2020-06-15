@@ -915,14 +915,33 @@ namespace maskx.ARMOrchestration.Functions
                         else if (name.StartsWith("list", StringComparison.OrdinalIgnoreCase))
                         {
                             var pars = args.EvaluateParameters(context);
+                            var resourceName = pars[0].ToString();
+                            if (resourceName.IndexOf('/') < 0 && cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                            {
+                                List<string> dependsOn;
+                                if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                                {
+                                    dependsOn = d as List<string>;
+                                }
+                                else
+                                {
+                                    dependsOn = new List<string>();
+                                    cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                                }
+                                dependsOn.Add(resourceName);
+                                args.Result = new FakeJsonValue();
+                            }
+                            else
+                            {
+                                var r = this.infrastructure.List(
+                                                                cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext,
+                                                                resourceName,
+                                                                pars[1].ToString(),
+                                                                pars.Length == 3 ? pars[2].ToString() : string.Empty,
+                                                                name.Remove(0, 4));
+                                args.Result = r.Content;
+                            }
 
-                            var r = this.infrastructure.List(
-                                 cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext,
-                                 pars[0].ToString(),
-                                 pars[1].ToString(),
-                                 pars.Length == 3 ? pars[2].ToString() : string.Empty,
-                                 name.Remove(0, 4));
-                            args.Result = r.Content;
                         }
                     }
                 };

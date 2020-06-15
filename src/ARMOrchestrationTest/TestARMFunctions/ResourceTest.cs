@@ -58,7 +58,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             pars.Add("rp/t1/t2/t3/t4");
             pars.AddRange("r1/r2/r3/r4".Split('/'));
             var id = func.resourceId(context, pars.ToArray());
-            Assert.Equal("/subscription/c1fa36c2-4d58-45e8-9c51-498fadb4d8bf/resourceGroups/ResourceGroup1/providers/rp/t1/r1/t2/r2/t3/r3/t4/r4",id);
+            Assert.Equal("/subscription/c1fa36c2-4d58-45e8-9c51-498fadb4d8bf/resourceGroups/ResourceGroup1/providers/rp/t1/r1/t2/r2/t3/r3/t4/r4", id);
         }
         [Fact(DisplayName = "list*")]
         public void ListResource()
@@ -75,7 +75,23 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 });
             Assert.NotNull(rtv);
         }
-
+        [Fact(DisplayName = "ListResourceInPrepareTime")]
+        public void ListResourceInPrepareTime()
+        {
+            Dictionary<string, object> cxt = new Dictionary<string, object>() {
+                    {"armcontext",new DeploymentContext(){
+                        Template=new Template() } },{ContextKeys.IS_PREPARE,true }
+                };
+            ARMFunctions functions = new ARMFunctions(
+                Options.Create(new ARMOrchestrationOptions()),
+                null,
+                new MockInfrastructure(null));
+            object rtv = functions.Evaluate("[listId('resourceId','2019-01-02')]",cxt);
+            Assert.NotNull(rtv);
+            Assert.True(cxt.TryGetValue(ContextKeys.DEPENDSON, out object depend));
+            var dList=depend as List<string>;
+            Assert.Contains("resourceId", dList);
+        }
         [Fact(DisplayName = "resourceGroup")]
         public void resourceGroup()
         {
