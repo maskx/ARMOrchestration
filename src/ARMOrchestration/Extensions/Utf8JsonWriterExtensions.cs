@@ -1,11 +1,7 @@
-﻿using Dynamitey.Internal.Optimization;
-using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
-using Microsoft.Extensions.Logging;
+﻿using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Extensions
 {
@@ -73,7 +69,6 @@ namespace maskx.ARMOrchestration.Extensions
                 {
                     foreach (var item in property.Value.EnumerateArray())
                     {
-                        // TODO: add validate
                         var copyResult = helper.ParseCopy(item.GetRawText(), context).Result;
                         if (!copyResult.Result)
                             return (false, copyResult.Message);

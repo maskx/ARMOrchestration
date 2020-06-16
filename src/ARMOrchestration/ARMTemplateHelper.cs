@@ -20,7 +20,6 @@ namespace maskx.ARMOrchestration
     {
         private readonly ARMOrchestrationOptions options;
         public readonly ARMFunctions ARMfunctions;
-        private readonly IServiceProvider serviceProvider;
         private readonly IInfrastructure infrastructure;
 
         private readonly string _saveDeploymentOperationCommandString;
@@ -28,12 +27,10 @@ namespace maskx.ARMOrchestration
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions functions,
-            IServiceProvider service,
             IInfrastructure infrastructure)
         {
             this.options = options?.Value;
             this.ARMfunctions = functions;
-            this.serviceProvider = service;
             this.infrastructure = infrastructure;
 
             this._saveDeploymentOperationCommandString = string.Format(@"
@@ -559,7 +556,8 @@ WHEN MATCHED THEN
                 }
             }
 
-            #region ResouceId            
+            #region ResouceId
+
             if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
             {
                 List<object> pars = new List<object>();

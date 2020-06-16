@@ -273,8 +273,14 @@ namespace maskx.ARMOrchestration.Orchestrations
             writer.WriteString("name", deploymentContext.DeploymentName);
             // TODO: set type
             writer.WriteString("type", deploymentContext.Mode.ToString());
+
+            #region properties
+
             writer.WritePropertyName("properties");
             writer.WriteStartObject();
+
+            #region outputs
+
             writer.WritePropertyName("outputs");
             writer.WriteStartObject();
             foreach (var item in outputDefineElement.EnumerateObject())
@@ -288,21 +294,16 @@ namespace maskx.ARMOrchestration.Orchestrations
                         !(bool)this._ARMFunctions.Evaluate(condition.GetString(), context))
                         continue;
                 }
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-outputs?tabs=azure-powershell#dynamic-number-of-outputs
-                //if (item.Value.TryGetProperty("copy",out JsonElement copy))
-                //{
-
-                //}
-                //writer.WritePropertyName(item.Name);
-                //writer.WriteStartObject();
-                //writer.WriteString("type", item.Value.GetProperty("type").GetString());
-                //writer.WritePropertyName("value");
-                //writer.WriteElement(item.Value.GetProperty("value"), context, helper);
-                //writer.WriteEndObject();
                 writer.WriteProperty(item, context, helper);
             }
             writer.WriteEndObject();
+
+            #endregion outputs
+
             writer.WriteEndObject();
+
+            #endregion properties
+
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());

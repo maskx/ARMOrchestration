@@ -586,7 +586,7 @@ namespace ARMCreatorTest.TestARMFunctions
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
                     HierarchyId = "001002003004005",
-                    CreateByUserId=TestHelper.CreateByUserId,
+                    CreateByUserId = TestHelper.CreateByUserId,
                 })
             }).Result;
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();

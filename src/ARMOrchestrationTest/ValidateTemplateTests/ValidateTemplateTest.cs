@@ -1,16 +1,14 @@
 ﻿using ARMCreatorTest;
+using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
+using Microsoft.Extensions.Options;
+using System;
+using System.Linq;
 using System.Text.Json;
 using Xunit;
-using System.Linq;
-using Microsoft.Extensions.Options;
-using System.Collections.Generic;
-using maskx.OrchestrationService;
-using ARMOrchestrationTest.Mock;
-using maskx.ARMOrchestration.ARMTemplate;
-using System;
-using maskx.ARMOrchestration.Functions;
 
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
@@ -28,7 +26,6 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
                 }),
                 null,
                 new MockInfrastructure(null)),
-            null,
             new MockInfrastructure(null));
 
         private string GetTemplate(string filename)

@@ -6,8 +6,8 @@
     <Authors>maskx</Authors>
     <Version>0.0.1</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/maskx/ARMCreator</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/maskx/ARMCreator</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/maskx/ARMOrchestration</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/maskx/ARMOrchestration</RepositoryUrl>
     <RootNamespace>maskx.ARMOrchestration</RootNamespace>
     <LangVersion>8.0</LangVersion>
     <UserSecretsId>39e34da3-bea4-460d-a2f3-d7313e3eac9d</UserSecretsId>

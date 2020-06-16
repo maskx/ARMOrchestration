@@ -1,8 +1,6 @@
-﻿using Antlr4.Runtime.Misc;
-using ARMCreatorTest;
+﻿using ARMCreatorTest;
 using maskx.OrchestrationService;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Xunit;
 
@@ -72,15 +70,16 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                 "CopyIndex/PropertyIteration");
         }
+
         [Fact(DisplayName = "copyIndexOutput")]
         public void copyIndexOutput()
         {
             var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
                   "CopyIndex/output");
             var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result[0];
-            var result =JsonDocument.Parse( r.Result).RootElement;
+            var result = JsonDocument.Parse(r.Result).RootElement;
             var storageEndpoints = result.GetProperty("properties").GetProperty("outputs").GetProperty("storageEndpoints");
-            Assert.True(storageEndpoints.TryGetProperty("value",out JsonElement value));
+            Assert.True(storageEndpoints.TryGetProperty("value", out JsonElement value));
             Assert.Equal(JsonValueKind.Array, value.ValueKind);
             Assert.Equal(3, value.GetArrayLength());
             bool has0 = false;

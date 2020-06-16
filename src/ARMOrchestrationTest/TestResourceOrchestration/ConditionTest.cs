@@ -1,5 +1,4 @@
-﻿using maskx.OrchestrationService;
-using Xunit;
+﻿using Xunit;
 
 namespace ARMCreatorTest.TestResourceOrchestration
 {

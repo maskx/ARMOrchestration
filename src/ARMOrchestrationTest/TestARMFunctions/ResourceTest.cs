@@ -47,6 +47,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceid", result);
         }
+
         [Fact(DisplayName = "resourceidInternl")]
         public void resourceidInternl()
         {
@@ -60,6 +61,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             var id = func.resourceId(context, pars.ToArray());
             Assert.Equal("/subscription/c1fa36c2-4d58-45e8-9c51-498fadb4d8bf/resourceGroups/ResourceGroup1/providers/rp/t1/r1/t2/r2/t3/r3/t4/r4", id);
         }
+
         [Fact(DisplayName = "list*")]
         public void ListResource()
         {
@@ -75,6 +77,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 });
             Assert.NotNull(rtv);
         }
+
         [Fact(DisplayName = "ListResourceInPrepareTime")]
         public void ListResourceInPrepareTime()
         {
@@ -86,12 +89,13 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
                 new MockInfrastructure(null));
-            object rtv = functions.Evaluate("[listId('resourceId','2019-01-02')]",cxt);
+            object rtv = functions.Evaluate("[listId('resourceId','2019-01-02')]", cxt);
             Assert.NotNull(rtv);
             Assert.True(cxt.TryGetValue(ContextKeys.DEPENDSON, out object depend));
-            var dList=depend as List<string>;
+            var dList = depend as List<string>;
             Assert.Contains("resourceId", dList);
         }
+
         [Fact(DisplayName = "resourceGroup")]
         public void resourceGroup()
         {

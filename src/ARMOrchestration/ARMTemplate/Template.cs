@@ -26,12 +26,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// </summary>
         public DeployLevel DeployLevel { get; set; }
 
-        public override string ToString()
-        {
-            // TODO: Templae.ToString();
-            return string.Empty;
-        }
-
         internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
     }
 }

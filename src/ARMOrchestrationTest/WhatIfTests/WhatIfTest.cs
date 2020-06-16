@@ -1,14 +1,9 @@
 ﻿using ARMCreatorTest;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
-using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Xunit;
 
 namespace ARMOrchestrationTest.WhatIfTests
@@ -16,8 +11,6 @@ namespace ARMOrchestrationTest.WhatIfTests
     [Trait("c", "WhatIf")]
     public class WhatIfTest
     {
-        private readonly string resource1Id = "";
-
         private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
             Options.Create(new ARMOrchestrationOptions
             {
@@ -31,7 +24,6 @@ namespace ARMOrchestrationTest.WhatIfTests
                 Options.Create(new ARMOrchestrationOptions()),
                 null,
                 new Mock.MockInfrastructure(null)),
-            null,
             new Mock.MockInfrastructure(null));
 
         [Fact(DisplayName = "WhatIfIncremental")]

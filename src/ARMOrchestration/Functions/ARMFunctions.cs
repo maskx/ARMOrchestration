@@ -719,7 +719,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 args.Result = tenantResourceId(args.EvaluateParameters(cxt));
             });
-            
+
             Functions.Add("reference", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -937,7 +937,6 @@ namespace maskx.ARMOrchestration.Functions
                                                                 name.Remove(0, 4));
                                 args.Result = r.Content;
                             }
-
                         }
                     }
                 };
