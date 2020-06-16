@@ -1,12 +1,10 @@
 ﻿using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
-using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -587,7 +585,8 @@ namespace ARMCreatorTest.TestARMFunctions
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     GroupId = Guid.NewGuid().ToString("N"),
                     GroupType = "ResourceGroup",
-                    HierarchyId = "001002003004005"
+                    HierarchyId = "001002003004005",
+                    CreateByUserId=TestHelper.CreateByUserId,
                 })
             }).Result;
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();

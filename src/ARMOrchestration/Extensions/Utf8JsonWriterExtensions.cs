@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
+﻿using Dynamitey.Internal.Optimization;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.Logging;
 using System;
@@ -63,46 +64,86 @@ namespace maskx.ARMOrchestration.Extensions
 
         public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context, ARMTemplateHelper helper)
         {
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-numeric#copyindex
             if ("copy".Equals(property.Name, StringComparison.OrdinalIgnoreCase))
             {
-                foreach (var item in property.Value.EnumerateArray())
+                var copyProperty = property.Value;
+                // this is for Variable  and Property iteration
+                if (copyProperty.ValueKind == JsonValueKind.Array)
                 {
-                    // TODO: add validate
-                    var copyResult = helper.ParseCopy(item.GetRawText(), context).Result;
-                    if (!copyResult.Result)
-                        return (false, copyResult.Message);
-                    var copy = copyResult.Copy;
-                    using JsonDocument doc = JsonDocument.Parse(copy.Input);
-                    var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
+                    foreach (var item in property.Value.EnumerateArray())
+                    {
+                        // TODO: add validate
+                        var copyResult = helper.ParseCopy(item.GetRawText(), context).Result;
+                        if (!copyResult.Result)
+                            return (false, copyResult.Message);
+                        var copy = copyResult.Copy;
+                        using JsonDocument doc = JsonDocument.Parse(copy.Input);
+                        var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
+                        Dictionary<string, object> copyContext = new Dictionary<string, object>();
+                        copyContext.Add("copyindex", copyindex);
+                        copyContext.Add("currentloopname", copy.Name);
+                        foreach (var k in context.Keys)
+                        {
+                            copyContext.Add(k, context[k]);
+                        }
+                        writer.WritePropertyName(copy.Name);
+                        writer.WriteStartArray();
+                        for (int i = 0; i < copy.Count; i++)
+                        {
+                            copyindex[copy.Name] = i;
+                            writer.WriteElement(doc.RootElement, copyContext, helper);
+                        }
+                        writer.WriteEndArray();
+                        if (copyContext.TryGetValue(ContextKeys.DEPENDSON, out object copyDependsOn))
+                        {
+                            List<string> dependsOn;
+                            if (context.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                            {
+                                dependsOn = d as List<string>;
+                            }
+                            else
+                            {
+                                dependsOn = new List<string>();
+                                context.Add(ContextKeys.DEPENDSON, dependsOn);
+                            }
+                            dependsOn.AddRange(copyDependsOn as List<string>);
+                        }
+                    }
+                }
+                // this is for output
+                else if (copyProperty.ValueKind == JsonValueKind.Object)
+                {
+                    var input = copyProperty.GetProperty("input");
+                    int count = 0;
+                    var countProperty = copyProperty.GetProperty("count");
+                    if (countProperty.ValueKind == JsonValueKind.Number)
+                        count = countProperty.GetInt32();
+                    else if (countProperty.ValueKind == JsonValueKind.String)
+                        count = (int)helper.ARMfunctions.Evaluate(countProperty.GetString(), context);
+                    else
+                        throw new Exception("the property of count has wrong error. It should be number or an function return a number");
+                    var name = Guid.NewGuid().ToString("N");
+                    var copyindex = new Dictionary<string, int>() { { name, 0 } };
                     Dictionary<string, object> copyContext = new Dictionary<string, object>();
                     copyContext.Add("copyindex", copyindex);
-                    copyContext.Add("currentloopname", copy.Name);
+                    copyContext.Add("currentloopname", name);
                     foreach (var k in context.Keys)
                     {
                         copyContext.Add(k, context[k]);
                     }
-                    writer.WritePropertyName(copy.Name);
+                    writer.WritePropertyName("value");
                     writer.WriteStartArray();
-                    for (int i = 0; i < copy.Count; i++)
+                    for (int i = 0; i < count; i++)
                     {
-                        copyindex[copy.Name] = i;
-                        writer.WriteElement(doc.RootElement, copyContext, helper);
+                        copyindex[name] = i;
+                        writer.WriteElement(input, copyContext, helper);
                     }
                     writer.WriteEndArray();
-                    if (copyContext.TryGetValue(ContextKeys.DEPENDSON, out object copyDependsOn))
-                    {
-                        List<string> dependsOn;
-                        if (context.TryGetValue(ContextKeys.DEPENDSON, out object d))
-                        {
-                            dependsOn = d as List<string>;
-                        }
-                        else
-                        {
-                            dependsOn = new List<string>();
-                            context.Add(ContextKeys.DEPENDSON, dependsOn);
-                        }
-                        dependsOn.AddRange(copyDependsOn as List<string>);
-                    }
+                }
+                else
+                {
+                    throw new Exception("the structer of copy property is wrong");
                 }
             }
             else

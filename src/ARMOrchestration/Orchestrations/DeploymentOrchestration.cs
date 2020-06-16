@@ -288,12 +288,18 @@ namespace maskx.ARMOrchestration.Orchestrations
                         !(bool)this._ARMFunctions.Evaluate(condition.GetString(), context))
                         continue;
                 }
-                writer.WritePropertyName(item.Name);
-                writer.WriteStartObject();
-                writer.WriteString("type", item.Value.GetProperty("type").GetString());
-                writer.WritePropertyName("value");
-                writer.WriteElement(item.Value.GetProperty("value"), context, helper);
-                writer.WriteEndObject();
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-outputs?tabs=azure-powershell#dynamic-number-of-outputs
+                //if (item.Value.TryGetProperty("copy",out JsonElement copy))
+                //{
+
+                //}
+                //writer.WritePropertyName(item.Name);
+                //writer.WriteStartObject();
+                //writer.WriteString("type", item.Value.GetProperty("type").GetString());
+                //writer.WritePropertyName("value");
+                //writer.WriteElement(item.Value.GetProperty("value"), context, helper);
+                //writer.WriteEndObject();
+                writer.WriteProperty(item, context, helper);
             }
             writer.WriteEndObject();
             writer.WriteEndObject();
