@@ -164,7 +164,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             {
                                 InstanceId = context.OrchestrationInstance.InstanceId,
                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                Stage = ProvisioningStage.AfterResourceProvisioningOrchestation,
+                                Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
                                 Input = DataConverter.Serialize(input),
                                 Result = DataConverter.Serialize(r)
                             });
