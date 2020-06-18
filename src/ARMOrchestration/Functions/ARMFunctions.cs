@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -484,6 +485,30 @@ namespace maskx.ARMOrchestration.Functions
             {
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = string.Format((pars[0] as string), pars.Skip(1).ToArray());
+            });
+            Functions.Add("guid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                MD5 md5 = new MD5CryptoServiceProvider();
+                byte[] bytes = md5.ComputeHash(Encoding.Unicode.GetBytes(string.Join('-', pars)));
+                args.Result = new Guid(bytes).ToString();
+            });
+            // https://stackoverflow.com/a/48305669
+            Functions.Add("uniquestring", (args, cxt) =>
+            {               
+                var pars = args.EvaluateParameters(cxt);
+                string result = "";
+                var buffer = Encoding.UTF8.GetBytes(string.Join('-', pars));
+                var hashArray = new SHA512Managed().ComputeHash(buffer);
+                for (int i = 1; i <= 13; i++)
+                {
+                    var b = hashArray[i];
+                    if (b >= 48 && b <= 57)// keep number
+                        result += Convert.ToChar(b);
+                    else // change to letter
+                        result = result + Convert.ToChar((b % 26) + (byte)'a');
+                }
+                args.Result = result;
             });
             Functions.Add("indexof", (args, cxt) =>
             {

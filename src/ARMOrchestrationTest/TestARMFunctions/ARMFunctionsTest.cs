@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ARMCreatorTest.TestARMFunctions
 {
@@ -559,7 +562,34 @@ namespace ARMCreatorTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "format", result);
         }
-
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "guid")]
+        public void guid()
+        {          
+            var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
+            var abc=func.Evaluate("[guid('abcdefghijklmn')]", null).ToString();
+            var xyz = func.Evaluate("[guid('xyz','opqrst','uvw1','123','4564')]", null).ToString();
+            var abc1 = func.Evaluate("[guid('abcdefghijklmn')]", null).ToString();
+            var xyz2 = func.Evaluate("[guid('xyz','opqrst','uvw1','123','4564')]", null).ToString();
+            Assert.Equal("b74a9217-f91d-54f5-86a8-bd998e2d611d", abc);
+            Assert.Equal("51e07a2f-6c47-2383-a3ea-376e5bd2df27", xyz);
+            Assert.Equal("b74a9217-f91d-54f5-86a8-bd998e2d611d", abc1);
+            Assert.Equal("51e07a2f-6c47-2383-a3ea-376e5bd2df27", xyz2);
+        }
+        [Trait("ARMFunctions", "String")]
+        [Fact(DisplayName = "uniqueString")]
+        public void uniqueString()
+        {
+            var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
+            var abc = func.Evaluate("[uniqueString('abcdefghijklmn')]", null).ToString();
+            var xyz = func.Evaluate("[uniqueString('xyz','opqrst','uvw1','123','4564')]", null).ToString();
+            var abc1 = func.Evaluate("[uniqueString('abcdefghijklmn')]", null).ToString();
+            var xyz2 = func.Evaluate("[uniqueString('xyz','opqrst','uvw1','123','4564')]", null).ToString();
+            Assert.Equal("4tmzhlnssjckt", abc);
+            Assert.Equal("k6gotveobkoyh", xyz);
+            Assert.Equal("4tmzhlnssjckt", abc1);
+            Assert.Equal("k6gotveobkoyh", xyz2);
+        }
         [Trait("ARMFunctions", "String")]
         [Fact(DisplayName = "newGuid")]
         public void newGuid()
