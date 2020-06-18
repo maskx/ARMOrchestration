@@ -4,15 +4,13 @@ using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
-using Microsoft.Extensions.DependencyInjection;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace ARMCreatorTest.TestARMFunctions
 {
@@ -24,7 +22,7 @@ namespace ARMCreatorTest.TestARMFunctions
     [Trait("c", "ARMFunctions")]
     public class ARMFunctionsTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public ARMFunctionsTest(ARMOrchestartionFixture fixture)
         {
@@ -35,7 +33,7 @@ namespace ARMCreatorTest.TestARMFunctions
 
         [Trait("ARMFunctions", "Array and object")]
         [Fact(DisplayName = "array")]
-        public void array()
+        public void Array()
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
@@ -363,7 +361,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"deploymentOutput",TestHelper.GetJsonFileContent("TestARMFunctions/json/deployment") }
             };
-            var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "deployment", result);
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "deployment", result);
         }
 
         #endregion Deployment

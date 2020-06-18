@@ -16,9 +16,10 @@ namespace ARMOrchestrationTest.TestARMFunctions
 {
     [Collection("WebHost ARMOrchestartion")]
     [Trait("ARMFunctions", "Resource")]
+    [Trait("c", "ARMFunctions")]
     public class ResourceTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public ResourceTest(ARMOrchestartionFixture fixture)
         {
@@ -26,7 +27,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         [Fact(DisplayName = "extensionResourceId")]
-        public void extensionResourceId()
+        public void ExtensionResourceId()
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
@@ -36,7 +37,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         [Fact(DisplayName = "resourceid")]
-        public void resourceid()
+        public void Resourceid()
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
@@ -49,16 +50,18 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         [Fact(DisplayName = "resourceidInternl")]
-        public void resourceidInternl()
+        public void ResourceidInternl()
         {
             var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
             DeploymentContext context = new DeploymentContext();
-            List<object> pars = new List<object>();
-            pars.Add(TestHelper.SubscriptionId);
-            pars.Add(TestHelper.ResourceGroup);
-            pars.Add("rp/t1/t2/t3/t4");
+            List<object> pars = new List<object>
+            {
+                TestHelper.SubscriptionId,
+                TestHelper.ResourceGroup,
+                "rp/t1/t2/t3/t4"
+            };
             pars.AddRange("r1/r2/r3/r4".Split('/'));
-            var id = func.resourceId(context, pars.ToArray());
+            var id = func.ResourceId(context, pars.ToArray());
             Assert.Equal("/subscription/c1fa36c2-4d58-45e8-9c51-498fadb4d8bf/resourceGroups/ResourceGroup1/providers/rp/t1/r1/t2/r2/t3/r3/t4/r4", id);
         }
 
@@ -97,7 +100,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         [Fact(DisplayName = "resourceGroup")]
-        public void resourceGroup()
+        public void ResourceGroup()
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {

@@ -1,10 +1,8 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Extensions
 {
@@ -102,45 +100,5 @@ namespace maskx.ARMOrchestration.Extensions
             return Encoding.UTF8.GetString(ms.ToArray());
         }
 
-        public static async Task<(bool Result, string Message, List<Resource> Resources)> ExpandCopyResource(
-            this JsonElement resource,
-            Copy copy,
-            Dictionary<string, object> context,
-            ARMTemplateHelper helper)
-        {
-            Resource CopyResource = new Resource()
-            {
-                Name = copy.Name,
-                Type = Copy.ServiceType,
-                ResouceId = $"{Copy.ServiceType}/{copy.Name}"
-            };
-            List<Resource> resources = new List<Resource>();
-            resources.Add(CopyResource);
-
-            var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
-            Dictionary<string, object> copyContext = new Dictionary<string, object>();
-            copyContext.Add("armcontext", context["armcontext"]);
-            copyContext.Add("copyindex", copyindex);
-            copyContext.Add("currentloopname", copy.Name);
-            for (int i = 0; i < copy.Count; i++)
-            {
-                copyindex[copy.Name] = i;
-                var r = await helper.ParseResource(resource, copyContext);
-                if (r.Result)
-                {
-                    CopyResource.Resources.Add(r.Resources[0].Name);
-                    resources.AddRange(r.Resources);
-                    if (copy.Mode == Copy.SerialMode
-                        && copy.BatchSize > 0
-                        && i >= copy.BatchSize)
-                    {
-                        r.Resources[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
-                    }
-                }
-                else
-                    return (false, r.Message, null);
-            }
-            return (true, copy.Name, resources);
-        }
     }
 }

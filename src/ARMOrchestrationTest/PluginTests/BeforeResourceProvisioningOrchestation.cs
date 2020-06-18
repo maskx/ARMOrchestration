@@ -7,10 +7,10 @@ namespace ARMOrchestrationTest.PluginTests
 {
     public class BeforeResourceProvisioningOrchestation : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
+        public override Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.Resource.Name += "_BeforeResourceProvisioning";
-            return new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) };
+            return Task.FromResult( new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) });
         }
     }
 }

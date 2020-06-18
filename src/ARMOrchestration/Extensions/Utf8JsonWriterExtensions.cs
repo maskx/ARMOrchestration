@@ -69,15 +69,17 @@ namespace maskx.ARMOrchestration.Extensions
                 {
                     foreach (var item in property.Value.EnumerateArray())
                     {
-                        var copyResult = helper.ParseCopy(item.GetRawText(), context).Result;
-                        if (!copyResult.Result)
-                            return (false, copyResult.Message);
-                        var copy = copyResult.Copy;
+                        var (Result, Message, Copy) = helper.ParseCopy(item.GetRawText(), context);
+                        if (!Result)
+                            return (false, Message);
+                        var copy = Copy;
                         using JsonDocument doc = JsonDocument.Parse(copy.Input);
                         var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
-                        Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                        copyContext.Add("copyindex", copyindex);
-                        copyContext.Add("currentloopname", copy.Name);
+                        Dictionary<string, object> copyContext = new Dictionary<string, object>
+                        {
+                            { "copyindex", copyindex },
+                            { "currentloopname", copy.Name }
+                        };
                         foreach (var k in context.Keys)
                         {
                             copyContext.Add(k, context[k]);
@@ -110,8 +112,8 @@ namespace maskx.ARMOrchestration.Extensions
                 else if (copyProperty.ValueKind == JsonValueKind.Object)
                 {
                     var input = copyProperty.GetProperty("input");
-                    int count = 0;
                     var countProperty = copyProperty.GetProperty("count");
+                    int count;
                     if (countProperty.ValueKind == JsonValueKind.Number)
                         count = countProperty.GetInt32();
                     else if (countProperty.ValueKind == JsonValueKind.String)
@@ -120,9 +122,11 @@ namespace maskx.ARMOrchestration.Extensions
                         throw new Exception("the property of count has wrong error. It should be number or an function return a number");
                     var name = Guid.NewGuid().ToString("N");
                     var copyindex = new Dictionary<string, int>() { { name, 0 } };
-                    Dictionary<string, object> copyContext = new Dictionary<string, object>();
-                    copyContext.Add("copyindex", copyindex);
-                    copyContext.Add("currentloopname", name);
+                    Dictionary<string, object> copyContext = new Dictionary<string, object>
+                    {
+                        { "copyindex", copyindex },
+                        { "currentloopname", name }
+                    };
                     foreach (var k in context.Keys)
                     {
                         copyContext.Add(k, context[k]);

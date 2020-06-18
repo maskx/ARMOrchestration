@@ -16,7 +16,7 @@ namespace maskx.ARMOrchestration.Functions
 {
     public class ARMFunctions
     {
-        private Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>> Functions = new Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>>();
+        private readonly Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>> Functions = new Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>>();
         private readonly ARMOrchestrationOptions options;
         private readonly IServiceProvider serviceProvider;
         private readonly IInfrastructure infrastructure;
@@ -125,7 +125,7 @@ namespace maskx.ARMOrchestration.Functions
                 if (par1 is string s)
                     args.Result = s.Last().ToString();
                 else if (par1 is JsonValue jv)
-                    args.Result = jv[jv.Length - 1];
+                    args.Result = jv[^1];
             });
             Functions.Add("length", (args, cxt) =>
             {
@@ -410,7 +410,7 @@ namespace maskx.ARMOrchestration.Functions
                     db.AddStatement($"select Stage,Input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
                               new
                               {
-                                  DeploymentId = input.DeploymentId,
+                                  input.DeploymentId,
                                   Name = input.DeploymentName
                               });
                     db.ExecuteReaderAsync((r, resultSet) =>
@@ -421,10 +421,14 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 if (deploymentOrchestrationInput == null)
                     throw new Exception("cannot find deployment recorder in database in deployment function");
-                JObject obj = new JObject();
-                obj.Add("name", input.DeploymentName);
-                JObject properties = new JObject();
-                properties.Add("template", JObject.Parse(deploymentOrchestrationInput.TemplateContent));
+                JObject obj = new JObject
+                {
+                    { "name", input.DeploymentName }
+                };
+                JObject properties = new JObject
+                {
+                    { "template", JObject.Parse(deploymentOrchestrationInput.TemplateContent) }
+                };
                 if (string.IsNullOrEmpty(input.Parameters))
                     properties.Add("parameters", new JObject());
                 else
@@ -495,7 +499,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             // https://stackoverflow.com/a/48305669
             Functions.Add("uniquestring", (args, cxt) =>
-            {               
+            {
                 var pars = args.EvaluateParameters(cxt);
                 string result = "";
                 var buffer = Encoding.UTF8.GetBytes(string.Join('-', pars));
@@ -506,7 +510,7 @@ namespace maskx.ARMOrchestration.Functions
                     if (b >= 48 && b <= 57)// keep number
                         result += Convert.ToChar(b);
                     else // change to letter
-                        result = result + Convert.ToChar((b % 26) + (byte)'a');
+                        result += Convert.ToChar((b % 26) + (byte)'a');
                 }
                 args.Result = result;
             });
@@ -727,22 +731,22 @@ namespace maskx.ARMOrchestration.Functions
                 var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
                 var t = input.Template;
                 if (t.DeployLevel == DeployLevel.ResourceGroup)
-                    args.Result = resourceId(input, pars);
+                    args.Result = ResourceId(input, pars);
                 else if (t.DeployLevel == DeployLevel.Subscription)
-                    args.Result = subscriptionResourceId(input, pars);
+                    args.Result = SubscriptionResourceId(input, pars);
                 else
-                    args.Result = tenantResourceId(pars);
+                    args.Result = TenantResourceId(pars);
             });
             // TODO: to support managementGroup resource, should add a managementGroupResourceId function
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
                 var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
-                args.Result = subscriptionResourceId(input, pars);
+                args.Result = SubscriptionResourceId(input, pars);
             });
             Functions.Add("tenantresourceid", (args, cxt) =>
             {
-                args.Result = tenantResourceId(args.EvaluateParameters(cxt));
+                args.Result = TenantResourceId(args.EvaluateParameters(cxt));
             });
 
             Functions.Add("reference", (args, cxt) =>
@@ -756,23 +760,27 @@ namespace maskx.ARMOrchestration.Functions
                 bool full = false;
                 if (pars.Length > 2)
                     full = "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase);
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
-                // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
-                if (resourceName.IndexOf('/') < 0 && cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
                 {
-                    List<string> dependsOn;
-                    if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
+                    // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
+
+                    if (resourceName.IndexOf('/') < 0)
                     {
-                        dependsOn = d as List<string>;
+                        List<string> dependsOn;
+                        if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                        {
+                            dependsOn = d as List<string>;
+                        }
+                        else
+                        {
+                            dependsOn = new List<string>();
+                            cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                        }
+                        dependsOn.Add(resourceName);
                     }
-                    else
-                    {
-                        dependsOn = new List<string>();
-                        cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                    }
-                    dependsOn.Add(resourceName);
-                    args.Result = new FakeJsonValue();
+                    args.Result = new FakeJsonValue(resourceName);
                 }
                 else
                 {
@@ -807,7 +815,7 @@ namespace maskx.ARMOrchestration.Functions
             #endregion Resource
         }
 
-        public string resourceId(DeploymentContext input, params object[] pars)
+        public string ResourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string resourceGroupName = input.ResourceGroup;
@@ -854,7 +862,7 @@ namespace maskx.ARMOrchestration.Functions
             return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public string subscriptionResourceId(DeploymentContext input, params object[] pars)
+        public string SubscriptionResourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string[] fullnames;
@@ -883,7 +891,7 @@ namespace maskx.ARMOrchestration.Functions
             return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public string tenantResourceId(params object[] pars)
+        public string TenantResourceId(params object[] pars)
         {
             string[] fullnames;
             IEnumerable<object> nestResources;
@@ -937,20 +945,24 @@ namespace maskx.ARMOrchestration.Functions
                         {
                             var pars = args.EvaluateParameters(context);
                             var resourceName = pars[0].ToString();
-                            if (resourceName.IndexOf('/') < 0 && cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                            if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
                             {
-                                List<string> dependsOn;
-                                if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                                if (resourceName.IndexOf('/') < 0)
                                 {
-                                    dependsOn = d as List<string>;
+                                    List<string> dependsOn;
+                                    if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                                    {
+                                        dependsOn = d as List<string>;
+                                    }
+                                    else
+                                    {
+                                        dependsOn = new List<string>();
+                                        cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                                    }
+                                    dependsOn.Add(resourceName);
                                 }
-                                else
-                                {
-                                    dependsOn = new List<string>();
-                                    cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                                }
-                                dependsOn.Add(resourceName);
-                                args.Result = new FakeJsonValue();
+
+                                args.Result = new FakeJsonValue(resourceName);
                             }
                             else
                             {

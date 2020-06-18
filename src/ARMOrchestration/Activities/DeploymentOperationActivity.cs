@@ -1,6 +1,5 @@
 ﻿using DurableTask.Core;
 using maskx.OrchestrationService;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
@@ -15,11 +14,6 @@ namespace maskx.ARMOrchestration.Activities
         }
 
         protected override TaskResult Execute(TaskContext context, DeploymentOperation input)
-        {
-            return ExecuteAsync(context, input).Result;
-        }
-
-        protected override async Task<TaskResult> ExecuteAsync(TaskContext context, DeploymentOperation input)
         {
             templateHelper.SaveDeploymentOperation(input);
             return new TaskResult() { Code = 200 };

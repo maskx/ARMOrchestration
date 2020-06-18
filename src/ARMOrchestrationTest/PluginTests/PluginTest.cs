@@ -17,7 +17,7 @@ namespace ARMOrchestrationTest.PluginTests
     [Trait("c", "PluginTest")]
     public class PluginTest
     {
-        private IServiceProvider serviceProvider;
+        private readonly IServiceProvider serviceProvider;
 
         public PluginTest()
         {

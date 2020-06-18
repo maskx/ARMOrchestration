@@ -5,10 +5,11 @@ using Xunit;
 namespace ARMOrchestrationTest.TestResourceOrchestration
 {
     [Collection("WebHost ARMOrchestartion")]
+    [Trait("c","ResourceOrchestration")]
     [Trait("ResourceOrchestration", "DeploymentOrchestration")]
     public class DeploymentOrchestrationTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public DeploymentOrchestrationTest(ARMOrchestartionFixture fixture)
         {

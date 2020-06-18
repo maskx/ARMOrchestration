@@ -59,11 +59,9 @@ WHEN MATCHED THEN
                 deploymentOperation.Input,
                 deploymentOperation.Stage.ToString());
 
-            using (var db = new DbAccess(this.options.Database.ConnectionString))
-            {
-                db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
-                db.ExecuteNonQueryAsync().Wait();
-            }
+            using var db = new DbAccess(this.options.Database.ConnectionString);
+            db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
+            db.ExecuteNonQueryAsync().Wait();
         }
 
         public (bool Result, string Message, DeploymentOrchestrationInput Deployment) ParseDeployment(DeploymentOrchestrationInput input)
@@ -133,10 +131,10 @@ WHEN MATCHED THEN
             {
                 if (resource.TryGetProperty("copy", out JsonElement copy))
                 {
-                    var copyResult = ExpandCopyResource(resource, armContext).Result;
-                    if (copyResult.Result)
+                    var (Result, Message, Resources) = ExpandCopyResource(resource, armContext);
+                    if (Result)
                     {
-                        foreach (var item in copyResult.Resources)
+                        foreach (var item in Resources)
                         {
                             if (!template.Resources.TryAdd(item))
                             {
@@ -146,24 +144,24 @@ WHEN MATCHED THEN
                     }
                     else
                     {
-                        error += copyResult.Message + Environment.NewLine;
+                        error += Message + Environment.NewLine;
                     }
                 }
                 else
                 {
-                    var resResult = ParseResource(resource, armContext).Result;
-                    if (!resResult.Result)
+                    var (Result, Message, Resources, deployments) = ParseResource(resource, armContext);
+                    if (!Result)
                     {
-                        error += resResult.Message;
+                        error += Message;
                     }
-                    foreach (var item in resResult.Resources)
+                    foreach (var item in Resources)
                     {
                         if (!item.Condition)
                             template.ConditionFalseResources.Add(item.Name);
                         else
                             template.Resources.TryAdd(item);
                     }
-                    foreach (var d in resResult.deployments)
+                    foreach (var d in deployments)
                     {
                         input.Deployments.Add(d.DeploymentName, d);
                     }
@@ -195,7 +193,7 @@ WHEN MATCHED THEN
         public WhatIfOperationResult WhatIf(PredictTemplateOrchestrationInput input)
         {
             var result = new WhatIfOperationResult();
-            var valid = ParseDeployment(new DeploymentOrchestrationInput()
+            var (Result, Message, Deployment) = ParseDeployment(new DeploymentOrchestrationInput()
             {
                 CorrelationId = input.CorrelationId,
                 Parameters = input.Parameters,
@@ -204,10 +202,10 @@ WHEN MATCHED THEN
                 TemplateContent = input.Template,
                 TenantId = input.TenantId
             });
-            if (!valid.Result)
+            if (!Result)
             {
                 result.Status = "failed";
-                result.Error = new ErrorResponse() { Code = "400", Message = valid.Message };
+                result.Error = new ErrorResponse() { Code = "400", Message = Message };
             }
             DeploymentContext deploymentContext = new DeploymentContext()
             {
@@ -221,7 +219,7 @@ WHEN MATCHED THEN
             string queryScope = $"/{infrastructure.BuiltinPathSegment.Subscription}/{input.SubscriptionId}";
             if (input.ScopeType == ScopeType.ResourceGroup)
                 queryScope += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{input.ResourceGroupName}";
-            var str = this.infrastructure.List(deploymentContext, queryScope, valid.Deployment.Template.ApiProfile, string.Empty, "resources");
+            var str = this.infrastructure.List(deploymentContext, queryScope, Deployment.Template.ApiProfile, string.Empty, "resources");
             //https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
             using var doc = JsonDocument.Parse(str.Content);
             Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
@@ -233,7 +231,7 @@ WHEN MATCHED THEN
                 asset.Add(id.GetString(), r);
             }
 
-            foreach (var r in valid.Deployment.Template.Resources)
+            foreach (var r in Deployment.Template.Resources)
             {
                 CheckResourceWhatIf(input, result, asset, r);
             }
@@ -297,7 +295,7 @@ WHEN MATCHED THEN
             }
         }
 
-        public async Task<(bool Result, string Message, Copy Copy)> ParseCopy(string jsonString, Dictionary<string, object> context)
+        public (bool Result, string Message, Copy Copy) ParseCopy(string jsonString, Dictionary<string, object> context)
         {
             var copy = new Copy();
             var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
@@ -347,7 +345,7 @@ WHEN MATCHED THEN
             return (true, string.Empty, copy);
         }
 
-        public async Task<(bool Result, string Message, DeploymentOrchestrationInput Deployment)> ParseDeployment(
+        public (bool Result, string Message, DeploymentOrchestrationInput Deployment) ParseDeployment(
            Resource resource,
            DeploymentContext deploymentContext)
         {
@@ -456,10 +454,10 @@ WHEN MATCHED THEN
                 LastRunUserId = deploymentContext.LastRunUserId
             };
 
-            var t = ParseDeployment(deployInput);
-            if (!t.Result)
-                return (false, t.Message, null);
-            return (true, string.Empty, t.Deployment);
+            var (Result, Message, Deployment) = ParseDeployment(deployInput);
+            if (!Result)
+                return (false, Message, null);
+            return (true, string.Empty, Deployment);
         }
 
         private bool HandleDependsOn(Resource r, Dictionary<string, object> context)
@@ -473,19 +471,7 @@ WHEN MATCHED THEN
             return false;
         }
 
-        private object Evaluate(Resource r, string expression, Dictionary<string, object> context)
-        {
-            var rtv = ARMfunctions.Evaluate(expression, context);
-            if (context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
-            {
-                r.DependsOn.AddRange(conditionDep as List<string>);
-                context.Remove(ContextKeys.DEPENDSON);
-                return rtv;
-            }
-            return expression;
-        }
-
-        public async Task<(bool Result, string Message, List<Resource> Resources, List<DeploymentOrchestrationInput> deployments)>
+        public (bool Result, string Message, List<Resource> Resources, List<DeploymentOrchestrationInput> deployments)
             ParseResource(
             JsonElement resourceElement,
             Dictionary<string, object> context,
@@ -560,29 +546,35 @@ WHEN MATCHED THEN
 
             if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
             {
-                List<object> pars = new List<object>();
-                pars.Add(r.SubscriptionId);
-                pars.Add(r.ResourceGroup);
-                pars.Add(r.FullType);
+                List<object> pars = new List<object>
+                {
+                    r.SubscriptionId,
+                    r.ResourceGroup,
+                    r.FullType
+                };
                 pars.AddRange(r.FullName.Split('/'));
-                r.ResouceId = ARMfunctions.resourceId(
+                r.ResouceId = ARMfunctions.ResourceId(
                    deploymentContext,
                    pars.ToArray());
             }
             else if (deploymentContext.Template.DeployLevel == DeployLevel.Subscription)
             {
-                List<object> pars = new List<object>();
-                pars.Add(r.SubscriptionId);
-                pars.Add(r.FullType);
+                List<object> pars = new List<object>
+                {
+                    r.SubscriptionId,
+                    r.FullType
+                };
                 pars.AddRange(r.FullName.Split('/'));
-                r.ResouceId = ARMfunctions.subscriptionResourceId(deploymentContext, pars.ToArray());
+                r.ResouceId = ARMfunctions.SubscriptionResourceId(deploymentContext, pars.ToArray());
             }
             else
             {
-                List<object> pars = new List<object>();
-                pars.Add(r.FullType);
+                List<object> pars = new List<object>
+                {
+                    r.FullType
+                };
                 pars.AddRange(r.FullName.Split('/'));
-                r.ResouceId = ARMfunctions.tenantResourceId(pars.ToArray());
+                r.ResouceId = ARMfunctions.TenantResourceId(pars.ToArray());
             }
 
             #endregion ResouceId
@@ -628,7 +620,7 @@ WHEN MATCHED THEN
                 foreach (var childres in _resources.EnumerateArray())
                 {
                     //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/child-resource-name-type
-                    var childResult = await ParseResource(childres, context, r.Name, r.Type);
+                    var childResult = ParseResource(childres, context, r.Name, r.Type);
                     if (childResult.Result)
                     {
                         r.Resources.Add(childResult.Resources[0].Name);
@@ -640,21 +632,21 @@ WHEN MATCHED THEN
             }
             if (r.FullType == infrastructure.BuitinServiceTypes.Deployments)
             {
-                var d = await ParseDeployment(r, deploymentContext);
-                if (d.Result)
-                    deployments.Add(d.Deployment);
+                var (Result, Message, Deployment) = ParseDeployment(r, deploymentContext);
+                if (Result)
+                    deployments.Add(Deployment);
                 else
-                    return (false, d.Message, null, null);
+                    return (false, Message, null, null);
             }
             return (true, string.Empty, resources, deployments);
         }
 
-        private async Task<(bool Result, string Message, List<Resource> Resources)> ExpandCopyResource(
+        private (bool Result, string Message, List<Resource> Resources) ExpandCopyResource(
            JsonElement resource,
            Dictionary<string, object> context)
         {
             resource.TryGetProperty("copy", out JsonElement _copy);
-            var copyResult = await ParseCopy(_copy.GetRawText(), context);
+            var copyResult = ParseCopy(_copy.GetRawText(), context);
             if (!copyResult.Result)
                 return (false, copyResult.Message, null);
             var copy = copyResult.Copy;
@@ -668,36 +660,40 @@ WHEN MATCHED THEN
                 FullType = $"{infrastructure.BuitinServiceTypes.Deployments}/{Copy.ServiceType}",
                 ResouceId = $"{infrastructure.BuitinServiceTypes.Deployments}/{deploymentContext.DeploymentName}/{Copy.ServiceType}/{copy.Name}"
             };
-            List<Resource> resources = new List<Resource>();
-            resources.Add(CopyResource);
+            List<Resource> resources = new List<Resource>
+            {
+                CopyResource
+            };
 
             var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
-            Dictionary<string, object> copyContext = new Dictionary<string, object>();
-            copyContext.Add(ContextKeys.ARM_CONTEXT, deploymentContext);
-            copyContext.Add(ContextKeys.COPY_INDEX, copyindex);
-            copyContext.Add(ContextKeys.CURRENT_LOOP_NAME, copy.Name);
-            copyContext.Add(ContextKeys.IS_PREPARE, true);
+            Dictionary<string, object> copyContext = new Dictionary<string, object>
+            {
+                { ContextKeys.ARM_CONTEXT, deploymentContext },
+                { ContextKeys.COPY_INDEX, copyindex },
+                { ContextKeys.CURRENT_LOOP_NAME, copy.Name },
+                { ContextKeys.IS_PREPARE, true }
+            };
 
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var r = await ParseResource(resource, copyContext);
-                if (r.Result)
+                var (Result, Message, Resources, deployments) = ParseResource(resource, copyContext);
+                if (Result)
                 {
-                    r.Resources[0].CopyIndex = i;
-                    r.Resources[0].CopyId = copy.Id;
-                    r.Resources[0].CopyName = copy.Name;
-                    CopyResource.Resources.Add(r.Resources[0].Name);
-                    resources.AddRange(r.Resources);
+                    Resources[0].CopyIndex = i;
+                    Resources[0].CopyId = copy.Id;
+                    Resources[0].CopyName = copy.Name;
+                    CopyResource.Resources.Add(Resources[0].Name);
+                    resources.AddRange(Resources);
                     if (copy.Mode == Copy.SerialMode
                         && copy.BatchSize > 0
                         && i >= copy.BatchSize)
                     {
-                        r.Resources[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
+                        Resources[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
                     }
                 }
                 else
-                    return (false, r.Message, null);
+                    return (false, Message, null);
             }
             return (true, copy.Name, resources);
         }
