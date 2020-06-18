@@ -136,35 +136,51 @@ WHEN MATCHED THEN
                     {
                         foreach (var item in Resources)
                         {
-                            if (!template.Resources.TryAdd(item))
+                            if (!item.Condition)
+                                template.ConditionFalseResources.Add(item.Name);
+                            else if (!template.Resources.TryAdd(item))
                             {
                                 error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
+                                state.Break();
                             }
                         }
                     }
                     else
                     {
                         error += Message + Environment.NewLine;
+                        state.Break();
                     }
                 }
                 else
                 {
                     var (Result, Message, Resources, deployments) = ParseResource(resource, armContext);
-                    if (!Result)
+                    if (Result)
                     {
-                        error += Message;
+                        foreach (var item in Resources)
+                        {
+                            if (!item.Condition)
+                                template.ConditionFalseResources.Add(item.Name);
+                            else if (!template.Resources.TryAdd(item))
+                            {
+                                error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
+                                state.Break();
+                            }
+                        }
+                        foreach (var d in deployments)
+                        {
+                            if (!input.Deployments.TryAdd(d.DeploymentName, d))
+                            {
+                                error += $"duplicate resource name[{d.DeploymentName}] find" + Environment.NewLine;
+                                state.Break();
+                            }
+                        }
                     }
-                    foreach (var item in Resources)
+                    else
                     {
-                        if (!item.Condition)
-                            template.ConditionFalseResources.Add(item.Name);
-                        else
-                            template.Resources.TryAdd(item);
+                        error += Message + Environment.NewLine;
+                        state.Break();
                     }
-                    foreach (var d in deployments)
-                    {
-                        input.Deployments.Add(d.DeploymentName, d);
-                    }
+
                 }
             });
             if (!string.IsNullOrEmpty(error))
