@@ -8,7 +8,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
     [Trait("ResourceOrchestration", "DependsOn")]
     public class DependsOnTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public DependsOnTest(ARMOrchestartionFixture fixture)
         {

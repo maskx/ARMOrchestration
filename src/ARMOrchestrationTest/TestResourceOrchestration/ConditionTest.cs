@@ -7,7 +7,7 @@ namespace ARMCreatorTest.TestResourceOrchestration
     [Trait("ResourceOrchestration", "Condition")]
     public class ConditionTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public ConditionTest(ARMOrchestartionFixture fixture)
         {

@@ -69,7 +69,7 @@ namespace ARMOrchestrationTest
                 }).Result;
             while (true)
             {
-                var result = client.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { InstanceId=instance.InstanceId,ExecutionId=instance.ExecutionId}, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
@@ -79,5 +79,7 @@ namespace ARMOrchestrationTest
                 }
             }
         }
+
+        
     }
 }

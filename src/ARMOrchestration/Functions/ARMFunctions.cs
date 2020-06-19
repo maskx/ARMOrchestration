@@ -407,7 +407,7 @@ namespace maskx.ARMOrchestration.Functions
                 DeploymentOrchestrationInput deploymentOrchestrationInput = null;
                 using (var db = new DbAccess(options.Database.ConnectionString))
                 {
-                    db.AddStatement($"select Stage,Input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
+                    db.AddStatement($"select TOP 1 Stage,Input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
                               new
                               {
                                   input.DeploymentId,

@@ -13,7 +13,7 @@ namespace ARMOrchestrationTest.Mock
 {
     public class MockInfrastructure : IInfrastructure
     {
-        private IServiceProvider serviceProvider;
+        private readonly IServiceProvider serviceProvider;
 
         public MockInfrastructure(IServiceProvider serviceProvider)
         {
@@ -74,8 +74,8 @@ namespace ARMOrchestrationTest.Mock
         {
             string c = string.Empty;
             var pars = resourceName.TrimStart('/').Split('/');
-            if (pars[pars.Length - 2].Equals("deployments", StringComparison.OrdinalIgnoreCase)
-                && pars[pars.Length - 3].Equals("Microsoft.Resources", StringComparison.OrdinalIgnoreCase))
+            if (pars[^2].Equals("deployments", StringComparison.OrdinalIgnoreCase)
+                && pars[^3].Equals("Microsoft.Resources", StringComparison.OrdinalIgnoreCase))
             {
                 var client = this.serviceProvider.GetService<ARMOrchestrationClient>();
                 var rs = client.GetAllResourceListAsync(context.RootId).Result;
@@ -89,7 +89,7 @@ namespace ARMOrchestrationTest.Mock
                 }
             }
             else
-                c = TestHelper.GetJsonFileContent($"Mock/Response/{pars[pars.Length - 1]}");
+                c = TestHelper.GetJsonFileContent($"Mock/Response/{pars[^1]}");
             if (!full)
                 c = JObject.Parse(c)["properties"].ToString(Newtonsoft.Json.Formatting.None);
             return new TaskResult()

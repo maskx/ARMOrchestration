@@ -5,8 +5,8 @@
   "resources": [
     {
       "apiVersion": "2019-12-25",
-      "type": "<resource-provider-namespace/resource-type-name>",
-      "name": "<name-of-the-resource>"
+      "type": "resource-provider-namespace/resource-type-name",
+      "name": "name-of-the-resource"
     }
   ],
   "outputs": {

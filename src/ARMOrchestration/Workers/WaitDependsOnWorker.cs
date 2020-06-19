@@ -14,17 +14,15 @@ namespace maskx.ARMOrchestration.Workers
 {
     public class WaitDependsOnWorker : BackgroundService
     {
-        private ARMOrchestrationOptions options;
+        private readonly ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
-        private DataConverter dataConverter = new JsonDataConverter();
-        private IServiceProvider serviceProvider;
+        private readonly DataConverter dataConverter = new JsonDataConverter();
+
 
         public WaitDependsOnWorker(
-             IServiceProvider serviceProvider,
             IOrchestrationServiceClient orchestrationServiceClient,
             IOptions<ARMOrchestrationOptions> options)
         {
-            this.serviceProvider = serviceProvider;
             this.options = options?.Value;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
             this.fetchCommandString = string.Format(fetchCommandTemplate,
@@ -63,9 +61,9 @@ namespace maskx.ARMOrchestration.Workers
             while (!stoppingToken.IsCancellationRequested)
             {
                 List<Task> tasks = new List<Task>();
-                foreach (var item in await GetResolvedDependsOn())
+                foreach (var (InstanceId, ExecutionId, EventName, FailCount) in await GetResolvedDependsOn())
                 {
-                    tasks.Add(ResolveDependsOn(item.InstanceId, item.ExecutionId, item.EventName, item.FailCount));
+                    tasks.Add(ResolveDependsOn(InstanceId, ExecutionId, EventName, FailCount));
                 }
                 await Task.WhenAll(tasks.ToArray());
                 if (tasks.Count == 0)
@@ -84,40 +82,35 @@ namespace maskx.ARMOrchestration.Workers
                                            eventName,
                                            dataConverter.Serialize(new TaskResult() { Code = failCount > 0 ? 500 : 200 })
                                            );
-            using (var db = new DbAccess(this.options.Database.ConnectionString))
-            {
-                db.AddStatement(this.removeCommandString,
-                   new
-                   {
-                       InstanceId = instanceId,
-                       ExecutionId = executionId,
-                       EventName = eventName
-                   });
-                await db.ExecuteNonQueryAsync();
-            }
+            using var db = new DbAccess(this.options.Database.ConnectionString);
+            db.AddStatement(this.removeCommandString,
+               new
+               {
+                   InstanceId = instanceId,
+                   ExecutionId = executionId,
+                   EventName = eventName
+               });
+            await db.ExecuteNonQueryAsync();
         }
 
         public async Task DeleteARMOrchestrationTableAsync()
         {
-            using (var db = new DbAccess(options.Database.ConnectionString))
-            {
-                db.AddStatement($"DROP TABLE IF EXISTS {options.Database.WaitDependsOnTableName}");
-                db.AddStatement($"DROP TABLE IF EXISTS {options.Database.DeploymentOperationsTableName}");
-                await db.ExecuteNonQueryAsync();
-            }
+            using var db = new DbAccess(options.Database.ConnectionString);
+            db.AddStatement($"DROP TABLE IF EXISTS {options.Database.WaitDependsOnTableName}");
+            db.AddStatement($"DROP TABLE IF EXISTS {options.Database.DeploymentOperationsTableName}");
+            await db.ExecuteNonQueryAsync();
         }
 
         public async Task CreateIfNotExistsAsync(bool recreate)
         {
             if (recreate) await DeleteARMOrchestrationTableAsync();
-            using (var db = new DbAccess(options.Database.ConnectionString))
-            {
-                db.AddStatement($@"IF(SCHEMA_ID(@schema) IS NULL)
+            using var db = new DbAccess(options.Database.ConnectionString);
+            db.AddStatement($@"IF(SCHEMA_ID(@schema) IS NULL)
                     BEGIN
                         EXEC sp_executesql N'CREATE SCHEMA [{options.Database.SchemaName}]'
                     END", new { schema = options.Database.SchemaName });
 
-                db.AddStatement($@"
+            db.AddStatement($@"
 IF(OBJECT_ID(@table) IS NULL)
 BEGIN
     CREATE TABLE {options.Database.WaitDependsOnTableName} (
@@ -130,7 +123,7 @@ BEGIN
 	    [CreateTime] [datetime2](7) NULL
     )
 END", new { table = options.Database.WaitDependsOnTableName });
-                db.AddStatement($@"
+            db.AddStatement($@"
 IF(OBJECT_ID(@table) IS NULL)
 BEGIN
     create table {options.Database.DeploymentOperationsTableName}(
@@ -163,8 +156,7 @@ BEGIN
     )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
     ) ON [PRIMARY]
 END", new { table = options.Database.DeploymentOperationsTableName });
-                await db.ExecuteNonQueryAsync();
-            }
+            await db.ExecuteNonQueryAsync();
         }
 
         private readonly string removeCommandString;

@@ -11,6 +11,7 @@ namespace maskx.ARMOrchestration
     /// </summary>
     public interface IInfrastructure
     {
+      //  void ValidateResource(string resource, DeploymentContext context);
         /// <summary>
         /// Convert the message to the define format of communication table
         /// </summary>

@@ -129,58 +129,39 @@ WHEN MATCHED THEN
             string error = string.Empty;
             Parallel.ForEach(resources.EnumerateArray(), (resource, state) =>
             {
+                bool Result;
+                string Message;
+                List<Resource> Resources;
+                List<DeploymentOrchestrationInput> deployments = null;
                 if (resource.TryGetProperty("copy", out JsonElement copy))
+                    (Result, Message, Resources) = ExpandCopyResource(resource, armContext);
+                else
+                    (Result, Message, Resources, deployments) = ParseResource(resource, armContext);
+                if (!Result)
                 {
-                    var (Result, Message, Resources) = ExpandCopyResource(resource, armContext);
-                    if (Result)
+                    error += Message + Environment.NewLine;
+                    state.Break();
+                }
+                foreach (var item in Resources)
+                {
+                    if (!item.Condition)
+                        template.ConditionFalseResources.Add(item.Name);
+                    else if (!template.Resources.TryAdd(item))
                     {
-                        foreach (var item in Resources)
-                        {
-                            if (!item.Condition)
-                                template.ConditionFalseResources.Add(item.Name);
-                            else if (!template.Resources.TryAdd(item))
-                            {
-                                error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
-                                state.Break();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        error += Message + Environment.NewLine;
+                        error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
                         state.Break();
                     }
                 }
-                else
+                if (deployments != null)
                 {
-                    var (Result, Message, Resources, deployments) = ParseResource(resource, armContext);
-                    if (Result)
+                    foreach (var d in deployments)
                     {
-                        foreach (var item in Resources)
+                        if (!input.Deployments.TryAdd(d.DeploymentName, d))
                         {
-                            if (!item.Condition)
-                                template.ConditionFalseResources.Add(item.Name);
-                            else if (!template.Resources.TryAdd(item))
-                            {
-                                error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
-                                state.Break();
-                            }
-                        }
-                        foreach (var d in deployments)
-                        {
-                            if (!input.Deployments.TryAdd(d.DeploymentName, d))
-                            {
-                                error += $"duplicate resource name[{d.DeploymentName}] find" + Environment.NewLine;
-                                state.Break();
-                            }
+                            error += $"duplicate resource name[{d.DeploymentName}] find" + Environment.NewLine;
+                            state.Break();
                         }
                     }
-                    else
-                    {
-                        error += Message + Environment.NewLine;
-                        state.Break();
-                    }
-
                 }
             });
             if (!string.IsNullOrEmpty(error))

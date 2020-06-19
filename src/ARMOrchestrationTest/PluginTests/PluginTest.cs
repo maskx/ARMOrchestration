@@ -56,7 +56,7 @@ namespace ARMOrchestrationTest.PluginTests
                 }).Result;
             while (true)
             {
-                var result = client.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { ExecutionId=instance.ExecutionId,InstanceId=instance.InstanceId}, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);

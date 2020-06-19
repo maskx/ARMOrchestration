@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>maskx.ARMOrchestration</AssemblyName>
     <Authors>maskx</Authors>
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/maskx/ARMOrchestration</PackageProjectUrl>
     <RepositoryUrl>https://github.com/maskx/ARMOrchestration</RepositoryUrl>

@@ -8,34 +8,62 @@ using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
 {
     public class ARMOrchestrationClient
     {
-        private readonly OrchestrationWorkerClient orchestrationWorkerClient;
-        private readonly DataConverter DataConverter = new JsonDataConverter();
-        private string getResourceListCommandString = "select * from {0} where deploymentId=@deploymentId";
-        private string getAllResourceListCommandString = "select * from {0} where RootId=@RootId";
-        private readonly ARMOrchestrationOptions options;
-        private readonly ARMTemplateHelper _ARMTemplateHelper;
+        private readonly OrchestrationWorkerClient _OrchestrationWorkerClient;
+        private readonly DataConverter _DataConverter = new JsonDataConverter();
+        private readonly string _GetResourceListCommandString;
+        private readonly string _GetAllResourceListCommandString;
+        private readonly string _PreCheckDeploymentOperationCommandString;
+        private readonly string _CommitDeploymentOperationCommandString;
+        private readonly ARMOrchestrationOptions _Options;
+
         private readonly IInfrastructure _Infrastructure;
 
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
-            ARMTemplateHelper aRMTemplateHelper,
             IInfrastructure infrastructure)
         {
-            this.orchestrationWorkerClient = orchestrationWorkerClient;
-            this.options = options?.Value;
-            this._ARMTemplateHelper = aRMTemplateHelper;
+            this._OrchestrationWorkerClient = orchestrationWorkerClient;
+            this._Options = options?.Value;
+
             this._Infrastructure = infrastructure;
+            this._GetResourceListCommandString = string.Format("select * from {0} where deploymentId=@deploymentId",
+                this._Options.Database.DeploymentOperationsTableName);
+            this._GetAllResourceListCommandString = string.Format("select * from {0} where RootId=@RootId",
+                this._Options.Database.DeploymentOperationsTableName);
+            this._PreCheckDeploymentOperationCommandString = string.Format(@"
+declare @ExistCorrelationId nvarchar(50)=null
+declare @ExistExecutionId nvarchar(50)=null
+MERGE {0} with (serializable) [Target]
+USING (VALUES (@ResourceId)) as [Source](ResourceId)
+ON [Target].ResourceId = [Source].ResourceId
+WHEN NOT MATCHED THEN
+	INSERT
+	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
+	VALUES
+	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Result,@Comments,@CreateByUserId,@LastRunUserId)
+WHEN MATCHED THEN
+	UPDATE set @ExistCorrelationId=[Target].CorrelationId,@ExistExecutionId=[Target].ExecutionId;
+select @ExistCorrelationId,@ExistExecutionId",
+                this._Options.Database.DeploymentOperationsTableName);
+            this._CommitDeploymentOperationCommandString = string.Format(@"
+update {0} set [ExecutionId]=@NewExecutionId where [ExecutionId]=@ExecutionId and [InstanceId]=@InstanceId and [CorrelationId]=@CorrelationId
+",
+                this._Options.Database.DeploymentOperationsTableName);
         }
 
-        public async Task<OrchestrationInstance> Run(DeploymentOrchestrationInput args)
+        public async Task<DeploymentOperation> Run(DeploymentOrchestrationInput args)
         {
+            if (string.IsNullOrEmpty(args.DeploymentId))
+                throw new ArgumentNullException("DeploymentId");
             if (string.IsNullOrEmpty(args.ApiVersion))
                 throw new ArgumentNullException("ApiVersion");
             if (string.IsNullOrEmpty(args.CorrelationId))
@@ -56,7 +84,55 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentException("SubscriptionId and ManagementGroupId only one can be set value");
             if (string.IsNullOrEmpty(args.CreateByUserId))
                 throw new ArgumentNullException("CreateByUserId");
-            var instance = await orchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+
+            var operation = new DeploymentOperation(args, this._Infrastructure)
+            {
+                RootId = args.DeploymentId,
+                InstanceId = args.DeploymentId,
+                ExecutionId = "PLACEHOLDER",
+                Stage = ProvisioningStage.Pending,
+                Input = _DataConverter.Serialize(args)
+            };
+            bool duplicateRequest = false;
+            using (var db = new DbAccess(this._Options.Database.ConnectionString))
+            {
+                db.AddStatement(this._PreCheckDeploymentOperationCommandString, operation);
+                await db.ExecuteReaderAsync((r, resultSet) =>
+                {
+                    if (!r.IsDBNull(0))
+                    {
+                        if (r.GetString(0) == args.CorrelationId)
+                        {
+                            operation.ExecutionId = r.GetString(1);
+                            duplicateRequest = true;
+                        }
+                        else
+                            throw new Exception($"already have a deployment named {args.DeploymentName}");
+                    }
+                });
+            }
+            if (duplicateRequest)
+            {
+                // when two request arrival at same time, the excutionId maybe equal 'PLACEHOLDER'
+                // we need wait for final value
+                while (operation.ExecutionId == "PLACEHOLDER")
+                {
+                    using (var db = new DbAccess(this._Options.Database.ConnectionString))
+                    {
+                        db.AddStatement($"select ExecutionId from {this._Options.Database.DeploymentOperationsTableName} where ResourceId=N'{operation.ResourceId}'");
+                        var r = await db.ExecuteScalarAsync();
+                        if (r.ToString() != "PLACEHOLDER")
+                        {
+                            operation.ExecutionId = r.ToString();
+                            break;
+                        }
+                        else
+                            await Task.Delay(500);
+                    }
+                }
+                return operation;
+            }
+            var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
                 Orchestration = new OrchestrationSetting()
@@ -64,18 +140,21 @@ namespace maskx.ARMOrchestration
                     Name = DeploymentOrchestration.Name,
                     Version = args.ApiVersion
                 },
-                Input = DataConverter.Serialize(args)
+                Input = _DataConverter.Serialize(args)
             });
-            this._ARMTemplateHelper.SaveDeploymentOperation(new DeploymentOperation(args, this._Infrastructure)
+            using (var db = new DbAccess(this._Options.Database.ConnectionString))
             {
-                RootId = args.DeploymentId,
-                ParentResourceId = $"{instance.InstanceId}:{instance.ExecutionId}",
-                InstanceId = instance.InstanceId,
-                ExecutionId = instance.ExecutionId,
-                Stage = ProvisioningStage.Pending,
-                Input = DataConverter.Serialize(args)
-            });
-            return instance;
+                db.AddStatement(this._CommitDeploymentOperationCommandString, new
+                {
+                    NewExecutionId = instance.ExecutionId,
+                    instance.InstanceId,
+                    operation.ExecutionId,
+                    args.CorrelationId
+                });
+                await db.ExecuteNonQueryAsync();
+            }
+            operation.ExecutionId = instance.ExecutionId;
+            return operation;
         }
 
         /// <summary>
@@ -86,9 +165,9 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new DbAccess(this.options.Database.ConnectionString))
+            using (var db = new DbAccess(this._Options.Database.ConnectionString))
             {
-                db.AddStatement(string.Format(this.getResourceListCommandString, this.options.Database.DeploymentOperationsTableName),
+                db.AddStatement(this._GetResourceListCommandString,
                     new Dictionary<string, object>() {
                         { "deploymentId",deploymentId}
                     });
@@ -129,9 +208,9 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetAllResourceListAsync(string rootId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new DbAccess(this.options.Database.ConnectionString))
+            using (var db = new DbAccess(this._Options.Database.ConnectionString))
             {
-                db.AddStatement(string.Format(this.getAllResourceListCommandString, this.options.Database.DeploymentOperationsTableName),
+                db.AddStatement(this._GetAllResourceListCommandString,
                     new Dictionary<string, object>() {
                         { "RootId",rootId}
                     });

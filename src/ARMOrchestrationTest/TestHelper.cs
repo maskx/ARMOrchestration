@@ -219,8 +219,10 @@ namespace ARMCreatorTest
              {
                  config?.Invoke(hostContext, services);
                  services.AddHttpClient();
-                 CommunicationWorkerOptions options = new CommunicationWorkerOptions();
-                 options.AutoCreate = true;
+                 CommunicationWorkerOptions options = new CommunicationWorkerOptions
+                 {
+                     AutoCreate = true
+                 };
                  if (communicationWorkerOptions != null)
                  {
                      options.GetFetchRules = communicationWorkerOptions.GetFetchRules;
