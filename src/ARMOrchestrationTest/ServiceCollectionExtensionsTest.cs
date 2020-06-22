@@ -69,7 +69,7 @@ namespace ARMOrchestrationTest
                 }).Result;
             while (true)
             {
-                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { InstanceId=instance.InstanceId,ExecutionId=instance.ExecutionId}, TimeSpan.FromSeconds(30)).Result;
+                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { InstanceId = instance.InstanceId, ExecutionId = instance.ExecutionId }, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
@@ -80,6 +80,69 @@ namespace ARMOrchestrationTest
             }
         }
 
-        
+        [Fact(DisplayName = "UsingARMOrchestration_ConfigFunc")]
+        public void UsingARMOrchestration_ConfigFunc()
+        {
+            var webHost = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((hostingContext, config) =>
+                {
+                    config
+                    .AddJsonFile("appsettings.json", optional: true)
+                    .AddUserSecrets("afab7740-fb18-44a0-9f16-b94c3327da7e");
+                })
+                .ConfigureServices((hostContext, services) =>
+                {
+                    services.UsingARMOrchestration((sp) =>
+                    {
+                        return new ARMOrchestrationSqlServerConfig()
+                        {
+                            Database = new DatabaseConfig()
+                            {
+                                ConnectionString = TestHelper.ConnectionString,
+                                AutoCreate = true
+                            }
+                        };
+                    });
+                    services.AddSingleton<ICommunicationProcessor>((sp) =>
+                    {
+                        return new MockCommunicationProcessor();
+                    });
+                    services.AddSingleton<IInfrastructure>((sp) =>
+                    {
+                        return new MockInfrastructure(sp);
+                    });
+                })
+                .Build();
+            webHost.RunAsync();
+
+            var client = webHost.Services.GetService<OrchestrationWorkerClient>();
+            var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
+                new DeploymentOrchestrationInput()
+                {
+                    ApiVersion = "1.0",
+                    DeploymentName = "UsingARMOrchestrationTest",
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    TemplateContent = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
+                    SubscriptionId = TestHelper.SubscriptionId,
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005",
+                    TenantId = "TenantId",
+                    CreateByUserId = TestHelper.CreateByUserId
+                }).Result;
+            while (true)
+            {
+                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { InstanceId = instance.InstanceId, ExecutionId = instance.ExecutionId }, TimeSpan.FromSeconds(30)).Result;
+                if (result != null)
+                {
+                    Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
+                    var r = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
+                    Assert.Equal(200, r.Code);
+                    break;
+                }
+            }
+        }
     }
 }

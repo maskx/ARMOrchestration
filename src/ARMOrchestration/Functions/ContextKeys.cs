@@ -16,5 +16,6 @@
         /// if this key is exist, then process for prepare, not care the value is true or false
         /// </summary>
         public const string IS_PREPARE = "isprepare";
+        public const string UDF_CONTEXT = "UDF_CONTEXT";
     }
 }

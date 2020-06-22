@@ -7,7 +7,7 @@ namespace ARMCreatorTest.TestARMFunctions
     [Trait("c", "ARMFunctions")]
     public class UserDefinedFunctionTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public UserDefinedFunctionTest(ARMOrchestartionFixture fixture)
         {

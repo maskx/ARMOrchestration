@@ -117,18 +117,16 @@ update {0} set [ExecutionId]=@NewExecutionId where [ExecutionId]=@ExecutionId an
                 // we need wait for final value
                 while (operation.ExecutionId == "PLACEHOLDER")
                 {
-                    using (var db = new DbAccess(this._Options.Database.ConnectionString))
+                    using var db = new DbAccess(this._Options.Database.ConnectionString);
+                    db.AddStatement($"select ExecutionId from {this._Options.Database.DeploymentOperationsTableName} where ResourceId=N'{operation.ResourceId}'");
+                    var r = await db.ExecuteScalarAsync();
+                    if (r.ToString() != "PLACEHOLDER")
                     {
-                        db.AddStatement($"select ExecutionId from {this._Options.Database.DeploymentOperationsTableName} where ResourceId=N'{operation.ResourceId}'");
-                        var r = await db.ExecuteScalarAsync();
-                        if (r.ToString() != "PLACEHOLDER")
-                        {
-                            operation.ExecutionId = r.ToString();
-                            break;
-                        }
-                        else
-                            await Task.Delay(500);
+                        operation.ExecutionId = r.ToString();
+                        break;
                     }
+                    else
+                        await Task.Delay(500);
                 }
                 return operation;
             }

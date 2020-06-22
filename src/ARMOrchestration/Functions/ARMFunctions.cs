@@ -352,34 +352,59 @@ namespace maskx.ARMOrchestration.Functions
                 // TODO: support securestring
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
                 // may be need implement at Resource Provider
+
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-                if (cxt.TryGetValue("parameters", out object parameters))
+
+                // this is User Defined Functions
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
+                if (cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
                 {
-                    if (parameters != null && !string.IsNullOrEmpty(parameters.ToString()))
+                    using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
+                    if (jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
                     {
-                        using var jsonDoc = JsonDocument.Parse(parameters.ToString());
-                        if (jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
+                        if (ele.TryGetProperty("value", out JsonElement v))
+                        {
+                            args.Result = JsonValue.GetElementValue(v);
+                        }
+                    }
+                }
+                else
+                {
+                    if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
+                        throw new Exception("cannot find context in parameters function");
+                    var context = armcxt as DeploymentContext;
+
+                    if (!string.IsNullOrEmpty(context.Parameters))
+                    {
+                        using var jsonDoc = JsonDocument.Parse(context.Parameters);
+                        if (!jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
+                        {
+                            throw new Exception($"parameters does not define:{par1}");
+                        }
+                        else
                         {
                             if (ele.TryGetProperty("value", out JsonElement v))
                             {
                                 args.Result = JsonValue.GetElementValue(v);
                             }
                         }
+
+                    }
+                    if (!args.HasResult)
+                    {
+                        var pds = context.Template.Parameters;
+                        using var defineDoc = JsonDocument.Parse(pds);
+                        if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
+                        {
+                            throw new Exception($"ARM Template does not define the parameter:{par1}");
+                        }
+                        if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                        {
+                            args.Result = JsonValue.GetElementValue(defValue);
+                        }
                     }
                 }
-                if (!args.HasResult && cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
-                {
-                    var pds = (armcxt as DeploymentContext).Template.Parameters;
-                    using var defineDoc = JsonDocument.Parse(pds);
-                    if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
-                    {
-                        throw new Exception($"ARM Template does not define the parameter:{par1}");
-                    }
-                    if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
-                    {
-                        args.Result = JsonValue.GetElementValue(defValue);
-                    }
-                }
+                
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
@@ -760,26 +785,24 @@ namespace maskx.ARMOrchestration.Functions
                 bool full = false;
                 if (pars.Length > 2)
                     full = "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase);
-                if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                if (cxt.ContainsKey(ContextKeys.IS_PREPARE) && resourceName.IndexOf('/') < 0)
                 {
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                     // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
 
-                    if (resourceName.IndexOf('/') < 0)
+                    List<string> dependsOn;
+                    if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
                     {
-                        List<string> dependsOn;
-                        if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
-                        {
-                            dependsOn = d as List<string>;
-                        }
-                        else
-                        {
-                            dependsOn = new List<string>();
-                            cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                        }
-                        dependsOn.Add(resourceName);
+                        dependsOn = d as List<string>;
                     }
+                    else
+                    {
+                        dependsOn = new List<string>();
+                        cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                    }
+                    dependsOn.Add(resourceName);
+
                     args.Result = new FakeJsonValue(resourceName);
                 }
                 else
@@ -1001,7 +1024,7 @@ namespace maskx.ARMOrchestration.Functions
                     p = new JProperty("value", pars[i]);
                 jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
             }
-            udfContext.Add("parameters", jObject.ToString(Newtonsoft.Json.Formatting.None));
+            udfContext.Add(ContextKeys.UDF_CONTEXT, jObject.ToString(Newtonsoft.Json.Formatting.None));
             args.Result = GetOutput(member.Output, udfContext);
         }
 
