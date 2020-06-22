@@ -463,6 +463,10 @@ WHEN MATCHED THEN
             {
                 r.DependsOn.AddRange(conditionDep as List<string>);
                 context.Remove(ContextKeys.DEPENDSON);
+            }
+            if(context.ContainsKey(ContextKeys.NEED_REEVALUATE))
+            {
+                context.Remove(ContextKeys.NEED_REEVALUATE);
                 return true;
             }
             return false;

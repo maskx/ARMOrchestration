@@ -785,24 +785,27 @@ namespace maskx.ARMOrchestration.Functions
                 bool full = false;
                 if (pars.Length > 2)
                     full = "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase);
-                if (cxt.ContainsKey(ContextKeys.IS_PREPARE) && resourceName.IndexOf('/') < 0)
+                if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
                 {
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                     // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
 
-                    List<string> dependsOn;
-                    if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                    if(resourceName.IndexOf('/') < 0)
                     {
-                        dependsOn = d as List<string>;
+                        List<string> dependsOn;
+                        if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                        {
+                            dependsOn = d as List<string>;
+                        }
+                        else
+                        {
+                            dependsOn = new List<string>();
+                            cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                            dependsOn.Add(resourceName);
+                        }
                     }
-                    else
-                    {
-                        dependsOn = new List<string>();
-                        cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                    }
-                    dependsOn.Add(resourceName);
-
+                    cxt.TryAdd(ContextKeys.NEED_REEVALUATE, true);
                     args.Result = new FakeJsonValue(resourceName);
                 }
                 else
@@ -984,7 +987,7 @@ namespace maskx.ARMOrchestration.Functions
                                     }
                                     dependsOn.Add(resourceName);
                                 }
-
+                                cxt.TryAdd(ContextKeys.NEED_REEVALUATE, true);
                                 args.Result = new FakeJsonValue(resourceName);
                             }
                             else

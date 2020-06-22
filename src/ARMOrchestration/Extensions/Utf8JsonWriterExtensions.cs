@@ -106,6 +106,8 @@ namespace maskx.ARMOrchestration.Extensions
                             }
                             dependsOn.AddRange(copyDependsOn as List<string>);
                         }
+                        if (copyContext.ContainsKey(ContextKeys.NEED_REEVALUATE))
+                            context.TryAdd(ContextKeys.NEED_REEVALUATE, true);
                     }
                 }
                 // this is for output
