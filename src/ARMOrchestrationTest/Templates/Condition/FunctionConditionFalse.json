@@ -7,7 +7,10 @@
       "condition": "[bool('false')]",
       "apiVersion": "2019-12-25",
       "type": "Microsoft.AAD/domainServices",
-      "name": "resName"
+      "name": "resName",
+      "sku": {
+        "name": "Standard_LRS"
+      }
     }
   ],
   "outputs": {

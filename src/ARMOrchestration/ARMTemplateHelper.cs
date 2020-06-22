@@ -464,7 +464,7 @@ WHEN MATCHED THEN
                 r.DependsOn.AddRange(conditionDep as List<string>);
                 context.Remove(ContextKeys.DEPENDSON);
             }
-            if(context.ContainsKey(ContextKeys.NEED_REEVALUATE))
+            if (context.ContainsKey(ContextKeys.NEED_REEVALUATE))
             {
                 context.Remove(ContextKeys.NEED_REEVALUATE);
                 return true;
@@ -581,7 +581,7 @@ WHEN MATCHED THEN
             #endregion ResouceId
 
             if (resourceElement.TryGetProperty("sku", out JsonElement sku))
-                r.SKU = sku.GetRawText();
+                r.SKU = SKU.Parse(sku.GetRawText(), ARMfunctions, context);
             if (resourceElement.TryGetProperty("kind", out JsonElement kind))
                 r.Kind = kind.GetString();
             if (resourceElement.TryGetProperty("plan", out JsonElement plan))

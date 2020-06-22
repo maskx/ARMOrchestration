@@ -34,7 +34,7 @@ namespace ARMOrchestrationTest.Mock
                 ruleField.Add("Type", input.Resource.Type);
                 ruleField.Add("Name", input.Resource.Name);
                 ruleField.Add("Location", input.Resource.Location);
-                ruleField.Add("SKU", input.Resource.SKU);
+                ruleField.Add("SKU", input.Resource.SKU?.Name);
                 ruleField.Add("Kind", input.Resource.Kind);
                 ruleField.Add("Plan", input.Resource.Plan);
             }
