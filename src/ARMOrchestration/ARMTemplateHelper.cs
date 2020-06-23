@@ -479,6 +479,7 @@ WHEN MATCHED THEN
             string parentName = "",
             string parentType = "")
         {
+
             DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
             Resource r = new Resource();
             List<Resource> resources = new List<Resource>();
@@ -697,6 +698,22 @@ WHEN MATCHED THEN
                     return (false, Message, null);
             }
             return (true, copy.Name, resources);
+        }
+
+        public string ExpadResourceProperties(Resource resource, DeploymentContext deploymentContext)
+        {
+            if (string.IsNullOrEmpty(resource.Properties))
+                return string.Empty;
+            {
+                var doc = JsonDocument.Parse(resource.Properties);
+                Dictionary<string, object> cxt = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, deploymentContext } };
+                if (!string.IsNullOrEmpty(resource.CopyName))
+                {
+                    cxt.Add(ContextKeys.CURRENT_LOOP_NAME, resource.CopyName);
+                    cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { resource.CopyName, resource.CopyIndex } });
+                }
+                return doc.RootElement.ExpandObject(cxt, this);
+            }
         }
     }
 }

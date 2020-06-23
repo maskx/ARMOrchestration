@@ -72,5 +72,9 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// some extension settings
         /// </summary>
         public Dictionary<string, object> Extensions { get; set; }
+
+        public TemplateLink TemplateLink { get; set; }
+        public ParametersLink ParametersLink { get; set; }
+        public string TemplateContent { get; set; }
     }
 }

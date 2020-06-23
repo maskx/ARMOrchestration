@@ -30,21 +30,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             var resourceDeploy = input.Resource;
 
             #region Evaluate functions
-
-            // if there no dependson, means that there no implicit dependency by reference function
-            // so there no need re-evaluate functions
-            if (!string.IsNullOrEmpty(resourceDeploy.Properties) && resourceDeploy.DependsOn.Count > 0)
-            {
-                var doc = JsonDocument.Parse(resourceDeploy.Properties);
-                Dictionary<string, object> cxt = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, input.Context } };
-                if (!string.IsNullOrEmpty(resourceDeploy.CopyName))
-                {
-                    cxt.Add(ContextKeys.CURRENT_LOOP_NAME, resourceDeploy.CopyName);
-                    cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { resourceDeploy.CopyName, resourceDeploy.CopyIndex } });
-                }
-                resourceDeploy.Properties = doc.RootElement.ExpandObject(cxt, templateHelper);
-            }
-
+            resourceDeploy.Properties = templateHelper.ExpadResourceProperties(input.Resource, input.Context);
             #endregion Evaluate functions
 
             #region plug-in
