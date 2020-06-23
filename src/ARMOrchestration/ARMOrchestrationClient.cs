@@ -1,5 +1,4 @@
-﻿using DurableTask.Core;
-using DurableTask.Core.Serializing;
+﻿using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
@@ -8,8 +7,6 @@ using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
@@ -42,6 +39,7 @@ namespace maskx.ARMOrchestration
             this._PreCheckDeploymentOperationCommandString = string.Format(@"
 declare @ExistCorrelationId nvarchar(50)=null
 declare @ExistExecutionId nvarchar(50)=null
+declare @ExistInstanceId nvarchar(50)=null
 MERGE {0} with (serializable) [Target]
 USING (VALUES (@ResourceId)) as [Source](ResourceId)
 ON [Target].ResourceId = [Source].ResourceId
@@ -51,11 +49,12 @@ WHEN NOT MATCHED THEN
 	VALUES
 	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Result,@Comments,@CreateByUserId,@LastRunUserId)
 WHEN MATCHED THEN
-	UPDATE set @ExistCorrelationId=[Target].CorrelationId,@ExistExecutionId=[Target].ExecutionId;
-select @ExistCorrelationId,@ExistExecutionId",
+	UPDATE set @ExistCorrelationId=[Target].CorrelationId,@ExistExecutionId=[Target].ExecutionId,@ExistInstanceId=[Target].InstanceId;
+select @ExistCorrelationId,@ExistExecutionId,@ExistInstanceId",
                 this._Options.Database.DeploymentOperationsTableName);
             this._CommitDeploymentOperationCommandString = string.Format(@"
-update {0} set [ExecutionId]=@NewExecutionId where [ExecutionId]=@ExecutionId and [InstanceId]=@InstanceId and [CorrelationId]=@CorrelationId
+update {0} set [ExecutionId]=@NewExecutionId ,[ParentResourceId]=@ParentResourceId
+where [ExecutionId]=@ExecutionId and [InstanceId]=@InstanceId and [CorrelationId]=@CorrelationId
 ",
                 this._Options.Database.DeploymentOperationsTableName);
         }
@@ -104,6 +103,8 @@ update {0} set [ExecutionId]=@NewExecutionId where [ExecutionId]=@ExecutionId an
                         if (r.GetString(0) == args.CorrelationId)
                         {
                             operation.ExecutionId = r.GetString(1);
+                            operation.InstanceId = r.GetString(2);
+                            operation.DeploymentId = operation.InstanceId;
                             duplicateRequest = true;
                         }
                         else
@@ -118,15 +119,15 @@ update {0} set [ExecutionId]=@NewExecutionId where [ExecutionId]=@ExecutionId an
                 while (operation.ExecutionId == "PLACEHOLDER")
                 {
                     using var db = new DbAccess(this._Options.Database.ConnectionString);
-                    db.AddStatement($"select ExecutionId from {this._Options.Database.DeploymentOperationsTableName} where ResourceId=N'{operation.ResourceId}'");
-                    var r = await db.ExecuteScalarAsync();
-                    if (r.ToString() != "PLACEHOLDER")
-                    {
-                        operation.ExecutionId = r.ToString();
-                        break;
-                    }
-                    else
-                        await Task.Delay(500);
+                    db.AddStatement($"select ExecutionId,InstanceId from {this._Options.Database.DeploymentOperationsTableName} where ResourceId=N'{operation.ResourceId}'");
+                    await db.ExecuteReaderAsync((r,resultSet)=> {
+                        operation.ExecutionId = r.GetString(0);
+                        operation.InstanceId = r.GetString(1);
+                        operation.DeploymentId = operation.InstanceId;
+                        operation.ParentResourceId = $"{operation.InstanceId}:{operation.ExecutionId}";
+                    });
+                    if (operation.ExecutionId == "PLACEHOLDER")
+                        await Task.Delay(50);
                 }
                 return operation;
             }
@@ -147,11 +148,13 @@ update {0} set [ExecutionId]=@NewExecutionId where [ExecutionId]=@ExecutionId an
                     NewExecutionId = instance.ExecutionId,
                     instance.InstanceId,
                     operation.ExecutionId,
-                    args.CorrelationId
+                    args.CorrelationId,
+                    ParentResourceId =$"{instance.InstanceId}:{instance.ExecutionId}"
                 });
                 await db.ExecuteNonQueryAsync();
             }
             operation.ExecutionId = instance.ExecutionId;
+            operation.ParentResourceId = $"{instance.InstanceId}:{instance.ExecutionId}";
             return operation;
         }
 

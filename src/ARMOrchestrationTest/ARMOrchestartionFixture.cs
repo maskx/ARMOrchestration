@@ -8,7 +8,7 @@ using Xunit;
 
 namespace ARMCreatorTest
 {
-    public class ARMOrchestartionFixture : IDisposable
+    public class ARMOrchestartionFixture 
     {
         private IHost workerHost = null;
         public IServiceProvider ServiceProvider { get; private set; }
@@ -26,15 +26,6 @@ namespace ARMCreatorTest
             this.ARMFunctions = workerHost.Services.GetService<ARMFunctions>();
             this.ARMOrchestrationClient = workerHost.Services.GetService<ARMOrchestrationClient>();
             this.ServiceProvider = workerHost.Services;
-        }
-
-        public void Dispose()
-        {
-            //if (workerHost != null)
-            //{
-            //    workerHost.StopAsync();
-            //    workerHost.WaitForShutdown();
-            //}
         }
     }
 
