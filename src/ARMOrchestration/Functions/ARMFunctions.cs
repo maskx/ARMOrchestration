@@ -1027,7 +1027,12 @@ namespace maskx.ARMOrchestration.Functions
                     p = new JProperty("value", pars[i]);
                 jObject.Add(rootEle[i].GetProperty("name").GetString(), new JObject(p));
             }
+            foreach (var key in cxt.Keys)
+            {
+                udfContext.Add(key, cxt[key]);
+            }
             udfContext.Add(ContextKeys.UDF_CONTEXT, jObject.ToString(Newtonsoft.Json.Formatting.None));
+           
             args.Result = GetOutput(member.Output, udfContext);
         }
 
