@@ -7,7 +7,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class SKU
     {
-        public string Name { get; set; }
+        public const string Default = "Default";
+        public string Name { get; set; } = Default;
         public string Tier { get; set; }
         public string Size { get; set; }
         public string Family { get; set; }
