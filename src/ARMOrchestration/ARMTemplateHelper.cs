@@ -127,7 +127,7 @@ WHEN MATCHED THEN
                     return (false, fr.Message, null);
             }
             string error = string.Empty;
-            Parallel.ForEach(resources.EnumerateArray(), (resource, state) =>
+            foreach (var resource in resources.EnumerateArray())
             {
                 bool Result;
                 string Message;
@@ -140,7 +140,7 @@ WHEN MATCHED THEN
                 if (!Result)
                 {
                     error += Message + Environment.NewLine;
-                    state.Break();
+                    break;
                 }
                 foreach (var item in Resources)
                 {
@@ -149,7 +149,7 @@ WHEN MATCHED THEN
                     else if (!template.Resources.TryAdd(item))
                     {
                         error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
-                        state.Break();
+                        break;
                     }
                 }
                 if (deployments != null)
@@ -159,11 +159,11 @@ WHEN MATCHED THEN
                         if (!input.Deployments.TryAdd(d.DeploymentName, d))
                         {
                             error += $"duplicate resource name[{d.DeploymentName}] find" + Environment.NewLine;
-                            state.Break();
+                            break;
                         }
                     }
                 }
-            });
+            }
             if (!string.IsNullOrEmpty(error))
                 return (false, error, null);
             string dependsOnName = string.Empty;

@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime.Misc;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 
@@ -28,7 +29,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-management-group
         /// </summary>
         public DeployLevel DeployLevel { get; set; }
-
+       
         internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
 
         public static Template Parse(string content)
