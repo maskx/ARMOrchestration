@@ -17,8 +17,6 @@ namespace maskx.ARMOrchestration
         private readonly DataConverter _DataConverter = new JsonDataConverter();
         private readonly string _GetResourceListCommandString;
         private readonly string _GetAllResourceListCommandString;
-        private readonly string _PreCheckDeploymentOperationCommandString;
-        private readonly string _CommitDeploymentOperationCommandString;
         private readonly ARMOrchestrationOptions _Options;
 
         private readonly IInfrastructure _Infrastructure;
@@ -35,27 +33,6 @@ namespace maskx.ARMOrchestration
             this._GetResourceListCommandString = string.Format("select * from {0} where deploymentId=@deploymentId",
                 this._Options.Database.DeploymentOperationsTableName);
             this._GetAllResourceListCommandString = string.Format("select * from {0} where RootId=@RootId",
-                this._Options.Database.DeploymentOperationsTableName);
-            this._PreCheckDeploymentOperationCommandString = string.Format(@"
-declare @ExistCorrelationId nvarchar(50)=null
-declare @ExistExecutionId nvarchar(50)=null
-declare @ExistInstanceId nvarchar(50)=null
-MERGE {0} with (serializable) [Target]
-USING (VALUES (@ResourceId)) as [Source](ResourceId)
-ON [Target].ResourceId = [Source].ResourceId
-WHEN NOT MATCHED THEN
-	INSERT
-	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
-	VALUES
-	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Result,@Comments,@CreateByUserId,@LastRunUserId)
-WHEN MATCHED THEN
-	UPDATE set @ExistCorrelationId=[Target].CorrelationId,@ExistExecutionId=[Target].ExecutionId,@ExistInstanceId=[Target].InstanceId;
-select @ExistCorrelationId,@ExistExecutionId,@ExistInstanceId",
-                this._Options.Database.DeploymentOperationsTableName);
-            this._CommitDeploymentOperationCommandString = string.Format(@"
-update {0} set [ExecutionId]=@NewExecutionId ,[ParentResourceId]=@ParentResourceId
-where [ExecutionId]=@ExecutionId and [InstanceId]=@InstanceId and [CorrelationId]=@CorrelationId
-",
                 this._Options.Database.DeploymentOperationsTableName);
         }
 
@@ -92,45 +69,6 @@ where [ExecutionId]=@ExecutionId and [InstanceId]=@InstanceId and [CorrelationId
                 Stage = ProvisioningStage.Pending,
                 Input = _DataConverter.Serialize(args)
             };
-            bool duplicateRequest = false;
-            using (var db = new DbAccess(this._Options.Database.ConnectionString))
-            {
-                db.AddStatement(this._PreCheckDeploymentOperationCommandString, operation);
-                await db.ExecuteReaderAsync((r, resultSet) =>
-                {
-                    if (!r.IsDBNull(0))
-                    {
-                        if (r.GetString(0) == args.CorrelationId)
-                        {
-                            operation.ExecutionId = r.GetString(1);
-                            operation.InstanceId = r.GetString(2);
-                            operation.DeploymentId = operation.InstanceId;
-                            duplicateRequest = true;
-                        }
-                        else
-                            throw new Exception($"already have a deployment named {args.DeploymentName}");
-                    }
-                });
-            }
-            if (duplicateRequest)
-            {
-                // when two request arrival at same time, the excutionId maybe equal 'PLACEHOLDER'
-                // we need wait for final value
-                while (operation.ExecutionId == "PLACEHOLDER")
-                {
-                    using var db = new DbAccess(this._Options.Database.ConnectionString);
-                    db.AddStatement($"select ExecutionId,InstanceId from {this._Options.Database.DeploymentOperationsTableName} where ResourceId=N'{operation.ResourceId}'");
-                    await db.ExecuteReaderAsync((r,resultSet)=> {
-                        operation.ExecutionId = r.GetString(0);
-                        operation.InstanceId = r.GetString(1);
-                        operation.DeploymentId = operation.InstanceId;
-                        operation.ParentResourceId = $"{operation.InstanceId}:{operation.ExecutionId}";
-                    });
-                    if (operation.ExecutionId == "PLACEHOLDER")
-                        await Task.Delay(50);
-                }
-                return operation;
-            }
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
@@ -141,18 +79,7 @@ where [ExecutionId]=@ExecutionId and [InstanceId]=@InstanceId and [CorrelationId
                 },
                 Input = _DataConverter.Serialize(args)
             });
-            using (var db = new DbAccess(this._Options.Database.ConnectionString))
-            {
-                db.AddStatement(this._CommitDeploymentOperationCommandString, new
-                {
-                    NewExecutionId = instance.ExecutionId,
-                    instance.InstanceId,
-                    operation.ExecutionId,
-                    args.CorrelationId,
-                    ParentResourceId =$"{instance.InstanceId}:{instance.ExecutionId}"
-                });
-                await db.ExecuteNonQueryAsync();
-            }
+
             operation.ExecutionId = instance.ExecutionId;
             operation.ParentResourceId = $"{instance.InstanceId}:{instance.ExecutionId}";
             return operation;
