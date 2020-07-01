@@ -117,7 +117,11 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("json", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
-                args.Result = new JsonValue(par1.ToString());
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#null-values
+                if (par1.ToString() == "null")
+                    args.Result = null;
+                else
+                    args.Result = new JsonValue(par1.ToString());
             });
             Functions.Add("last", (args, cxt) =>
             {
@@ -404,7 +408,7 @@ namespace maskx.ARMOrchestration.Functions
                         }
                     }
                 }
-                
+
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
@@ -791,7 +795,7 @@ namespace maskx.ARMOrchestration.Functions
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                     // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
 
-                    if(resourceName.IndexOf('/') < 0)
+                    if (resourceName.IndexOf('/') < 0)
                     {
                         List<string> dependsOn;
                         if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
@@ -952,8 +956,10 @@ namespace maskx.ARMOrchestration.Functions
             if (string.IsNullOrEmpty(function))
                 return string.Empty;
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#escape-characters
-            if (function.StartsWith("[") && function.EndsWith("]") && !function.StartsWith("[["))
+            if (function.StartsWith("[") && function.EndsWith("]"))
             {
+                if (function.StartsWith("[["))
+                    return function.Remove(0, 1);
                 string functionString = function.TrimStart('[').TrimEnd(']');
                 var expression = new Expression.Expression(functionString)
                 {
@@ -1032,7 +1038,7 @@ namespace maskx.ARMOrchestration.Functions
                 udfContext.Add(key, cxt[key]);
             }
             udfContext.Add(ContextKeys.UDF_CONTEXT, jObject.ToString(Newtonsoft.Json.Formatting.None));
-           
+
             args.Result = GetOutput(member.Output, udfContext);
         }
 

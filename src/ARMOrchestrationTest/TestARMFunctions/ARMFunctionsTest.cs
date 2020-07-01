@@ -28,7 +28,24 @@ namespace ARMCreatorTest.TestARMFunctions
         {
             this.fixture = fixture;
         }
-
+        [Fact(DisplayName = "left bracket")]
+        public void LeftBracket()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "Result","[test value]"}
+            };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "LeftBracket", result);
+        }
+        [Fact(DisplayName = "escape double quotes")]
+        public void EscapeDoubleQuotes()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "Result","{\"Dept\":\"Finance\",\"Environment\":\"Production\"}"}
+            };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "EscapeDoubleQuotes", result);
+        }
         #region Array and object
 
         [Trait("ARMFunctions", "Array and object")]

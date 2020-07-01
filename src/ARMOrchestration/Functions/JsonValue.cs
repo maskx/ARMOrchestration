@@ -71,14 +71,7 @@ namespace maskx.ARMOrchestration.Functions
         {
             try
             {
-                if (indexes[0] is string)
-                {
-                    result = this[(string)indexes[0]];
-                }
-                else
-                {
-                    result = this[(int)indexes[0]];
-                }
+                result = indexes[0] is string @string ? this[@string] : this[(int)indexes[0]];
                 return true;
             }
             catch
@@ -155,10 +148,9 @@ namespace maskx.ARMOrchestration.Functions
         {
             if (RootElement.ValueKind == JsonValueKind.Array)
             {
-                var jv = item as JsonValue;
                 foreach (var element in RootElement.EnumerateArray())
                 {
-                    if (jv != null)
+                    if (item is JsonValue jv)
                     {
                         if (element.ValueKind == JsonValueKind.Array || element.ValueKind == JsonValueKind.Object)
                         {
