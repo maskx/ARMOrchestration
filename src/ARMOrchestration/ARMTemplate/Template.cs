@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -18,7 +20,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string Variables { get; set; }
 
-        public ResourceCollection Resources { get; set; } = new ResourceCollection();
+        public Dictionary<string, Resource> Resources { get; set; } = new Dictionary<string, Resource>();
 
         public Functions Functions { get; set; }
 
@@ -49,12 +51,46 @@ namespace maskx.ARMOrchestration.ARMTemplate
             else if (template.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
                 template.DeployLevel = DeployLevel.ManagemnetGroup;
             if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
-                template.ApiProfile = apiProfile.GetString();
+                template.ApiProfile = apiProfile.GetRawText();
             if (root.TryGetProperty("parameters", out JsonElement parameters))
                 template.Parameters = parameters.GetRawText();
             if (root.TryGetProperty("outputs", out JsonElement outputs))
                 template.Outputs = outputs.GetRawText();
             return template;
+        }
+
+        public override string ToString()
+        {
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartObject();
+            
+            writer.WriteString("$schema", this.Schema);
+            writer.WriteString("contentVersion", this.ContentVersion);
+            if(string.IsNullOrEmpty(this.ApiProfile))
+            {
+                using var doc= JsonDocument.Parse(this.ApiProfile);
+                doc.RootElement.WriteTo(writer);
+            }
+            if (string.IsNullOrEmpty(this.Parameters))
+            {
+                using var doc = JsonDocument.Parse(this.Parameters);
+                doc.RootElement.WriteTo(writer);
+            }
+            if (string.IsNullOrEmpty(this.Variables))
+            {
+                using var doc = JsonDocument.Parse(this.Variables);
+                doc.RootElement.WriteTo(writer);
+            }
+            if (string.IsNullOrEmpty(this.Outputs))
+            {
+                using var doc = JsonDocument.Parse(this.Outputs);
+                doc.RootElement.WriteTo(writer);
+            }
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
+    
         }
     }
 }

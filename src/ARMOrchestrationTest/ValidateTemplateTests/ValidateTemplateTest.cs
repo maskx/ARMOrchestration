@@ -128,7 +128,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             });
             Assert.True(r.Result);
             Assert.Single(r.Deployment.Template.Resources);
-            var resource = r.Deployment.Template.Resources.First();
+            var resource = r.Deployment.Template.Resources.Values.First();
             using var doc = JsonDocument.Parse(resource.Properties);
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("storageProfile", out JsonElement storageProfile));
@@ -184,7 +184,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);
-            var res = t.Resources.First();
+            var res = t.Resources.Values.First();
             Assert.Equal("storageAccount1", res.FullName);
             Assert.Equal("Microsoft.Storage/storageAccounts", res.FullType);
         }
@@ -206,7 +206,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);
-            var res = t.Resources.First();
+            var res = t.Resources.Values.First();
             Assert.Equal("from nested template", res.FullName);
         }
 
@@ -227,7 +227,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(d.Template);
             var t = d.Template;
             Assert.Single(t.Resources);
-            var res = t.Resources.First();
+            var res = t.Resources.Values.First();
             Assert.Equal("from parent template", res.FullName);
         }
     }

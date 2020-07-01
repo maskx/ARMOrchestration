@@ -146,7 +146,7 @@ WHEN MATCHED THEN
                 {
                     if (!item.Condition)
                         template.ConditionFalseResources.Add(item.Name);
-                    else if (!template.Resources.TryAdd(item))
+                    else if (!template.Resources.TryAdd(item.Name,item))
                     {
                         error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
                         break;
@@ -167,7 +167,7 @@ WHEN MATCHED THEN
             if (!string.IsNullOrEmpty(error))
                 return (false, error, null);
             string dependsOnName = string.Empty;
-            foreach (var res in template.Resources)
+            foreach (var res in template.Resources.Values)
             {
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
@@ -228,7 +228,7 @@ WHEN MATCHED THEN
                 asset.Add(id.GetString(), r);
             }
 
-            foreach (var r in Deployment.Template.Resources)
+            foreach (var r in Deployment.Template.Resources.Values)
             {
                 CheckResourceWhatIf(input, result, asset, r);
             }

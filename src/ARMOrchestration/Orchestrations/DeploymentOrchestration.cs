@@ -140,7 +140,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
 
-            foreach (var resource in input.Template.Resources)
+            foreach (var resource in input.Template.Resources.Values)
             {
                 if (resource.FullType == infrastructure.BuitinServiceTypes.Deployments)
                 {
