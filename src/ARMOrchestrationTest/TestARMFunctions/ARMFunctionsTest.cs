@@ -350,7 +350,8 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"intOutput","1" },
                 {"arrayOutput","[1,2,3]"},
                 {"crossOutput","option 1"},
-                {"objectOutput","{\"one\":\"a\",\"two\":\"b\"}"}
+                {"objectOutput","{\"one\":\"a\",\"two\":\"b\"}"},
+               {"arrayOutput1","2"},
             };
             //  result.Add("objectOutput", TestHelper.GetNodeStringValue("parameters", "parameters/objectParameter/defaultValue"));
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "parameters", result);
@@ -580,9 +581,9 @@ namespace ARMCreatorTest.TestARMFunctions
         [Trait("ARMFunctions", "String")]
         [Fact(DisplayName = "guid")]
         public void guid()
-        {          
+        {
             var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
-            var abc=func.Evaluate("[guid('abcdefghijklmn')]", null).ToString();
+            var abc = func.Evaluate("[guid('abcdefghijklmn')]", null).ToString();
             var xyz = func.Evaluate("[guid('xyz','opqrst','uvw1','123','4564')]", null).ToString();
             var abc1 = func.Evaluate("[guid('abcdefghijklmn')]", null).ToString();
             var xyz2 = func.Evaluate("[guid('xyz','opqrst','uvw1','123','4564')]", null).ToString();

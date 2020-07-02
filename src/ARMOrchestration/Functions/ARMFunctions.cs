@@ -960,7 +960,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 if (function.StartsWith("[["))
                     return function.Remove(0, 1);
-                string functionString = function.TrimStart('[').TrimEnd(']');
+                string functionString = function[1..^1];
                 var expression = new Expression.Expression(functionString)
                 {
                     EvaluateFunction = (name, args, cxt) =>

@@ -48,6 +48,10 @@
     "crossOutput": {
       "value": "[parameters('crossParameter')]",
       "type": "string"
+    },
+    "arrayOutput1": {
+      "value": "[parameters('arrayParameter')[1]]",
+      "type": "int"
     }
   }
 }

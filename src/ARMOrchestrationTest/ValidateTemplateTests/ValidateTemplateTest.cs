@@ -15,7 +15,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
     [Trait("c", "ValidateTemplate")]
     public class ValidateTemplateTest
     {
-        private ARMTemplateHelper templateHelper = new ARMTemplateHelper(
+        private readonly ARMTemplateHelper templateHelper = new ARMTemplateHelper(
             Options.Create(new ARMOrchestrationOptions()),
             new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()

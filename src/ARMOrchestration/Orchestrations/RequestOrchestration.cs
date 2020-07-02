@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public static string Name { get { return "RequestOrchestration"; } }
         private string eventName = string.Empty;
         private TaskCompletionSource<string> waitHandler = null;
-        private IInfrastructure infrastructure;
+        private readonly IInfrastructure infrastructure;
         private readonly ARMTemplateHelper templateHelper;
 
         public RequestOrchestration(

@@ -332,11 +332,11 @@ WHEN MATCHED THEN
             {
                 copy.Input = input.GetRawText();
             }
-            if (string.IsNullOrEmpty(deployContext.SubscriptionId))
+            if (!string.IsNullOrEmpty(deployContext.SubscriptionId))
                 copy.Id = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deployContext.SubscriptionId}";
-            if (string.IsNullOrEmpty(deployContext.ManagementGroupId))
+            if (!string.IsNullOrEmpty(deployContext.ManagementGroupId))
                 copy.Id = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deployContext.ManagementGroupId}";
-            if (string.IsNullOrEmpty(deployContext.ResourceGroup))
+            if (!string.IsNullOrEmpty(deployContext.ResourceGroup))
                 copy.Id += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deployContext.ResourceGroup}";
             copy.Id += $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/{infrastructure.BuitinServiceTypes.Copy}/{copy.Name}";
             return (true, string.Empty, copy);
@@ -583,6 +583,8 @@ WHEN MATCHED THEN
 
             if (resourceElement.TryGetProperty("sku", out JsonElement sku))
                 r.SKU = SKU.Parse(sku.GetRawText(), ARMfunctions, context);
+            else
+                r.SKU = new SKU() { Name = SKU.Default };
             if (resourceElement.TryGetProperty("kind", out JsonElement kind))
                 r.Kind = kind.GetString();
             if (resourceElement.TryGetProperty("plan", out JsonElement plan))

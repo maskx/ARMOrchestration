@@ -57,7 +57,16 @@ namespace maskx.ARMOrchestration.Extensions
                     break;
             }
         }
-
+        public static void WritRawString(this Utf8JsonWriter writer, string rawString)
+        {
+            using var doc = JsonDocument.Parse(rawString);
+            doc.RootElement.WriteTo(writer);
+        }
+        public static void WritRawString(this Utf8JsonWriter writer, string name, string rawString)
+        {
+            writer.WritePropertyName(name);
+            writer.WritRawString(rawString);      
+        }
         public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context, ARMTemplateHelper helper)
         {
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-numeric#copyindex

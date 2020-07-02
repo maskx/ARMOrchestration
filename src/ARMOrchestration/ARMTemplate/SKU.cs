@@ -1,6 +1,8 @@
 ﻿using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -14,19 +16,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string Family { get; set; }
         public string Capacity { get; set; }
 
-        public static SKU Parse(string rawString,ARMFunctions functions,Dictionary<string,object> context)
+        public static SKU Parse(string rawString, ARMFunctions functions, Dictionary<string, object> context)
         {
-            using var doc= JsonDocument.Parse(rawString);
+            using var doc = JsonDocument.Parse(rawString);
             var root = doc.RootElement;
             SKU sku = new SKU();
             if (root.TryGetProperty("name", out JsonElement nameE))
-            {
                 sku.Name = functions.Evaluate(nameE.GetString(), context).ToString();
-            }
             else
                 throw new Exception("cannot find name property in SKU node");
             if (root.TryGetProperty("tier", out JsonElement tierE))
-                sku.Name = functions.Evaluate(tierE.GetString(),context).ToString();
+                sku.Name = functions.Evaluate(tierE.GetString(), context).ToString();
             if (root.TryGetProperty("size", out JsonElement sizeE))
                 sku.Size = functions.Evaluate(sizeE.GetString(), context).ToString();
             if (root.TryGetProperty("family", out JsonElement familyE))
@@ -34,6 +34,24 @@ namespace maskx.ARMOrchestration.ARMTemplate
             if (root.TryGetProperty("capacity", out JsonElement capacityE))
                 sku.Capacity = capacityE.GetRawText();
             return sku;
+        }
+        public override string ToString()
+        {
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartObject();
+            writer.WriteString("name", this.Name);
+            if (!string.IsNullOrEmpty(this.Tier))
+                writer.WriteString("tier", this.Tier);
+            if (!string.IsNullOrEmpty(this.Size))
+                writer.WriteString("size", this.Size);
+            if (!string.IsNullOrEmpty(this.Family))
+                writer.WriteString("family", this.Family);
+            if (!string.IsNullOrEmpty(this.Capacity))
+                writer.WriteString("capacity", this.Capacity);
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
         }
     }
 }

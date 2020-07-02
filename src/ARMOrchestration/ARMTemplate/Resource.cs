@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using maskx.ARMOrchestration.Extensions;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -60,7 +64,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string Kind { get; set; }
 
         public string Plan { get; set; }
-
+        public List<string> Zones { get; set; } = new List<string>();
         public string ResourceGroup { get; set; }
 
         public string SubscriptionId { get; set; }
@@ -71,61 +75,45 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public int CopyIndex { get; set; }
         public string CopyName { get; set; }
 
-        //public override string ToString()
-        //{
-        //    using MemoryStream ms = new MemoryStream();
-        //    using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-        //    writer.WriteStartObject();
-        //    writer.WriteBoolean("condition", this.Condition);
-        //    writer.WriteString("apiVersion", this.ApiVersion);
-        //    writer.WriteString("type", this.Type);
-        //    writer.WriteString("name", this.Name);
-        //    if (!string.IsNullOrEmpty(this.Location))
-        //    {
-        //        writer.WriteString("location", this.Location);
-        //    }
-        //    if (!string.IsNullOrEmpty(this.Comments))
-        //        writer.WriteString("comments", this.Comments);
-        //    if (this.DependsOn.Count > 0)
-        //    {
-        //        writer.WritePropertyName("dependsOn");
-        //        writer.WriteStartArray();
-        //        foreach (var depend in this.DependsOn)
-        //        {
-        //            writer.WriteStringValue(depend);
-        //        }
-        //        writer.WriteEndArray();
-        //    }
+        public override string ToString()
+        {
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartObject();
+            writer.WriteBoolean("condition", this.Condition);
+            writer.WriteString("apiVersion", this.ApiVersion);
+            writer.WriteString("type", this.FullType);
+            writer.WriteString("name", this.FullName);
+            if (!string.IsNullOrEmpty(this.Location))
+                writer.WriteString("location", this.Location);
+            if (!string.IsNullOrEmpty(this.Comments))
+                writer.WriteString("comments", this.Comments);
+            if (this.DependsOn.Count > 0)
+            {
+                writer.WritePropertyName("dependsOn");
+                writer.WriteStartArray();
+                foreach (var depend in this.DependsOn)
+                {
+                    writer.WriteStringValue(depend);
+                }
+                writer.WriteEndArray();
+            }
 
-        //    if (!string.IsNullOrEmpty(this.Properties))
-        //    {
-        //        writer.WritePropertyName("properties");
-        //        JsonDocument.Parse(this.Properties).RootElement.WriteTo(writer);
-        //    }
-        //    if (!string.IsNullOrEmpty(this.SKU))
-        //    {
-        //        writer.WritePropertyName("sku");
-        //        JsonDocument.Parse(this.SKU).RootElement.WriteTo(writer);
-        //    }
-        //    if (!string.IsNullOrEmpty(this.Kind))
-        //        writer.WriteString("kind", this.Kind);
-        //    if (!string.IsNullOrEmpty(this.Plan))
-        //    {
-        //        writer.WritePropertyName("plan");
-        //        JsonDocument.Parse(this.Plan).RootElement.WriteTo(writer);
-        //    }
-        //    writer.WriteString("resourceGroup", this.ResourceGroup);
-        //    writer.WriteString("subscriptionId", this.SubscriptionId);
-        //    writer.WriteEndObject();
-        //    writer.Flush();
-        //    return Encoding.UTF8.GetString(ms.ToArray());
-        //}
-
-        /// <summary>
-        ///  the resources dependsOn me
-        /// </summary>
-        public List<string> Subsequent { get; set; } = new List<string>();
-
-        public List<string> Zones { get; set; } = new List<string>();
+            if (!string.IsNullOrEmpty(this.Properties))
+                writer.WritRawString("properties", this.Properties);
+            if (this.SKU == null)
+                writer.WritRawString("sku", this.SKU.ToString());
+            if (!string.IsNullOrEmpty(this.Kind))
+                writer.WriteString("kind", this.Kind);
+            if (!string.IsNullOrEmpty(this.Plan))
+                writer.WritRawString("plan", this.Plan);
+            if (!string.IsNullOrEmpty(this.ResourceGroup))
+                writer.WriteString("resourceGroup", this.ResourceGroup);
+            if (!string.IsNullOrEmpty(this.SubscriptionId))
+                writer.WriteString("subscriptionId", this.SubscriptionId);
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
+        }
     }
 }

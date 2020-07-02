@@ -1,4 +1,6 @@
-﻿using Antlr4.Runtime.Misc;
+﻿using Antlr4.Runtime;
+using Antlr4.Runtime.Misc;
+using maskx.ARMOrchestration.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -31,7 +33,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-management-group
         /// </summary>
         public DeployLevel DeployLevel { get; set; }
-       
+
         internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
 
         public static Template Parse(string content)
@@ -51,7 +53,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             else if (template.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
                 template.DeployLevel = DeployLevel.ManagemnetGroup;
             if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
-                template.ApiProfile = apiProfile.GetRawText();
+                template.ApiProfile = apiProfile.GetString();
             if (root.TryGetProperty("parameters", out JsonElement parameters))
                 template.Parameters = parameters.GetRawText();
             if (root.TryGetProperty("outputs", out JsonElement outputs))
@@ -64,33 +66,21 @@ namespace maskx.ARMOrchestration.ARMTemplate
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
             writer.WriteStartObject();
-            
+
             writer.WriteString("$schema", this.Schema);
             writer.WriteString("contentVersion", this.ContentVersion);
-            if(string.IsNullOrEmpty(this.ApiProfile))
-            {
-                using var doc= JsonDocument.Parse(this.ApiProfile);
-                doc.RootElement.WriteTo(writer);
-            }
-            if (string.IsNullOrEmpty(this.Parameters))
-            {
-                using var doc = JsonDocument.Parse(this.Parameters);
-                doc.RootElement.WriteTo(writer);
-            }
-            if (string.IsNullOrEmpty(this.Variables))
-            {
-                using var doc = JsonDocument.Parse(this.Variables);
-                doc.RootElement.WriteTo(writer);
-            }
-            if (string.IsNullOrEmpty(this.Outputs))
-            {
-                using var doc = JsonDocument.Parse(this.Outputs);
-                doc.RootElement.WriteTo(writer);
-            }
+            if (!string.IsNullOrEmpty(this.ApiProfile))
+                writer.WriteString("apiProfile", this.ApiProfile);
+            if (!string.IsNullOrEmpty(this.Parameters))
+                writer.WritRawString("parameters", this.Parameters);
+            if (!string.IsNullOrEmpty(this.Variables))
+                writer.WritRawString("variables", this.Variables);
+            if (!string.IsNullOrEmpty(this.Outputs))
+                writer.WritRawString("outputs", this.Outputs);
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());
-    
+
         }
     }
 }
