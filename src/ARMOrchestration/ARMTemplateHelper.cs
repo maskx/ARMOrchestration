@@ -20,7 +20,7 @@ namespace maskx.ARMOrchestration
     {
         private readonly ARMOrchestrationOptions options;
         public readonly ARMFunctions ARMfunctions;
-        private readonly IInfrastructure infrastructure;
+        public readonly IInfrastructure infrastructure;
 
         private readonly string _saveDeploymentOperationCommandString;
 
@@ -115,7 +115,7 @@ WHEN MATCHED THEN
             {
                 // cos var can reference var
                 template.Variables = variables.GetRawText();
-                template.Variables = variables.ExpandObject(armContext, this);
+                template.Variables = variables.ExpandObject(armContext,ARMfunctions,infrastructure);
             }
 
             if (root.TryGetProperty("functions", out JsonElement functions))
@@ -146,7 +146,7 @@ WHEN MATCHED THEN
                 {
                     if (!item.Condition)
                         template.ConditionFalseResources.Add(item.Name);
-                    else if (!template.Resources.TryAdd(item.Name,item))
+                    else if (!template.Resources.TryAdd(item.Name, item))
                     {
                         error += $"duplicate resource name[{item.Name}] find" + Environment.NewLine;
                         break;
@@ -292,55 +292,55 @@ WHEN MATCHED THEN
             }
         }
 
-        public (bool Result, string Message, Copy Copy) ParseCopy(string jsonString, Dictionary<string, object> context)
-        {
-            var copy = new Copy();
-            var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
-            using var doc = JsonDocument.Parse(jsonString);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("name", out JsonElement name))
-                copy.Name = name.GetString();
-            else
-                return (false, "not find name in copy node", null);
+        //public (bool Result, string Message, Copy Copy) ParseCopy(string jsonString, Dictionary<string, object> context)
+        //{
+        //    var copy = new Copy();
+        //    var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+        //    using var doc = JsonDocument.Parse(jsonString);
+        //    var root = doc.RootElement;
+        //    if (root.TryGetProperty("name", out JsonElement name))
+        //        copy.Name = name.GetString();
+        //    else
+        //        return (false, "not find name in copy node", null);
 
-            if (root.TryGetProperty("count", out JsonElement count))
-            {
-                if (count.ValueKind == JsonValueKind.Number)
-                    copy.Count = count.GetInt32();
-                else if (count.ValueKind == JsonValueKind.String)
-                    copy.Count = (int)ARMfunctions.Evaluate(count.GetString(), context);
-                else
-                    return (false, "the value of count property should be Number in copy node", null);
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
-                if (context.ContainsKey(ContextKeys.DEPENDSON))
-                    return (false, "You can't use the reference function to set the value of the count property in a copy loop.", null);
-            }
-            else
-                return (false, "not find count in copy node", null);
-            if (root.TryGetProperty("mode", out JsonElement mode))
-            {
-                copy.Mode = mode.GetString().ToLower();
-            }
-            if (root.TryGetProperty("batchSize", out JsonElement batchSize))
-            {
-                if (batchSize.ValueKind == JsonValueKind.Number)
-                    copy.BatchSize = batchSize.GetInt32();
-                else if (batchSize.ValueKind == JsonValueKind.String)
-                    copy.BatchSize = (int)ARMfunctions.Evaluate(batchSize.GetString(), context);
-            }
-            if (root.TryGetProperty("input", out JsonElement input))
-            {
-                copy.Input = input.GetRawText();
-            }
-            if (!string.IsNullOrEmpty(deployContext.SubscriptionId))
-                copy.Id = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deployContext.SubscriptionId}";
-            if (!string.IsNullOrEmpty(deployContext.ManagementGroupId))
-                copy.Id = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deployContext.ManagementGroupId}";
-            if (!string.IsNullOrEmpty(deployContext.ResourceGroup))
-                copy.Id += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deployContext.ResourceGroup}";
-            copy.Id += $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/{infrastructure.BuitinServiceTypes.Copy}/{copy.Name}";
-            return (true, string.Empty, copy);
-        }
+        //    if (root.TryGetProperty("count", out JsonElement count))
+        //    {
+        //        if (count.ValueKind == JsonValueKind.Number)
+        //            copy.Count = count.GetInt32();
+        //        else if (count.ValueKind == JsonValueKind.String)
+        //            copy.Count = (int)ARMfunctions.Evaluate(count.GetString(), context);
+        //        else
+        //            return (false, "the value of count property should be Number in copy node", null);
+        //        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
+        //        if (context.ContainsKey(ContextKeys.DEPENDSON))
+        //            return (false, "You can't use the reference function to set the value of the count property in a copy loop.", null);
+        //    }
+        //    else
+        //        return (false, "not find count in copy node", null);
+        //    if (root.TryGetProperty("mode", out JsonElement mode))
+        //    {
+        //        copy.Mode = mode.GetString().ToLower();
+        //    }
+        //    if (root.TryGetProperty("batchSize", out JsonElement batchSize))
+        //    {
+        //        if (batchSize.ValueKind == JsonValueKind.Number)
+        //            copy.BatchSize = batchSize.GetInt32();
+        //        else if (batchSize.ValueKind == JsonValueKind.String)
+        //            copy.BatchSize = (int)ARMfunctions.Evaluate(batchSize.GetString(), context);
+        //    }
+        //    if (root.TryGetProperty("input", out JsonElement input))
+        //    {
+        //        copy.Input = input.GetRawText();
+        //    }
+        //    if (!string.IsNullOrEmpty(deployContext.SubscriptionId))
+        //        copy.Id = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deployContext.SubscriptionId}";
+        //    if (!string.IsNullOrEmpty(deployContext.ManagementGroupId))
+        //        copy.Id = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deployContext.ManagementGroupId}";
+        //    if (!string.IsNullOrEmpty(deployContext.ResourceGroup))
+        //        copy.Id += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deployContext.ResourceGroup}";
+        //    copy.Id += $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/{infrastructure.BuitinServiceTypes.Copy}/{copy.Name}";
+        //    return (true, string.Empty, copy);
+        //}
 
         public (bool Result, string Message, DeploymentOrchestrationInput Deployment) ParseDeployment(
            Resource resource,
@@ -611,7 +611,7 @@ WHEN MATCHED THEN
                     r.Properties = properties.GetRawText();
                 else
                 {
-                    r.Properties = properties.ExpandObject(context, this);
+                    r.Properties = properties.ExpandObject(context, ARMfunctions,infrastructure);
                     // if there has Implicit dependency by reference function in properties
                     // the reference function should be evaluate at provisioning time
                     // so keep the original text
@@ -650,10 +650,15 @@ WHEN MATCHED THEN
            Dictionary<string, object> context)
         {
             resource.TryGetProperty("copy", out JsonElement _copy);
-            var copyResult = ParseCopy(_copy.GetRawText(), context);
-            if (!copyResult.Result)
-                return (false, copyResult.Message, null);
-            var copy = copyResult.Copy;
+            Copy copy;
+            try
+            {
+                copy = Copy.Parse(_copy.GetRawText(), context, this.ARMfunctions, this.infrastructure);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message, null);
+            }
             DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
 
             Resource CopyResource = new Resource()
@@ -714,7 +719,7 @@ WHEN MATCHED THEN
                     cxt.Add(ContextKeys.CURRENT_LOOP_NAME, resource.CopyName);
                     cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { resource.CopyName, resource.CopyIndex } });
                 }
-                return doc.RootElement.ExpandObject(cxt, this);
+                return doc.RootElement.ExpandObject(cxt, ARMfunctions,infrastructure);
             }
         }
     }

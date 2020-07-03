@@ -75,6 +75,9 @@
     <None Update="Templates\NestTemplate\NestTemplate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestARMFunctions\json\subscriptionResourceId.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestARMFunctions\json\LeftBracket.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

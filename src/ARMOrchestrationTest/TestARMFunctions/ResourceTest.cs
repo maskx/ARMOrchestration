@@ -35,7 +35,17 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "extensionResourceId", result);
         }
-
+        [Fact(DisplayName = "subscriptionResourceId")]
+        public void subscriptionResourceId()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"WithSubscriptionId",$"/subscription/11645A35-036C-48F0-BD7F-EA8312B8DC18/providers/Microsoft.Authorization/locks/lockname1"},
+                {"WithOutSubscriptionId",$"/subscription/{TestHelper.SubscriptionId}/providers/Microsoft.Authorization/locks/lockname1"},
+                {"NestResource",$"/subscription/{TestHelper.SubscriptionId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
+        };
+            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "subscriptionResourceId", result);
+        }
         [Fact(DisplayName = "resourceid")]
         public void Resourceid()
         {

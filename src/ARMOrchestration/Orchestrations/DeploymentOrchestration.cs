@@ -294,7 +294,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         !(bool)this._ARMFunctions.Evaluate(condition.GetString(), context))
                         continue;
                 }
-                writer.WriteProperty(item, context, helper);
+                writer.WriteProperty(item, context,helper.ARMfunctions,infrastructure);
             }
             writer.WriteEndObject();
 

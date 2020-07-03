@@ -766,7 +766,12 @@ namespace maskx.ARMOrchestration.Functions
                 else
                     args.Result = TenantResourceId(pars);
             });
-            // TODO: to support managementGroup resource, should add a managementGroupResourceId function
+            Functions.Add("managementgroupresourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                args.Result = ManagementResourceId(input, pars);
+            });
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -918,7 +923,36 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+        }
+
+        public string ManagementResourceId(DeploymentContext input, params object[] pars)
+        {
+            string managementId = input.ManagementGroupId;
+            string[] fullnames;
+            IEnumerable<object> nestResources;
+            string resource;
+            if (pars[0].ToString().IndexOf('/') > 0)
+            {
+                fullnames = pars[0].ToString().Split('/');
+                resource = pars[1].ToString();
+                nestResources = pars.Skip(2);
+            }
+            else
+            {
+                managementId = pars[0].ToString();
+                fullnames = pars[1].ToString().Split('/');
+                resource = pars[2].ToString();
+                nestResources = pars.Skip(3);
+            }
+            string nestr = "";
+            int typeIndex = 2;
+            foreach (var item in nestResources)
+            {
+                nestr += $"/{fullnames[typeIndex]}/{item}";
+                typeIndex++;
+            }
+            return $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{managementId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string TenantResourceId(params object[] pars)

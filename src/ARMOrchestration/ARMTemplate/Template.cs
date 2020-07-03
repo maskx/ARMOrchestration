@@ -1,8 +1,5 @@
-﻿using Antlr4.Runtime;
-using Antlr4.Runtime.Misc;
-using maskx.ARMOrchestration.Extensions;
+﻿using maskx.ARMOrchestration.Extensions;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -77,6 +74,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 writer.WritRawString("variables", this.Variables);
             if (!string.IsNullOrEmpty(this.Outputs))
                 writer.WritRawString("outputs", this.Outputs);
+            writer.WritePropertyName("resources");
+            writer.WriteStartArray();
+            foreach (var r in Resources.Values)
+            {
+                writer.WriteRawString(r.ToString());
+            }
+            writer.WriteEndArray();
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());

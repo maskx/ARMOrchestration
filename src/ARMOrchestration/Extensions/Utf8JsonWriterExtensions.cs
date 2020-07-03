@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Functions;
+﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -7,7 +8,7 @@ namespace maskx.ARMOrchestration.Extensions
 {
     public static class Utf8JsonWriterExtensions
     {
-        public static void WriteElement(this Utf8JsonWriter writer, JsonElement element, Dictionary<string, object> context, ARMTemplateHelper helper)
+        public static void WriteElement(this Utf8JsonWriter writer, JsonElement element, Dictionary<string, object> context,ARMFunctions functions,IInfrastructure infrastructure)
         {
             switch (element.ValueKind)
             {
@@ -23,7 +24,7 @@ namespace maskx.ARMOrchestration.Extensions
                     writer.WriteStartObject();
                     foreach (var p in element.EnumerateObject())
                     {
-                        writer.WriteProperty(p, context, helper);
+                        writer.WriteProperty(p, context,functions,infrastructure);
                     }
                     writer.WriteEndObject();
                     break;
@@ -32,13 +33,13 @@ namespace maskx.ARMOrchestration.Extensions
                     writer.WriteStartArray();
                     foreach (var a in element.EnumerateArray())
                     {
-                        writer.WriteElement(a, context, helper);
+                        writer.WriteElement(a, context,functions,infrastructure);
                     }
                     writer.WriteEndArray();
                     break;
 
                 case JsonValueKind.String:
-                    var r = helper.ARMfunctions.Evaluate(element.GetString(), context);
+                    var r = functions.Evaluate(element.GetString(), context);
                     if (r is JsonValue j)
                         j.RootElement.WriteTo(writer);
                     else if (r is bool b)
@@ -57,7 +58,7 @@ namespace maskx.ARMOrchestration.Extensions
                     break;
             }
         }
-        public static void WritRawString(this Utf8JsonWriter writer, string rawString)
+        public static void WriteRawString(this Utf8JsonWriter writer, string rawString)
         {
             using var doc = JsonDocument.Parse(rawString);
             doc.RootElement.WriteTo(writer);
@@ -65,9 +66,9 @@ namespace maskx.ARMOrchestration.Extensions
         public static void WritRawString(this Utf8JsonWriter writer, string name, string rawString)
         {
             writer.WritePropertyName(name);
-            writer.WritRawString(rawString);      
+            writer.WriteRawString(rawString);      
         }
-        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context, ARMTemplateHelper helper)
+        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context,ARMFunctions functions,IInfrastructure infrastructure)
         {
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-numeric#copyindex
             if ("copy".Equals(property.Name, StringComparison.OrdinalIgnoreCase))
@@ -78,10 +79,16 @@ namespace maskx.ARMOrchestration.Extensions
                 {
                     foreach (var item in property.Value.EnumerateArray())
                     {
-                        var (Result, Message, Copy) = helper.ParseCopy(item.GetRawText(), context);
-                        if (!Result)
-                            return (false, Message);
-                        var copy = Copy;
+                        Copy copy = null;
+
+                        try
+                        {
+                            copy = Copy.Parse(item, context, functions, infrastructure);
+                        }
+                        catch (Exception ex)
+                        {
+                            return (false,ex.Message);
+                        }
                         using JsonDocument doc = JsonDocument.Parse(copy.Input);
                         var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
                         Dictionary<string, object> copyContext = new Dictionary<string, object>
@@ -98,7 +105,7 @@ namespace maskx.ARMOrchestration.Extensions
                         for (int i = 0; i < copy.Count; i++)
                         {
                             copyindex[copy.Name] = i;
-                            writer.WriteElement(doc.RootElement, copyContext, helper);
+                            writer.WriteElement(doc.RootElement, copyContext,functions,infrastructure);
                         }
                         writer.WriteEndArray();
                         if (copyContext.TryGetValue(ContextKeys.DEPENDSON, out object copyDependsOn))
@@ -128,7 +135,7 @@ namespace maskx.ARMOrchestration.Extensions
                     if (countProperty.ValueKind == JsonValueKind.Number)
                         count = countProperty.GetInt32();
                     else if (countProperty.ValueKind == JsonValueKind.String)
-                        count = (int)helper.ARMfunctions.Evaluate(countProperty.GetString(), context);
+                        count = (int)functions.Evaluate(countProperty.GetString(), context);
                     else
                         throw new Exception("the property of count has wrong error. It should be number or an function return a number");
                     var name = Guid.NewGuid().ToString("N");
@@ -147,7 +154,7 @@ namespace maskx.ARMOrchestration.Extensions
                     for (int i = 0; i < count; i++)
                     {
                         copyindex[name] = i;
-                        writer.WriteElement(input, copyContext, helper);
+                        writer.WriteElement(input, copyContext,functions,infrastructure);
                     }
                     writer.WriteEndArray();
                 }
@@ -159,7 +166,7 @@ namespace maskx.ARMOrchestration.Extensions
             else
             {
                 writer.WritePropertyName(property.Name);
-                writer.WriteElement(property.Value, context, helper);
+                writer.WriteElement(property.Value, context,functions,infrastructure);
             }
             return (true, string.Empty);
         }

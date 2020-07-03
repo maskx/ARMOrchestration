@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using maskx.ARMOrchestration.Functions;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -86,14 +87,14 @@ namespace maskx.ARMOrchestration.Extensions
             return null;
         }
 
-        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context, ARMTemplateHelper helper)
+        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context,ARMFunctions functions,IInfrastructure infrastructure)
         {
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
             writer.WriteStartObject();
             foreach (var item in self.EnumerateObject())
             {
-                writer.WriteProperty(item, context, helper);
+                writer.WriteProperty(item, context,functions,infrastructure);
             }
             writer.WriteEndObject();
             writer.Flush();
