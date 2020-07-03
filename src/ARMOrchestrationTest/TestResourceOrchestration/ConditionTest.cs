@@ -17,28 +17,28 @@ namespace ARMCreatorTest.TestResourceOrchestration
         [Fact(DisplayName = "TrueCondition")]
         public void TrueCondition()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "Condition/TrueCondition");
         }
 
         [Fact(DisplayName = "NoCondition")]
         public void NoCondition()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "Condition/NoCondition");
         }
 
         [Fact(DisplayName = "FunctionConditionTrue")]
         public void FunctionConditionTrue()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "Condition/FunctionConditionTrue");
         }
 
         [Fact(DisplayName = "FunctionConditionFalse")]
         public void FunctionConditionFalse()
         {
-            var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            var instance = TestHelper.OrchestrationTest(fixture,
                        "Condition/FunctionConditionFalse");
             var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             Assert.Single(r);

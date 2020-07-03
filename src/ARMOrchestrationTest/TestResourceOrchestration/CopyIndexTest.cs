@@ -21,7 +21,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "CopyIndex/ResourceIteration");
         }
 
@@ -36,7 +36,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 { "exampleIntegerArray","[0,1,2,3,4]"}
             };
 
-            var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            var instance = TestHelper.OrchestrationTest(fixture,
                 "CopyIndex/VariableIteration",
                 (instance, args) =>
                 {
@@ -67,14 +67,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "CopyIndex/PropertyIteration");
         }
 
         [Fact(DisplayName = "copyIndexOutput")]
         public void copyIndexOutput()
         {
-            var instance = TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            var instance = TestHelper.OrchestrationTest(fixture,
                   "CopyIndex/output");
             var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result[0];
             var result = JsonDocument.Parse(r.Result).RootElement;

@@ -43,13 +43,13 @@ namespace ARMCreatorTest
             return File.ReadAllText(p);
         }
 
-        public static IOptions<ARMOrchestrationOptions> ARMOrchestrationOptions { get; private set; }
-
         public static IConfigurationRoot Configuration { get; private set; }
         public static DataConverter DataConverter { get; private set; } = new JsonDataConverter();
         public static string SubscriptionId = "C1FA36C2-4D58-45E8-9C51-498FADB4D8BF";
+        public static string ManagemntGroupId = "E79B1B9F-92CB-4325-9DA5-B3C82C43B6B6";
         public static string ResourceGroup = "ResourceGroup1";
         public static string CreateByUserId = "bob@163.com";
+        public static string TenantId = "000";
 
         public static string ConnectionString
         {
@@ -58,9 +58,6 @@ namespace ARMCreatorTest
                 return Configuration.GetConnectionString("dbConnection");
             }
         }
-
-        public static TaskHubClient TaskHubClient { get; private set; }
-
         static TestHelper()
         {
             Configuration = new ConfigurationBuilder()
@@ -68,39 +65,6 @@ namespace ARMCreatorTest
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddUserSecrets("afab7740-fb18-44a0-9f16-b94c3327da7e")
                 .Build();
-            TaskHubClient = new TaskHubClient(CreateOrchestrationClient());
-            ARMOrchestrationOptions = Options.Create(new ARMOrchestrationOptions());
-        }
-
-        public static IOrchestrationServiceClient CreateOrchestrationClient()
-        {
-            return new SQLServerOrchestrationService(
-                         TestHelper.ConnectionString,
-                         TestHelper.HubName,
-                         CreateSQLServerInstanceStore(),
-                         CreateOrchestrationServiceSettings());
-        }
-
-        public static SqlServerInstanceStore CreateSQLServerInstanceStore()
-        {
-            return new SqlServerInstanceStore(new SqlServerInstanceStoreSettings()
-            {
-                HubName = TestHelper.HubName,
-                ConnectionString = TestHelper.ConnectionString
-            });
-        }
-
-        public static string HubName { get { return Configuration["HubName"]; } }
-
-        public static SQLServerOrchestrationServiceSettings CreateOrchestrationServiceSettings(CompressionStyle style = CompressionStyle.Threshold)
-        {
-            var settings = new SQLServerOrchestrationServiceSettings
-            {
-                TaskOrchestrationDispatcherSettings = { CompressOrchestrationState = true },
-            };
-            settings.TaskOrchestrationDispatcherSettings.DispatcherCount = 4;
-            settings.TaskActivityDispatcherSettings.DispatcherCount = 4;
-            return settings;
         }
 
         public static string GetFunctionInputContent(string filename)
@@ -133,34 +97,34 @@ namespace ARMCreatorTest
             return new JsonValue(templatString).GetNodeStringValue(path);
         }
 
-        public static OrchestrationInstance FunctionTest(OrchestrationWorker worker, string filename, Dictionary<string, string> result)
+        public static OrchestrationInstance FunctionTest(
+            ARMOrchestartionFixture fixture, 
+            string filename, 
+            Dictionary<string, string> result,
+            string managementGroupId="")
         {
             var templateString = TestHelper.GetFunctionInputContent(filename);
-            var instance = worker.JumpStartOrchestrationAsync(new Job()
+            var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
             {
-                InstanceId = Guid.NewGuid().ToString("N"),
-                Orchestration = new OrchestrationSetting()
-                {
-                    Name = "DeploymentOrchestration",
-                    Version = "1.0"
-                },
-                Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
-                {
-                    TemplateContent = templateString,
-                    Parameters = string.Empty,
-                    CorrelationId = Guid.NewGuid().ToString("N"),
-                    DeploymentName = filename.Replace('/', '-'),
-                    SubscriptionId = TestHelper.SubscriptionId,
-                    ResourceGroup = TestHelper.ResourceGroup,
-                    GroupId = Guid.NewGuid().ToString("N"),
-                    GroupType = "ResourceGroup",
-                    HierarchyId = "001002003004005",
-                    CreateByUserId = TestHelper.CreateByUserId
-                })
+                TemplateContent = templateString,
+                Parameters = string.Empty,
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                DeploymentName = filename.Replace('/', '-'),
+                SubscriptionId = string.IsNullOrEmpty(managementGroupId)?TestHelper.SubscriptionId:string.Empty,
+                ManagementGroupId=managementGroupId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005",
+                CreateByUserId = TestHelper.CreateByUserId,
+                ApiVersion = "1.0",
+                TenantId = TestHelper.TenantId,
+                DeploymentId = Guid.NewGuid().ToString("N")
             }).Result;
+            var instance = new OrchestrationInstance() { InstanceId=deployment.InstanceId,ExecutionId=deployment.ExecutionId};
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();
 
-            worker.RegistOrchestrationCompletedAction((args) =>
+            fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
             {
                 if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
                     t.SetResult(args.Result);
@@ -187,17 +151,6 @@ namespace ARMCreatorTest
                 }
             }
             return instance;
-        }
-
-        public static IOrchestrationService CreateOrchestrationService()
-        {
-            var service = new SQLServerOrchestrationService(
-                         TestHelper.ConnectionString,
-                         TestHelper.HubName,
-                         CreateSQLServerInstanceStore(),
-                         CreateOrchestrationServiceSettings());
-            service.CreateIfNotExistsAsync().Wait();
-            return service;
         }
 
         public static IHostBuilder CreateHostBuilder(
@@ -271,39 +224,33 @@ namespace ARMCreatorTest
              });
         }
 
-        public static OrchestrationInstance OrchestrationTest(OrchestrationWorker worker,
+        public static OrchestrationInstance OrchestrationTest(ARMOrchestartionFixture fixture,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
             Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
         {
             var id = Guid.NewGuid().ToString("N");
-            var instance = worker.JumpStartOrchestrationAsync(new Job()
+            var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
             {
-                InstanceId = id,
-                Orchestration = new OrchestrationSetting()
-                {
-                    Name = DeploymentOrchestration.Name,
-                    Version = "1.0"
-                },
-                Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
-                {
-                    TemplateContent = TestHelper.GetTemplateContent(filename),
-                    Parameters = string.Empty,
-                    CorrelationId = Guid.NewGuid().ToString("N"),
-                    DeploymentName = filename.Replace('/', '-'),
-                    SubscriptionId = TestHelper.SubscriptionId,
-                    ResourceGroup = TestHelper.ResourceGroup,
-                    DeploymentId = id,
-                    GroupId = Guid.NewGuid().ToString("N"),
-                    GroupType = "ResourceGroup",
-                    HierarchyId = "001002003004005",
-                    CreateByUserId = TestHelper.CreateByUserId
-                })
+                TemplateContent = TestHelper.GetTemplateContent(filename),
+                Parameters = string.Empty,
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                DeploymentName = filename.Replace('/', '-'),
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                DeploymentId = id,
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005",
+                CreateByUserId = TestHelper.CreateByUserId,
+                ApiVersion = "1.0",
+                TenantId = TestHelper.TenantId
             }).Result;
+            var instance = new OrchestrationInstance() { InstanceId = deployment.InstanceId, ExecutionId = deployment.ExecutionId };
             TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();
             if (isValidateOrchestration != null)
             {
-                worker.RegistOrchestrationCompletedAction((args) =>
+                fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
                 {
                     if (isValidateOrchestration(instance, args))
                     {
@@ -313,9 +260,10 @@ namespace ARMCreatorTest
                 var r = t.Task.Result;
                 validate?.Invoke(instance, r);
             }
+            var taskHubClient = new TaskHubClient(fixture.ServiceProvider.GetService<IOrchestrationServiceClient>());
             while (true)
             {
-                var result = TestHelper.TaskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+                var result = taskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
@@ -325,25 +273,6 @@ namespace ARMCreatorTest
                 }
             }
             return instance;
-        }
-
-        public static async Task<List<DeploymentOperation>> GetDeploymentOpetions(string deploymentId)
-        {
-            List<DeploymentOperation> r = new List<DeploymentOperation>();
-            using (var db = new DbAccess(TestHelper.ConnectionString))
-            {
-                db.AddStatement($"select * from arm_DeploymentOperations where deploymentId=N'{deploymentId}'");
-                await db.ExecuteReaderAsync((reader, index) =>
-                  {
-                      r.Add(new DeploymentOperation()
-                      {
-                          Name = reader["Name"].ToString(),
-                          ResourceId = reader["ResourceId"].ToString(),
-                          Result = reader["Result"]?.ToString()
-                      });
-                  });
-            }
-            return r;
         }
     }
 }

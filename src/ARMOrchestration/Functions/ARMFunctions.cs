@@ -952,7 +952,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{managementId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{managementId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string TenantResourceId(params object[] pars)

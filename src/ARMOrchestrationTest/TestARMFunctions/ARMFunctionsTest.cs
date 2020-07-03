@@ -35,7 +35,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 { "Result","[test value]"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "LeftBracket", result);
+            TestHelper.FunctionTest(this.fixture, "LeftBracket", result);
         }
         [Fact(DisplayName = "escape double quotes")]
         public void EscapeDoubleQuotes()
@@ -44,7 +44,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 { "Result","{\"Dept\":\"Finance\",\"Environment\":\"Production\"}"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "EscapeDoubleQuotes", result);
+            TestHelper.FunctionTest(this.fixture, "EscapeDoubleQuotes", result);
         }
         #region Array and object
 
@@ -58,7 +58,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 { "stringOutput","[\"efgh\"]"},
                 { "objectOutput","[{\"a\":\"b\",\"c\":\"d\"}]"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "array", result);
+            TestHelper.FunctionTest(this.fixture, "array", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -73,7 +73,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","[1]" },
                 {"emptyOutput","true" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "coalesce", result);
+            TestHelper.FunctionTest(this.fixture, "coalesce", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -84,7 +84,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"return","[[\"1-1\",\"1-2\",\"1-3\"],[\"2-1\",\"2-2\",\"2-3\"]]"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "concat", result);
+            TestHelper.FunctionTest(this.fixture, "concat", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -100,7 +100,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayTrue",$"true" },
                 {"arrayFalse",$"false" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "contains", result);
+            TestHelper.FunctionTest(this.fixture, "contains", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -114,7 +114,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"objectArray","[{\"one\":\"a\",\"two\":\"b\",\"three\":\"c\"}]"},
                 {"arrayArray","[[\"one\",\"two\",\"three\"]]"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "createarray", result);
+            TestHelper.FunctionTest(this.fixture, "createarray", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -127,7 +127,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 { "objectEmpty","true"},
                 { "stringEmpty","true"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "empty", result);
+            TestHelper.FunctionTest(this.fixture, "empty", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -139,7 +139,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","one" },
                 { "stringOutput","O"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "first", result);
+            TestHelper.FunctionTest(this.fixture, "first", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -151,7 +151,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"objectOutput","{\"one\":\"a\",\"three\":\"c\"}" },
                 {"arrayOutput","[\"two\",\"three\"]"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "intersection", result);
+            TestHelper.FunctionTest(this.fixture, "intersection", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -164,7 +164,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"nullOutput","true"},
                 {"paramOutput","{\"a\":\"demo value\"}"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "json", result);
+            TestHelper.FunctionTest(this.fixture, "json", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -176,7 +176,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","three" },
                 {"stringOutput","e"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "last", result);
+            TestHelper.FunctionTest(this.fixture, "last", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -189,7 +189,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"stringLength","13"},
                 {"objectLength","4" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "length", result);
+            TestHelper.FunctionTest(this.fixture, "length", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -201,7 +201,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","5" },
                 {"intOutput","5"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "max", result);
+            TestHelper.FunctionTest(this.fixture, "max", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -213,7 +213,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","0" },
                 {"intOutput","0"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "min", result);
+            TestHelper.FunctionTest(this.fixture, "min", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -224,7 +224,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"rangeOutput","[5,6,7]" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "range", result);
+            TestHelper.FunctionTest(this.fixture, "range", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -237,7 +237,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","[\"three\"]" },
                 {"stringOutput","two three" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "skip", result);
+            TestHelper.FunctionTest(this.fixture, "skip", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -250,7 +250,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"arrayOutput","[\"one\",\"two\"]" },
                 {"stringOutput","on" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "take", result);
+            TestHelper.FunctionTest(this.fixture, "take", result);
         }
 
         [Trait("ARMFunctions", "Array and object")]
@@ -262,7 +262,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"objectOutput","{\"one\":\"a\",\"two\":\"b\",\"three\":\"c2\",\"four\":\"d\",\"five\":\"e\"}" },
                 {"arrayOutput","[\"one\",\"two\",\"three\",\"four\"]" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "union", result);
+            TestHelper.FunctionTest(this.fixture, "union", result);
         }
 
         #endregion Array and object
@@ -281,7 +281,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"checkObjects","true"}
             };
 
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "equals", result);
+            TestHelper.FunctionTest(this.fixture, "equals", result);
         }
 
         [Trait("ARMFunctions", "Comparison")]
@@ -294,7 +294,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"checkStrings","true" }
             };
 
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "greater", result);
+            TestHelper.FunctionTest(this.fixture, "greater", result);
         }
 
         [Trait("ARMFunctions", "Comparison")]
@@ -307,7 +307,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"checkStrings","true" }
             };
 
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "greaterOrEquals", result);
+            TestHelper.FunctionTest(this.fixture, "greaterOrEquals", result);
         }
 
         [Trait("ARMFunctions", "Comparison")]
@@ -320,7 +320,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"checkStrings","false" }
             };
 
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "less", result);
+            TestHelper.FunctionTest(this.fixture, "less", result);
         }
 
         [Trait("ARMFunctions", "Comparison")]
@@ -333,7 +333,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"checkStrings","false" }
             };
 
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "lessOrEquals", result);
+            TestHelper.FunctionTest(this.fixture, "lessOrEquals", result);
         }
 
         #endregion Comparison
@@ -354,7 +354,7 @@ namespace ARMCreatorTest.TestARMFunctions
                {"arrayOutput1","2"},
             };
             //  result.Add("objectOutput", TestHelper.GetNodeStringValue("parameters", "parameters/objectParameter/defaultValue"));
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "parameters", result);
+            TestHelper.FunctionTest(this.fixture, "parameters", result);
         }
 
         [Trait("ARMFunctions", "Deployment")]
@@ -368,7 +368,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"exampleOutput3","myVariable"},
                 {"exampleOutput4","{\"property1\":\"value1\",\"property2\":\"value2\"}"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "variables", result);
+            TestHelper.FunctionTest(this.fixture, "variables", result);
         }
 
         [Trait("ARMFunctions", "Deployment")]
@@ -379,7 +379,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"deploymentOutput",TestHelper.GetJsonFileContent("TestARMFunctions/json/deployment") }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "deployment", result);
+            TestHelper.FunctionTest(this.fixture, "deployment", result);
         }
 
         #endregion Deployment
@@ -396,7 +396,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"orExampleOutput","true" },
                 {"notExampleOutput","false"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "and", result);
+            TestHelper.FunctionTest(this.fixture, "and", result);
         }
 
         [Trait("ARMFunctions", "Logical")]
@@ -410,7 +410,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"trueInt","true"},
                 { "falseInt","false"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "bool", result);
+            TestHelper.FunctionTest(this.fixture, "bool", result);
         }
 
         [Trait("ARMFunctions", "Logical")]
@@ -423,7 +423,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"noOutput","no" },
                 {"objectOutput","{\"test\":\"value1\"}"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "if", result);
+            TestHelper.FunctionTest(this.fixture, "if", result);
         }
 
         #endregion Logical
@@ -438,7 +438,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"addResult","8"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "add", result);
+            TestHelper.FunctionTest(this.fixture, "add", result);
         }
 
         [Trait("ARMFunctions", "Numeric")]
@@ -475,7 +475,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"divResult","2"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "div", result);
+            TestHelper.FunctionTest(this.fixture, "div", result);
         }
 
         [Trait("ARMFunctions", "Numeric")]
@@ -486,7 +486,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"intResult","4"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "int", result);
+            TestHelper.FunctionTest(this.fixture, "int", result);
         }
 
         [Trait("ARMFunctions", "Numeric")]
@@ -497,7 +497,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"modResult","1"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "mod", result);
+            TestHelper.FunctionTest(this.fixture, "mod", result);
         }
 
         [Trait("ARMFunctions", "Numeric")]
@@ -508,7 +508,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"mulResult","15"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "mul", result);
+            TestHelper.FunctionTest(this.fixture, "mul", result);
         }
 
         [Trait("ARMFunctions", "Numeric")]
@@ -519,7 +519,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"subResult","4"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "sub", result);
+            TestHelper.FunctionTest(this.fixture, "sub", result);
         }
 
         #endregion Numeric
@@ -537,7 +537,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"toStringOutput","one, two, three"},
                 {"toJsonOutput","{\"one\":\"a\",\"two\":\"b\"}"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "base64", result);
+            TestHelper.FunctionTest(this.fixture, "base64", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -549,7 +549,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"dataUriOutput","data:text/plain;charset=utf8;base64,SGVsbG8="},
                 {"toStringOutput","Hello, World!"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "dataUri", result);
+            TestHelper.FunctionTest(this.fixture, "dataUri", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -565,7 +565,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"endsCapTrue","true"},
                 {"endsFalse","false"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "endsWith", result);
+            TestHelper.FunctionTest(this.fixture, "endsWith", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -576,7 +576,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"formatTest","Hello, User. Formatted number: 8,175,133" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "format", result);
+            TestHelper.FunctionTest(this.fixture, "format", result);
         }
         [Trait("ARMFunctions", "String")]
         [Fact(DisplayName = "guid")]
@@ -663,7 +663,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"lastString","0" },
                 {"notFound","-1" },
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "indexOf", result);
+            TestHelper.FunctionTest(this.fixture, "indexOf", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -674,7 +674,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"stringOutput","0000000123" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "padLeft", result);
+            TestHelper.FunctionTest(this.fixture, "padLeft", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -686,7 +686,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"firstOutput","1231231234" },
                 {"secondOutput","123-123-xxxx" }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "replace", result);
+            TestHelper.FunctionTest(this.fixture, "replace", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -698,7 +698,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 {"firstOutput","[\"one\",\"two\",\"three\"]"},
                 {"secondOutput","[\"one\",\"two\",\"three\"]"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "split", result);
+            TestHelper.FunctionTest(this.fixture, "split", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -711,7 +711,7 @@ namespace ARMCreatorTest.TestARMFunctions
             };
             result.Add("objectOutput", TestHelper.GetNodeStringValue("string", "parameters/testObject/defaultValue"));
             result.Add("arrayOutput", TestHelper.GetNodeStringValue("string", "parameters/testArray/defaultValue"));
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "string", result);
+            TestHelper.FunctionTest(this.fixture, "string", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -722,7 +722,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 { "substringOutput","two"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "substring", result);
+            TestHelper.FunctionTest(this.fixture, "substring", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -734,7 +734,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 { "toLowerOutput","one two three"},
                 { "toUpperOutput","ONE TWO THREE"}
         };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "toLower", result);
+            TestHelper.FunctionTest(this.fixture, "toLower", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -745,7 +745,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 { "return","one two three"}
         };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "trim", result);
+            TestHelper.FunctionTest(this.fixture, "trim", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -758,7 +758,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 { "componentOutput","http%3A%2F%2Fcontoso.com%2Fresources%2Fnested%2Fazuredeploy.json"},
                 { "toStringOutput","http://contoso.com/resources/nested/azuredeploy.json"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "uri", result);
+            TestHelper.FunctionTest(this.fixture, "uri", result);
         }
 
         [Trait("ARMFunctions", "String")]
@@ -771,7 +771,7 @@ namespace ARMCreatorTest.TestARMFunctions
                 { "utcShortOutput",DateTime.UtcNow.ToString("d")},
                 { "utcCustomOutput",DateTime.UtcNow.ToString("M d")}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "utcNow", result);
+            TestHelper.FunctionTest(this.fixture, "utcNow", result);
         }
 
         #endregion String

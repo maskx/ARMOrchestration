@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "lockName": {
+      "type": "string",
+      "defaultValue": "lockname1"
+    }
+  },
+  "variables": {},
+  "resources": [],
+  "outputs": {
+    "WithManagementGroupId": {
+      "type": "string",
+      "value": "[managementgroupresourceid('11645A35-036C-48F0-BD7F-EA8312B8DC18','Microsoft.Authorization/locks', parameters('lockName'))]"
+    },
+    "WithOutManagementGroupId": {
+      "type": "string",
+      "value": "[managementgroupresourceid('Microsoft.Authorization/locks', parameters('lockName'))]"
+    },
+    "NestResource": {
+      "type": "string",
+      "value": "[managementgroupresourceid('Microsoft.Authorization/locks/nestResourceType', parameters('lockName'),'NestResrouceName')]"
+    }
+  }
+}

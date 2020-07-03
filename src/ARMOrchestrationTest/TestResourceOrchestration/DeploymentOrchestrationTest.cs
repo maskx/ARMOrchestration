@@ -22,7 +22,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.OrchestrationTest(this.fixture.OrchestrationWorker, "HasResourceFail");
+            var instance = TestHelper.OrchestrationTest(this.fixture, "HasResourceFail");
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in rs)
             {

@@ -18,28 +18,28 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "OneResourceName")]
         public void OneResourceName()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "dependsOn/OneResourceName");
         }
 
         [Fact(DisplayName = "ThreeResourceName")]
         public void ThreeResourceName()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "dependsOn/ThreeResourceName");
         }
 
         [Fact(DisplayName = "CopyLoop")]
         public void CopyLoop()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "dependsOn/copyloop");
         }
 
         [Fact(DisplayName = "ConditionFalse")]
         public void ConditionFalse()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                 "dependsOn/ConditionFalse");
         }
     }

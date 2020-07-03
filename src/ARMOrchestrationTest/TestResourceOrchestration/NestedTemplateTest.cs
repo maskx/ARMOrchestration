@@ -20,14 +20,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "NestTemplate")]
         public void NestTemplate()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
                "NestTemplate/NestTemplate");
         }
 
         [Fact(DisplayName = "ExpressionsInNestedTemplates-inner")]
         public void ExpressionsInNestedTemplates_inner()
         {
-            TestHelper.OrchestrationTest(fixture.OrchestrationWorker,
+            TestHelper.OrchestrationTest(fixture,
               "NestTemplate/ExpressionsInNestedTemplates-inner",
               (instance, args) =>
               {

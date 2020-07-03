@@ -22,7 +22,7 @@ namespace ARMCreatorTest.TestARMFunctions
             {
                 {"addResult","abc-123"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "UserDefinedFunction", result);
+            TestHelper.FunctionTest(this.fixture, "UserDefinedFunction", result);
         }
     }
 }

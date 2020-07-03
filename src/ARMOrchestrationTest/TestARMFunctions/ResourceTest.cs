@@ -33,7 +33,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             {
                 {"lockResourceId",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Authorization/locks/lockname1/"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "extensionResourceId", result);
+            TestHelper.FunctionTest(this.fixture, "extensionResourceId", result);
         }
         [Fact(DisplayName = "subscriptionResourceId")]
         public void subscriptionResourceId()
@@ -43,8 +43,19 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"WithSubscriptionId",$"/subscription/11645A35-036C-48F0-BD7F-EA8312B8DC18/providers/Microsoft.Authorization/locks/lockname1"},
                 {"WithOutSubscriptionId",$"/subscription/{TestHelper.SubscriptionId}/providers/Microsoft.Authorization/locks/lockname1"},
                 {"NestResource",$"/subscription/{TestHelper.SubscriptionId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
-        };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "subscriptionResourceId", result);
+             };
+            TestHelper.FunctionTest(this.fixture, "subscriptionResourceId", result);
+        }
+        [Fact(DisplayName = "ManagementGroupResourceid")]
+        public void ManagementGroupResourceid()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"WithManagementGroupId",$"/management/11645A35-036C-48F0-BD7F-EA8312B8DC18/providers/Microsoft.Authorization/locks/lockname1"},
+                {"WithOutManagementGroupId",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1"},
+                {"NestResource",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
+             };
+            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result,TestHelper.ManagemntGroupId);
         }
         [Fact(DisplayName = "resourceid")]
         public void Resourceid()
@@ -56,7 +67,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"differentSubOutput","/subscription/11111111-1111-1111-1111-111111111111/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
                 { "nestedResourceOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceid", result);
+            TestHelper.FunctionTest(this.fixture, "resourceid", result);
         }
 
         [Fact(DisplayName = "resourceidInternl")]
@@ -119,7 +130,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 .Parse(TestHelper.GetJsonFileContent("mock/response/resourcegroup1"))
                 .ToString(Newtonsoft.Json.Formatting.None)}
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "resourceGroup", result);
+            TestHelper.FunctionTest(this.fixture, "resourceGroup", result);
         }
 
         [Fact(DisplayName = "ReferenceNoDependsOn")]
@@ -132,7 +143,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"referenceOutput",full["properties"].ToString(Newtonsoft.Json.Formatting.None)},
                 {"fullReferenceOutput",full.ToString(Newtonsoft.Json.Formatting.None) }
             };
-            TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "reference/reference", result);
+            TestHelper.FunctionTest(this.fixture, "reference/reference", result);
         }
 
         [Fact(DisplayName = "ReferenceDependsOn")]
@@ -141,7 +152,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "reference/referenceDependsOn", result);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/referenceDependsOn", result);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             bool hasResource = false;
             foreach (var r in rs)
@@ -164,7 +175,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "reference/ResourceIteration", result);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/ResourceIteration", result);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             Assert.Equal(6, rs.Count);
             int copyCount = 0;
@@ -201,7 +212,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture.OrchestrationWorker, "reference/PropertyIteration", result);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/PropertyIteration", result);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             bool hasexamplevm = false;
             int diskCount = 0;
