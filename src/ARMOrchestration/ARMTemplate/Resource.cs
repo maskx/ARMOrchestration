@@ -242,7 +242,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             #endregion ResouceId
 
             if (resourceElement.TryGetProperty("sku", out JsonElement sku))
-                r.SKU = SKU.Parse(sku.GetRawText(), functions, context);
+                r.SKU = SKU.Parse(sku, functions, context);
             else
                 r.SKU = new SKU() { Name = SKU.Default };
             if (resourceElement.TryGetProperty("kind", out JsonElement kind))

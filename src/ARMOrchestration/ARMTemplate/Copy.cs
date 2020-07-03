@@ -81,13 +81,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 copy.Input = input.GetRawText();
             }
-            if (!string.IsNullOrEmpty(deployContext.SubscriptionId))
-                copy.Id = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deployContext.SubscriptionId}";
-            if (!string.IsNullOrEmpty(deployContext.ManagementGroupId))
-                copy.Id = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deployContext.ManagementGroupId}";
-            if (!string.IsNullOrEmpty(deployContext.ResourceGroup))
-                copy.Id += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deployContext.ResourceGroup}";
-            copy.Id += $"/{infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/{infrastructure.BuitinServiceTypes.Copy}/{copy.Name}";
+            copy.Id = functions.ResourceId(deployContext, new object[] {
+                infrastructure.BuitinServiceTypes.Copy,
+                deployContext.DeploymentName,
+                copy.Name
+            });
             return copy;
         }
     }

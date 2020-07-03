@@ -582,7 +582,7 @@ WHEN MATCHED THEN
             #endregion ResouceId
 
             if (resourceElement.TryGetProperty("sku", out JsonElement sku))
-                r.SKU = SKU.Parse(sku.GetRawText(), ARMfunctions, context);
+                r.SKU = SKU.Parse(sku, ARMfunctions, context);
             else
                 r.SKU = new SKU() { Name = SKU.Default };
             if (resourceElement.TryGetProperty("kind", out JsonElement kind))

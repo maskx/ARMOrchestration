@@ -15,11 +15,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string Size { get; set; }
         public string Family { get; set; }
         public string Capacity { get; set; }
-
         public static SKU Parse(string rawString, ARMFunctions functions, Dictionary<string, object> context)
         {
             using var doc = JsonDocument.Parse(rawString);
-            var root = doc.RootElement;
+            return Parse(doc.RootElement, functions, context);
+        }
+        public static SKU Parse(JsonElement root, ARMFunctions functions, Dictionary<string, object> context)
+        {
             SKU sku = new SKU();
             if (root.TryGetProperty("name", out JsonElement nameE))
                 sku.Name = functions.Evaluate(nameE.GetString(), context).ToString();

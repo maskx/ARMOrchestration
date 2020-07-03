@@ -852,7 +852,13 @@ namespace maskx.ARMOrchestration.Functions
 
         public string ResourceId(DeploymentContext input, params object[] pars)
         {
-            string subscriptionId = input.SubscriptionId;
+            string groupType = infrastructure.BuiltinPathSegment.Subscription;
+            string groupId = input.SubscriptionId;
+            if (!string.IsNullOrEmpty(input.ManagementGroupId))
+            {
+                groupType = infrastructure.BuiltinPathSegment.ManagementGroup;
+                groupId = input.ManagementGroupId;
+            }
             string resourceGroupName = input.ResourceGroup;
             string[] fullnames;
             IEnumerable<object> nestResources;
@@ -865,7 +871,7 @@ namespace maskx.ARMOrchestration.Functions
             }
             else if (Guid.TryParse(pars[0].ToString(), out Guid subid))
             {
-                subscriptionId = subid.ToString();
+                groupId = subid.ToString();
                 if (pars[1].ToString().IndexOf('/') > 0)
                 {
                     fullnames = pars[1].ToString().Split('/');
@@ -894,7 +900,9 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            if(string.IsNullOrEmpty(resourceGroupName))
+                return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
+            return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
         public string SubscriptionResourceId(DeploymentContext input, params object[] pars)
