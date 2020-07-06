@@ -63,7 +63,7 @@ namespace maskx.ARMOrchestration.Extensions
             using var doc = JsonDocument.Parse(rawString);
             doc.RootElement.WriteTo(writer);
         }
-        public static void WritRawString(this Utf8JsonWriter writer, string name, string rawString)
+        public static void WriteRawString(this Utf8JsonWriter writer, string name, string rawString)
         {
             writer.WritePropertyName(name);
             writer.WriteRawString(rawString);      

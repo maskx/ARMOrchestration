@@ -38,6 +38,10 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.NotNull(r);
             Assert.Empty(r.Template.Resources);
             Assert.Empty(r.Deployments);
+            var s= r.Template.ToString();
+            using var doc = JsonDocument.Parse(s);
+            var root = doc.RootElement;
+
         }
 
         [Fact(DisplayName = "NoSchema")]
@@ -105,6 +109,10 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal(5, ele3.GetArrayLength());
             Assert.True(root.TryGetProperty("top-level-integer-array", out JsonElement ele4));
             Assert.Equal(5, ele4.GetArrayLength());
+
+            var s = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s);
+            var root1 = doc1.RootElement;
         }
 
         [Fact(DisplayName = "ResourceIteration")]
@@ -124,6 +132,10 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("0storage", resource);
             Assert.Equal(4, Deployment.Template.Resources.Count);
             Assert.Equal("Microsoft.Storage/storageAccounts", Deployment.Template.Resources["0storage"].Type);
+
+            var s = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s);
+            var root1 = doc1.RootElement;
         }
 
         [Fact(DisplayName = "PropertyIteration")]
@@ -151,6 +163,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
                 Assert.Equal(index, lun.GetInt32());
                 index++;
             }
+            var s = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s);
+            var root1 = doc1.RootElement;
         }
 
         [Fact(DisplayName = "ChildResource")]
@@ -169,6 +184,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.True(Deployment.Template.Resources.TryGetValue("Subnet1", out Resource s));
             Assert.Equal("Microsoft.Network/virtualNetworks", v.FullType);
             Assert.Equal("Microsoft.Network/virtualNetworks/subnets", s.FullType);
+            var s1 = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s1);
+            var root1 = doc1.RootElement;
         }
 
         [Fact(DisplayName = "NestTemplate")]
@@ -199,6 +217,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var res = t.Resources.Values.First();
             Assert.Equal("storageAccount1", res.FullName);
             Assert.Equal("Microsoft.Storage/storageAccounts", res.FullType);
+            var s = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s);
+            var root1 = doc1.RootElement;
         }
 
         [Fact(DisplayName = "ExpressionEvaluationScopeInner")]
@@ -221,6 +242,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Single(t.Resources);
             var res = t.Resources.Values.First();
             Assert.Equal("from nested template", res.FullName);
+            var s = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s);
+            var root1 = doc1.RootElement;
         }
 
         [Fact(DisplayName = "ExpressionEvaluationScopeOuter")]
@@ -243,6 +267,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Single(t.Resources);
             var res = t.Resources.Values.First();
             Assert.Equal("from parent template", res.FullName);
+            var s = Deployment.Template.ToString();
+            using var doc1 = JsonDocument.Parse(s);
+            var root1 = doc1.RootElement;
         }
     }
 }

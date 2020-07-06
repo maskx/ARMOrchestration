@@ -1,5 +1,4 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.WhatIf;
@@ -9,10 +8,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
 {
@@ -63,8 +59,6 @@ WHEN MATCHED THEN
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             db.ExecuteNonQueryAsync().Wait();
         }
-
-      
 
         public WhatIfOperationResult WhatIf(PredictTemplateOrchestrationInput input)
         {
@@ -170,59 +164,6 @@ WHEN MATCHED THEN
                 });
             }
         }
-
-        //public (bool Result, string Message, Copy Copy) ParseCopy(string jsonString, Dictionary<string, object> context)
-        //{
-        //    var copy = new Copy();
-        //    var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
-        //    using var doc = JsonDocument.Parse(jsonString);
-        //    var root = doc.RootElement;
-        //    if (root.TryGetProperty("name", out JsonElement name))
-        //        copy.Name = name.GetString();
-        //    else
-        //        return (false, "not find name in copy node", null);
-
-        //    if (root.TryGetProperty("count", out JsonElement count))
-        //    {
-        //        if (count.ValueKind == JsonValueKind.Number)
-        //            copy.Count = count.GetInt32();
-        //        else if (count.ValueKind == JsonValueKind.String)
-        //            copy.Count = (int)ARMfunctions.Evaluate(count.GetString(), context);
-        //        else
-        //            return (false, "the value of count property should be Number in copy node", null);
-        //        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
-        //        if (context.ContainsKey(ContextKeys.DEPENDSON))
-        //            return (false, "You can't use the reference function to set the value of the count property in a copy loop.", null);
-        //    }
-        //    else
-        //        return (false, "not find count in copy node", null);
-        //    if (root.TryGetProperty("mode", out JsonElement mode))
-        //    {
-        //        copy.Mode = mode.GetString().ToLower();
-        //    }
-        //    if (root.TryGetProperty("batchSize", out JsonElement batchSize))
-        //    {
-        //        if (batchSize.ValueKind == JsonValueKind.Number)
-        //            copy.BatchSize = batchSize.GetInt32();
-        //        else if (batchSize.ValueKind == JsonValueKind.String)
-        //            copy.BatchSize = (int)ARMfunctions.Evaluate(batchSize.GetString(), context);
-        //    }
-        //    if (root.TryGetProperty("input", out JsonElement input))
-        //    {
-        //        copy.Input = input.GetRawText();
-        //    }
-        //    if (!string.IsNullOrEmpty(deployContext.SubscriptionId))
-        //        copy.Id = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deployContext.SubscriptionId}";
-        //    if (!string.IsNullOrEmpty(deployContext.ManagementGroupId))
-        //        copy.Id = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deployContext.ManagementGroupId}";
-        //    if (!string.IsNullOrEmpty(deployContext.ResourceGroup))
-        //        copy.Id += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deployContext.ResourceGroup}";
-        //    copy.Id += $"/{this.infrastructure.BuitinServiceTypes.Deployments}/{deployContext.DeploymentName}/{infrastructure.BuitinServiceTypes.Copy}/{copy.Name}";
-        //    return (true, string.Empty, copy);
-        //}
-
-   
-
     
         [Obsolete("using Resource.ExpandProperties(DeploymentContext deploymentContext,ARMFunctions functions,IInfrastructure infrastructure) instead")]
         public string ExpadResourceProperties(Resource resource, DeploymentContext deploymentContext)

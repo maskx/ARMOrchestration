@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using maskx.ARMOrchestration.Extensions;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -18,25 +21,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
             return functions;
         }
-        public static (bool Result, string Message, Functions Functions) Parse(string jsonString)
+        public override string ToString()
         {
-            using var doc = JsonDocument.Parse(jsonString);
-            var root = doc.RootElement;
-            Functions functions = new Functions();
-            foreach (var funcDef in root.EnumerateArray())
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartArray();
+            foreach (var key in this.Members.Keys)
             {
-                if (funcDef.TryGetProperty("namespace", out JsonElement nsEle))
-                {
-                    var mr = ARMTemplate.Members.Parse(funcDef.GetProperty("members").GetRawText());
-                    if (mr.Result)
-                        functions.Members.Add(nsEle.GetString(), mr.Members);
-                    else
-                        return (false, mr.Message, null);
-                }
+                writer.WriteRawString(key,this.Members[key].ToString());
             }
-            return (true, string.Empty, functions);
+            writer.WriteEndArray();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
         }
-
         public Dictionary<string, Members> Members { get; set; } = new Dictionary<string, Members>();
 
         public Members this[string name]
@@ -58,17 +55,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Output = root.GetProperty("output").GetRawText()
             };
         }
-        public static (bool Result, string Message, Member Member) Parse(string jsonString)
+        public override string ToString()
         {
-            using var doc = JsonDocument.Parse(jsonString);
-            var root = doc.RootElement;
-            return (true, string.Empty, new Member()
-            {
-                Parameters = root.GetProperty("parameters").GetRawText(),
-                Output = root.GetProperty("output").GetRawText()
-            });
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartObject();
+            writer.WriteRawString("parameters", this.Parameters);
+            writer.WriteRawString("output", this.Output);
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
         }
-
         public string Parameters { get; set; }
 
         public string Output { get; set; }
@@ -81,33 +78,30 @@ namespace maskx.ARMOrchestration.ARMTemplate
             Members members = new Members();
             foreach (var m in root.EnumerateObject())
             {
-                members.Memeber.Add(m.Name, Member.Parse(m.Value));
+                members.Member.Add(m.Name, ARMTemplate.Member.Parse(m.Value));
             }
             return members;
         }
-        public static (bool Result, string Message, Members Members) Parse(string jsonString)
+        public override string ToString()
         {
-            Members members = new Members();
-            using var doc = JsonDocument.Parse(jsonString);
-            var root = doc.RootElement;
-            foreach (var m in root.EnumerateObject())
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+            writer.WriteStartObject();
+            foreach (var key in this.Member.Keys)
             {
-                var mr = Member.Parse(m.Value.GetRawText());
-                if (mr.Result)
-                    members.Memeber.Add(m.Name, mr.Member);
-                else
-                    return (false, mr.Message, null);
+                writer.WriteRawString(key,this.Member[key].ToString());
             }
-            return (true, string.Empty, members);
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
         }
-
-        public Dictionary<string, Member> Memeber = new Dictionary<string, Member>();
+        public Dictionary<string, Member> Member = new Dictionary<string, Member>();
 
         public Member this[string name]
         {
             get
             {
-                return this.Memeber[name];
+                return this.Member[name];
             }
         }
     }

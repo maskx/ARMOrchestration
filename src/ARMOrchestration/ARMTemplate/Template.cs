@@ -110,11 +110,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             if (!string.IsNullOrEmpty(this.ApiProfile))
                 writer.WriteString("apiProfile", this.ApiProfile);
             if (!string.IsNullOrEmpty(this.Parameters))
-                writer.WritRawString("parameters", this.Parameters);
+                writer.WriteRawString("parameters", this.Parameters);
             if (!string.IsNullOrEmpty(this.Variables))
-                writer.WritRawString("variables", this.Variables);
+                writer.WriteRawString("variables", this.Variables);
             if (!string.IsNullOrEmpty(this.Outputs))
-                writer.WritRawString("outputs", this.Outputs);
+                writer.WriteRawString("outputs", this.Outputs);
             writer.WritePropertyName("resources");
             writer.WriteStartArray();
             foreach (var r in Resources.Values)
@@ -122,6 +122,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 writer.WriteRawString(r.ToString());
             }
             writer.WriteEndArray();
+            if(this.Functions!=null)
+            {
+                writer.WriteRawString("functions",this.Functions.ToString());
+            }
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());

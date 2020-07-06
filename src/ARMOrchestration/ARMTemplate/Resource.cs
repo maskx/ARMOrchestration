@@ -103,13 +103,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
 
             if (!string.IsNullOrEmpty(this.Properties))
-                writer.WritRawString("properties", this.Properties);
-            if (this.SKU == null)
-                writer.WritRawString("sku", this.SKU.ToString());
+                writer.WriteRawString("properties", this.Properties);
+            if (this.SKU != null)
+                writer.WriteRawString("sku", this.SKU.ToString());
             if (!string.IsNullOrEmpty(this.Kind))
                 writer.WriteString("kind", this.Kind);
             if (!string.IsNullOrEmpty(this.Plan))
-                writer.WritRawString("plan", this.Plan);
+                writer.WriteRawString("plan", this.Plan);
             if (!string.IsNullOrEmpty(this.ResourceGroup))
                 writer.WriteString("resourceGroup", this.ResourceGroup);
             if (!string.IsNullOrEmpty(this.SubscriptionId))
