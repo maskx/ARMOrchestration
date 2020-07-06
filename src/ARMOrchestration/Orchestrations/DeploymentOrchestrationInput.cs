@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestrationInput : DeploymentContext
     {
-        public static DeploymentOrchestrationInput  Parse(DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
+        public static DeploymentOrchestrationInput  Validate(DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
         {
             if (input.Template != null)
                 return input;
@@ -152,9 +152,10 @@ namespace maskx.ARMOrchestration.Orchestrations
                 ParametersLink = parametersLink,
                 ApiVersion = resource.ApiVersion,
                 CreateByUserId = deploymentContext.CreateByUserId,
-                LastRunUserId = deploymentContext.LastRunUserId
+                LastRunUserId = deploymentContext.LastRunUserId,
+                DependsOn=resource.DependsOn
             };
-            return Parse(deployInput,functions,infrastructure);
+            return Validate(deployInput,functions,infrastructure);
         }
         public List<string> DependsOn { get; set; } = new List<string>();
         public Dictionary<string, DeploymentOrchestrationInput> Deployments { get; set; } = new Dictionary<string, DeploymentOrchestrationInput>();

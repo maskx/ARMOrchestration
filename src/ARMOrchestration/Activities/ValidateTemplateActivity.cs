@@ -23,7 +23,7 @@ namespace maskx.ARMOrchestration.Activities
             TaskResult tr;
             try
             {
-                var Deployment = DeploymentOrchestrationInput.Parse(input, templateHelper.ARMfunctions, infrastructure);
+                var Deployment = DeploymentOrchestrationInput.Validate(input, templateHelper.ARMfunctions, infrastructure);
                 tr = new TaskResult(200, DataConverter.Serialize(Deployment));
             }
             catch (Exception ex)

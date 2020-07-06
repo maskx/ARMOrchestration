@@ -43,7 +43,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region validate template
 
-            // when Template had value, this orchestration call by internal or processed by BeforeDeployment,the template string content already be parsed
+            // when Template had value, this orchestration call by internal, the template string content already be parsed
             if (input.Template == null)
             {
                 var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);

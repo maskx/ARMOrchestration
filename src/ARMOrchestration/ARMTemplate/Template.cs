@@ -34,7 +34,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public DeployLevel DeployLevel { get; set; }
 
         internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
-        public static Template Parse(JsonElement root, DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
+        public static Template Parse(JsonElement root, DeploymentContext input, ARMFunctions functions, IInfrastructure infrastructure)
         {
             Template template = new Template();
             input.Template = template;
@@ -93,7 +93,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
             return template;
         }
-        public static Template Parse(string content, DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
+        public static Template Parse(string content, DeploymentContext input, ARMFunctions functions, IInfrastructure infrastructure)
         {
             using JsonDocument doc = JsonDocument.Parse(content);
             return Parse(doc.RootElement, input, functions, infrastructure);

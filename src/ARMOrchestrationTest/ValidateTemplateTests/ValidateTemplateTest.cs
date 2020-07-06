@@ -30,7 +30,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "EmptyTemplate")]
         public void EmptyTemplate()
         {
-            var r = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var r = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName= "EmptyTemplate",
                 TemplateContent = GetTemplate("Empty")
@@ -50,7 +50,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("not find $schema in template",
                 Assert.Throws<Exception>(() =>
                 {
-                    DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+                    DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
                     {
                         DeploymentName = "NoSchema",
                         TemplateContent = GetTemplate("NoSchema")
@@ -64,7 +64,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("not find contentVersion in template",
                Assert.Throws<Exception>(() =>
                {
-                   DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+                   DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
                    {
                        DeploymentName = "NoContentVersion",
                        TemplateContent = GetTemplate("NoContentVersion")
@@ -78,7 +78,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("not find resources in template",
                Assert.Throws<Exception>(() =>
                {
-                   DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+                   DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
                    {
                        DeploymentName = "NoResources",
                        TemplateContent = GetTemplate("NoResources")
@@ -90,7 +90,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         public void VariableIteration()
         {
 
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "VariableIteration",
                 TemplateContent = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration")
@@ -118,7 +118,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "ResourceIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -141,7 +141,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "PropertyIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -171,7 +171,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ChildResource")]
         public void ChildResource()
         {
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "ChildResource",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -192,7 +192,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NestTemplate")]
         public void NestTemplate()
         {
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "NestTemplate",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -225,7 +225,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ExpressionEvaluationScopeInner")]
         public void ExpressionEvaluationScopeInner()
         {
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "ExpressionEvaluationScopeInner",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -250,7 +250,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ExpressionEvaluationScopeOuter")]
         public void ExpressionEvaluationScopeOuter()
         {
-            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
                 DeploymentName = "ExpressionEvaluationScopeOuter",
                 SubscriptionId = TestHelper.SubscriptionId,
