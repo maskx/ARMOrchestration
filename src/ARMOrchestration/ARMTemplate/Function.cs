@@ -5,6 +5,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class Functions
     {
+        public static Functions Parse(JsonElement root)
+        {
+            Functions functions = new Functions();
+            foreach (var funcDef in root.EnumerateArray())
+            {
+                if (funcDef.TryGetProperty("namespace", out JsonElement nsEle))
+                {
+                    functions.Members.Add(nsEle.GetString(), ARMTemplate.Members.Parse(funcDef.GetProperty("members")));
+
+                }
+            }
+            return functions;
+        }
         public static (bool Result, string Message, Functions Functions) Parse(string jsonString)
         {
             using var doc = JsonDocument.Parse(jsonString);
@@ -37,6 +50,14 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
     public class Member
     {
+        public static Member Parse(JsonElement root)
+        {
+            return new Member()
+            {
+                Parameters = root.GetProperty("parameters").GetRawText(),
+                Output = root.GetProperty("output").GetRawText()
+            };
+        }
         public static (bool Result, string Message, Member Member) Parse(string jsonString)
         {
             using var doc = JsonDocument.Parse(jsonString);
@@ -55,6 +76,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
     public class Members
     {
+        public static Members Parse(JsonElement root)
+        {
+            Members members = new Members();
+            foreach (var m in root.EnumerateObject())
+            {
+                members.Memeber.Add(m.Name, Member.Parse(m.Value));
+            }
+            return members;
+        }
         public static (bool Result, string Message, Members Members) Parse(string jsonString)
         {
             Members members = new Members();

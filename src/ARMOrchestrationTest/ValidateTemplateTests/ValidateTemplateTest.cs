@@ -1,10 +1,9 @@
 ﻿using ARMCreatorTest;
-using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -13,21 +12,16 @@ using Xunit;
 namespace ARMOrchestrationTest.ValidateTemplateTests
 {
     [Trait("c", "ValidateTemplate")]
+    [Collection("WebHost ARMOrchestartion")]
     public class ValidateTemplateTest
     {
-        private readonly ARMTemplateHelper templateHelper = new ARMTemplateHelper(
-            Options.Create(new ARMOrchestrationOptions()),
-            new ARMFunctions(
-                Options.Create(new ARMOrchestrationOptions()
-                {
-                    Database = new DatabaseConfig()
-                    {
-                    }
-                }),
-                null,
-                new MockInfrastructure(null)),
-            new MockInfrastructure(null));
-
+        private readonly ARMFunctions functions;
+        private readonly IInfrastructure infrastructure;
+        public ValidateTemplateTest(ARMOrchestartionFixture fixture)
+        {
+            this.functions = fixture.ARMFunctions;
+            this.infrastructure = fixture.ServiceProvider.GetService<IInfrastructure>();
+        }
         private string GetTemplate(string filename)
         {
             return TestHelper.GetJsonFileContent("ValidateTemplateTests/Template/" + filename);
@@ -36,55 +30,69 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "EmptyTemplate")]
         public void EmptyTemplate()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var r = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName= "EmptyTemplate",
                 TemplateContent = GetTemplate("Empty")
-            });
-            Assert.True(r.Result);
+            }, functions, infrastructure);
+            Assert.NotNull(r);
+            Assert.Empty(r.Template.Resources);
+            Assert.Empty(r.Deployments);
         }
 
         [Fact(DisplayName = "NoSchema")]
         public void NoSchema()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
-            {
-                TemplateContent = GetTemplate("NoSchema")
-            });
-            Assert.False(r.Result);
-            Assert.Equal("not find $schema in template", r.Message);
+            Assert.Equal("not find $schema in template",
+                Assert.Throws<Exception>(() =>
+                {
+                    DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+                    {
+                        DeploymentName = "NoSchema",
+                        TemplateContent = GetTemplate("NoSchema")
+                    }, functions, infrastructure);
+                }).Message);
         }
 
         [Fact(DisplayName = "NoContentVersion")]
         public void NoContentVersion()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
-            {
-                TemplateContent = GetTemplate("NoContentVersion")
-            });
-            Assert.False(r.Result);
-            Assert.Equal("not find contentVersion in template", r.Message);
+            Assert.Equal("not find contentVersion in template",
+               Assert.Throws<Exception>(() =>
+               {
+                   DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+                   {
+                       DeploymentName = "NoContentVersion",
+                       TemplateContent = GetTemplate("NoContentVersion")
+                   }, functions, infrastructure);
+               }).Message);
         }
 
         [Fact(DisplayName = "NoResources")]
         public void NoResources()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
-            {
-                TemplateContent = GetTemplate("NoResources")
-            });
-            Assert.False(r.Result);
-            Assert.Equal("not find resources in template", r.Message);
+            Assert.Equal("not find resources in template",
+               Assert.Throws<Exception>(() =>
+               {
+                   DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
+                   {
+                       DeploymentName = "NoResources",
+                       TemplateContent = GetTemplate("NoResources")
+                   }, functions, infrastructure);
+               }).Message);
         }
 
         [Fact(DisplayName = "VariableIteration")]
         public void VariableIteration()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "VariableIteration",
                 TemplateContent = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration")
-            });
-            Assert.True(r.Result);
-            using var doc = JsonDocument.Parse(r.Deployment.Template.Variables);
+            }, functions, infrastructure);
+
+            using var doc = JsonDocument.Parse(Deployment.Template.Variables);
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("disk-array-on-object", out JsonElement ele1));
             Assert.True(ele1.TryGetProperty("disks", out JsonElement disks));
@@ -102,33 +110,35 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "ResourceIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = TestHelper.GetJsonFileContent("Templates/CopyIndex/ResourceIteration")
-            });
-            Assert.True(r.Result);
-            Assert.True(r.Deployment.Template.Resources.ContainsKey("storagecopy"));
-            Assert.Equal(3, r.Deployment.Template.Resources["storagecopy"].Resources.Count);
-            var resource = r.Deployment.Template.Resources["storagecopy"].Resources.First();
+            }, functions, infrastructure);
+
+            Assert.True(Deployment.Template.Resources.ContainsKey("storagecopy"));
+            Assert.Equal(3, Deployment.Template.Resources["storagecopy"].Resources.Count);
+            var resource = Deployment.Template.Resources["storagecopy"].Resources.First();
             Assert.Equal("0storage", resource);
-            Assert.Equal(4, r.Deployment.Template.Resources.Count);
-            Assert.Equal("Microsoft.Storage/storageAccounts", r.Deployment.Template.Resources["0storage"].Type);
+            Assert.Equal(4, Deployment.Template.Resources.Count);
+            Assert.Equal("Microsoft.Storage/storageAccounts", Deployment.Template.Resources["0storage"].Type);
         }
 
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "PropertyIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = TestHelper.GetJsonFileContent("Templates/CopyIndex/PropertyIteration")
-            });
-            Assert.True(r.Result);
-            Assert.Single(r.Deployment.Template.Resources);
-            var resource = r.Deployment.Template.Resources.Values.First();
+            }, functions, infrastructure);
+          
+            Assert.Single(Deployment.Template.Resources);
+            var resource = Deployment.Template.Resources.Values.First();
             using var doc = JsonDocument.Parse(resource.Properties);
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("storageProfile", out JsonElement storageProfile));
@@ -146,16 +156,17 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ChildResource")]
         public void ChildResource()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "ChildResource",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = GetTemplate("ChildResource")
-            });
-            Assert.True(r.Result);
-            Assert.Equal(2, r.Deployment.Template.Resources.Count);
-            Assert.True(r.Deployment.Template.Resources.TryGetValue("VNet1", out Resource v));
-            Assert.True(r.Deployment.Template.Resources.TryGetValue("Subnet1", out Resource s));
+            }, functions, infrastructure);
+
+            Assert.Equal(2, Deployment.Template.Resources.Count);
+            Assert.True(Deployment.Template.Resources.TryGetValue("VNet1", out Resource v));
+            Assert.True(Deployment.Template.Resources.TryGetValue("Subnet1", out Resource s));
             Assert.Equal("Microsoft.Network/virtualNetworks", v.FullType);
             Assert.Equal("Microsoft.Network/virtualNetworks/subnets", s.FullType);
         }
@@ -163,8 +174,9 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NestTemplate")]
         public void NestTemplate()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "NestTemplate",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = GetTemplate("NestTemplate"),
@@ -172,13 +184,13 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
                 GroupId = Guid.NewGuid().ToString("N"),
                 GroupType = "ResourceGroup",
                 HierarchyId = "001002003004005"
-            });
-            Assert.True(r.Result);
-            Assert.Single(r.Deployment.Deployments);
-            var d = r.Deployment.Deployments.First().Value;
+            }, functions, infrastructure);
+
+            Assert.Single(Deployment.Deployments);
+            var d = Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
-            Assert.Equal(r.Deployment.RootId, d.RootId);
+            Assert.Equal(Deployment.RootId, d.RootId);
             Assert.NotNull(d.DeploymentId);
 
             Assert.NotNull(d.Template);
@@ -192,15 +204,16 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ExpressionEvaluationScopeInner")]
         public void ExpressionEvaluationScopeInner()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "ExpressionEvaluationScopeInner",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = GetTemplate("ExpressionsInNestedTemplates-inner")
-            });
-            Assert.True(r.Result);
-            Assert.Single(r.Deployment.Deployments);
-            var d = r.Deployment.Deployments.First().Value;
+            }, functions, infrastructure);
+           
+            Assert.Single(Deployment.Deployments);
+            var d = Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.NotNull(d.Template);
@@ -213,15 +226,16 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ExpressionEvaluationScopeOuter")]
         public void ExpressionEvaluationScopeOuter()
         {
-            var r = templateHelper.ParseDeployment(new DeploymentOrchestrationInput()
+            var Deployment = DeploymentOrchestrationInput.Parse(new DeploymentOrchestrationInput()
             {
+                DeploymentName = "ExpressionEvaluationScopeOuter",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = GetTemplate("ExpressionsInNestedTemplates-outer")
-            });
-            Assert.True(r.Result);
-            Assert.Single(r.Deployment.Deployments);
-            var d = r.Deployment.Deployments.First().Value;
+            }, functions, infrastructure);
+
+            Assert.Single(Deployment.Deployments);
+            var d = Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.NotNull(d.Template);

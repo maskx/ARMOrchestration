@@ -131,7 +131,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return Parse(doc.RootElement, context, functions, infrastructure, parentName, parentType);
 
         }
-        public static List<Resource> Parse(
+        private static List<Resource> ParseInternal(
             JsonElement resourceElement
             , Dictionary<string, object> context
             , ARMFunctions functions
@@ -139,12 +139,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             , string parentName,
             string parentType)
         {
-            if (resourceElement.TryGetProperty("copy", out JsonElement copy))
-                return ExpandCopyResource(resourceElement, copy,context,functions,infrastructure,parentName,parentType);
             DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
             List<Resource> resources = new List<Resource>();
             Resource r = new Resource();
             resources.Add(r);
+
             if (resourceElement.TryGetProperty("condition", out JsonElement condition))
             {
                 if (condition.ValueKind == JsonValueKind.False)
@@ -157,44 +156,48 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 r.ApiVersion = apiVersion.GetString();
             else
                 throw new Exception("not find apiVersion in resource node");
+
             if (resourceElement.TryGetProperty("type", out JsonElement type))
                 r.Type = type.GetString();
             else
                 throw new Exception("not find type in resource node");
+
             if (!string.IsNullOrEmpty(parentType))
                 r.FullType = $"{parentType}/{r.Type}";
             else
                 r.FullType = r.Type;
+
             if (resourceElement.TryGetProperty("name", out JsonElement name))
                 r.Name = functions.Evaluate(name.GetString(), context).ToString();
             else
                 throw new Exception("not find name in resource node");
+
             if (!string.IsNullOrEmpty(parentName))
                 r.FullName = $"{parentName}/{r.Name}";
             else
                 r.FullName = r.Name;
 
             if (resourceElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
-            {
                 r.ResourceGroup = functions.Evaluate(resourceGroup.GetString(), context).ToString();
-            }
             else
                 r.ResourceGroup = deploymentContext.ResourceGroup;
+
             if (resourceElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
                 r.SubscriptionId = functions.Evaluate(subscriptionId.GetString(), context).ToString();
             else
                 r.SubscriptionId = deploymentContext.SubscriptionId;
-            // TODO: need support deployment resource in managementGroup
-            // subscriptionId and managementGroupId should be only one have value
+
             if (resourceElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
                 r.ManagementGroupId = functions.Evaluate(managementGroupId.GetString(), context).ToString();
             else
                 r.ManagementGroupId = deploymentContext.ManagementGroupId;
+
             if (resourceElement.TryGetProperty("location", out JsonElement location))
                 r.Location = functions.Evaluate(location.GetString(), context).ToString();
 
             if (resourceElement.TryGetProperty("comments", out JsonElement comments))
                 r.Comments = comments.GetString();
+
             if (resourceElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
             {
                 using var dd = JsonDocument.Parse(dependsOn.GetRawText());
@@ -245,10 +248,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 r.SKU = SKU.Parse(sku, functions, context);
             else
                 r.SKU = new SKU() { Name = SKU.Default };
+
             if (resourceElement.TryGetProperty("kind", out JsonElement kind))
                 r.Kind = kind.GetString();
+
             if (resourceElement.TryGetProperty("plan", out JsonElement plan))
                 r.Plan = plan.GetRawText();
+
             if (resourceElement.TryGetProperty("zones", out JsonElement zones))
             {
                 foreach (var z in zones.EnumerateArray())
@@ -256,6 +262,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     r.Zones.Add(functions.Evaluate(z.GetString(), context).ToString());
                 }
             }
+
             if (context.ContainsKey(ContextKeys.DEPENDSON))
             {
                 //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
@@ -290,6 +297,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
             }
             return resources;
+        }
+        public static List<Resource> Parse(
+            JsonElement resourceElement
+            , Dictionary<string, object> context
+            , ARMFunctions functions
+            , IInfrastructure infrastructure
+            , string parentName,
+            string parentType)
+        {
+            if (resourceElement.TryGetProperty("copy", out JsonElement copy))
+                return ExpandCopyResource(resourceElement, copy,context,functions,infrastructure,parentName,parentType);
+            return ParseInternal(resourceElement, context, functions, infrastructure, parentName, parentType);
         }
         private static List<Resource> ExpandCopyResource(
           JsonElement resource
@@ -329,7 +348,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var Resources = Parse(resource, copyContext, functions, infrastructure,parentName,parentType);
+                var Resources = ParseInternal(resource, copyContext, functions, infrastructure,parentName,parentType);
 
                 Resources[0].CopyIndex = i;
                 Resources[0].CopyId = copy.Id;
@@ -358,6 +377,22 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return true;
             }
             return false;
+        }
+
+        public string ExpandProperties(DeploymentContext deploymentContext,ARMFunctions functions,IInfrastructure infrastructure)
+        {
+            if (string.IsNullOrEmpty(this.Properties))
+                return string.Empty;
+            {
+                var doc = JsonDocument.Parse(this.Properties);
+                Dictionary<string, object> cxt = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, deploymentContext } };
+                if (!string.IsNullOrEmpty(this.CopyName))
+                {
+                    cxt.Add(ContextKeys.CURRENT_LOOP_NAME, this.CopyName);
+                    cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { this.CopyName, this.CopyIndex } });
+                }
+                return doc.RootElement.ExpandObject(cxt, functions, infrastructure);
+            }
         }
     }
 }

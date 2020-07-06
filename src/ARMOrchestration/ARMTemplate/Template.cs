@@ -1,4 +1,6 @@
 ﻿using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Functions;
+using maskx.ARMOrchestration.Orchestrations;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,30 +34,69 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public DeployLevel DeployLevel { get; set; }
 
         internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
-
-        public static Template Parse(string content)
+        public static Template Parse(JsonElement root, DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
         {
             Template template = new Template();
-            using JsonDocument doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
+            input.Template = template;
+            Dictionary<string, object> context = new Dictionary<string, object>() {
+                {ContextKeys.ARM_CONTEXT, input},
+                {ContextKeys.IS_PREPARE,true }
+            };
+            if (!root.TryGetProperty("$schema", out JsonElement schema))
+                throw new Exception("not find $schema in template");
+            template.Schema = schema.GetString();
 
-            if (root.TryGetProperty("$schema", out JsonElement schema))
-                template.Schema = schema.GetString();
-            if (root.TryGetProperty("contentVersion", out JsonElement contentVersion))
-                template.ContentVersion = contentVersion.GetString();
+            if (!root.TryGetProperty("contentVersion", out JsonElement contentVersion))
+                throw new Exception("not find contentVersion in template");
+            template.ContentVersion = contentVersion.GetString();
+
             if (template.Schema.EndsWith("deploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
                 template.DeployLevel = DeployLevel.ResourceGroup;
             else if (template.Schema.EndsWith("subscriptionDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
                 template.DeployLevel = DeployLevel.Subscription;
             else if (template.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
                 template.DeployLevel = DeployLevel.ManagemnetGroup;
+            else
+                throw new Exception("wrong $shema setting");
+
+            if (!root.TryGetProperty("resources", out JsonElement resources))
+                throw new Exception("not find resources in template");
+
+
             if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
                 template.ApiProfile = apiProfile.GetString();
+
             if (root.TryGetProperty("parameters", out JsonElement parameters))
                 template.Parameters = parameters.GetRawText();
+
             if (root.TryGetProperty("outputs", out JsonElement outputs))
                 template.Outputs = outputs.GetRawText();
+            if (root.TryGetProperty("variables", out JsonElement variables))
+            {
+                // cos var can reference var
+                template.Variables = variables.GetRawText();
+                template.Variables = variables.ExpandObject(context, functions, infrastructure);
+            }
+            if (root.TryGetProperty("functions", out JsonElement funcs))
+            {
+                template.Functions = Functions.Parse(funcs);
+            }
+            foreach (var resource in resources.EnumerateArray())
+            {
+                foreach (var r in Resource.Parse(resource, context, functions, infrastructure, string.Empty, string.Empty))
+                {
+                    if (r.Condition)
+                        template.Resources.Add(r.Name, r);
+                    else
+                        template.ConditionFalseResources.Add(r.Name);
+                }
+            }
             return template;
+        }
+        public static Template Parse(string content, DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
+        {
+            using JsonDocument doc = JsonDocument.Parse(content);
+            return Parse(doc.RootElement, input, functions, infrastructure);
         }
 
         public override string ToString()
@@ -84,7 +125,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());
-
         }
     }
 }

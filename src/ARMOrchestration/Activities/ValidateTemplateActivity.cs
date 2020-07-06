@@ -1,6 +1,7 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
+using System;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
@@ -19,22 +20,21 @@ namespace maskx.ARMOrchestration.Activities
 
         protected override TaskResult Execute(TaskContext context, DeploymentOrchestrationInput input)
         {
-            var (Result, Message, Deployment) = templateHelper.ParseDeployment(input);
             TaskResult tr;
-            if (Result)
+            try
             {
+                var Deployment = DeploymentOrchestrationInput.Parse(input, templateHelper.ARMfunctions, infrastructure);
                 tr = new TaskResult(200, DataConverter.Serialize(Deployment));
             }
-            else
+            catch (Exception ex)
             {
-                tr = new TaskResult() { Code = 400, Content = Message };
+                tr = new TaskResult() { Code = 400, Content = ex.Message };
             }
-
             DeploymentOperation deploymentOperation = new DeploymentOperation(input, this.infrastructure)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = Result ? ProvisioningStage.ValidateTemplate : ProvisioningStage.ValidateTemplateFailed,
+                Stage = tr.Code == 200 ? ProvisioningStage.ValidateTemplate : ProvisioningStage.ValidateTemplateFailed,
                 Input = DataConverter.Serialize(input),
                 Result = DataConverter.Serialize(tr)
             };
