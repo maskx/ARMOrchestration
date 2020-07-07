@@ -13,7 +13,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestration : TaskOrchestration<TaskResult, string>
     {
-        public const string Name ="DeploymentOrchestration"; 
+        public const string Name = "DeploymentOrchestration";
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
         private readonly ARMFunctions _ARMFunctions;
@@ -40,7 +40,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region validate template
 
             // when Template had value, this orchestration call by internal, the template string content already be parsed
-            if (input.Template == null)
+            if (input.Template == null || input.Deployments.Count > 0)
             {
                 var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
                 if (valid.Code != 200)
