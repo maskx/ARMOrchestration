@@ -186,7 +186,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             {
                 if (r.Type == "Microsoft.Resources/deployments")
                     hasDeployments = true;
-                if (r.Type == "Copy")
+                if (r.Type == "Microsoft.Resources/deployments/copy")
                     hasCopy = true;
                 if (r.Type == "Microsoft.Storage/storageAccounts1")
                     hasDependsOnResource = true;

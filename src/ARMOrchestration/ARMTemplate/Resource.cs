@@ -330,7 +330,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Type = Copy.ServiceType,
                 FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
                 FullType = $"{infrastructure.BuitinServiceTypes.Deployments}/{Copy.ServiceType}",
-                ResouceId = $"{infrastructure.BuitinServiceTypes.Deployments}/{deploymentContext.DeploymentName}/{Copy.ServiceType}/{copy.Name}"
+                ResouceId = copy.Id
             };
             List<Resource> resources = new List<Resource>
             {

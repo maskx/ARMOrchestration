@@ -76,5 +76,17 @@ namespace maskx.ARMOrchestration.Orchestrations
         public TemplateLink TemplateLink { get; set; }
         public ParametersLink ParametersLink { get; set; }
         public string TemplateContent { get; set; }
+        public string GetResourceId(IInfrastructure infrastructure)
+        {
+            string resourceId = string.Empty;
+            if (!string.IsNullOrEmpty(this.SubscriptionId))
+                resourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{this.SubscriptionId}";
+            if (!string.IsNullOrEmpty(this.ManagementGroupId))
+                resourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{this.ManagementGroupId}";
+            if (!string.IsNullOrEmpty(this.ResourceGroup))
+                resourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{this.ResourceGroup}";
+            resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuitinServiceTypes.Deployments}/{this.DeploymentName}";
+            return resourceId;
+        }
     }
 }

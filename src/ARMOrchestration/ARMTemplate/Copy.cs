@@ -11,7 +11,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// </summary>
     public class Copy
     {
-        public const string ServiceType = "Copy";
+        public const string ServiceType = "copy";
         public const string SerialMode = "serial";
         public const string ParallelMode = "parallel";
 
@@ -82,7 +82,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 copy.Input = input.GetRawText();
             }
             copy.Id = functions.ResourceId(deployContext, new object[] {
-                infrastructure.BuitinServiceTypes.Copy,
+                $"{infrastructure.BuitinServiceTypes.Deployments}/{Copy.ServiceType}",
                 deployContext.DeploymentName,
                 copy.Name
             });

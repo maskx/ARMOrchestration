@@ -136,7 +136,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 RootId = deploymentContext.RootId,
                 DeploymentId = Guid.NewGuid().ToString("N"),
-                ParentId = deploymentContext.DeploymentId,
+                ParentId =deploymentContext.GetResourceId(infrastructure),
                 GroupId = deploymentContext.GroupId,
                 GroupType = deploymentContext.GroupType,
                 HierarchyId = deploymentContext.HierarchyId,

@@ -9,7 +9,7 @@ namespace maskx.ARMOrchestration
         public DeploymentOperation()
         {
         }
-
+        
         public DeploymentOperation(DeploymentContext deploymentContext, IInfrastructure infrastructure, Resource resource = null)
         {
             this.GroupType = deploymentContext.GroupType;
@@ -48,9 +48,9 @@ namespace maskx.ARMOrchestration
             else
             {
                 this.ResourceId = resource.ResouceId;
-                this.Name = resource.Name;
-                this.Type = resource.Type;
-                this.ParentResourceId = string.IsNullOrEmpty(resource.CopyId) ? deploymentContext.DeploymentId : resource.CopyId;
+                this.Name = resource.FullName;
+                this.Type = resource.FullType;
+                this.ParentResourceId = string.IsNullOrEmpty(resource.CopyId) ? deploymentContext.GetResourceId(infrastructure) : resource.CopyId;
                 this.SubscriptionId = resource.SubscriptionId;
                 this.ManagementGroupId = resource.ManagementGroupId;
             }
