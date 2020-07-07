@@ -41,10 +41,7 @@ namespace maskx.ARMOrchestration
 
                 this.Type = infrastructure.BuitinServiceTypes.Deployments;
                 this.Name = deploymentContext.DeploymentName;
-                if (string.IsNullOrEmpty(deploymentContext.ParentId))
-                    this.ParentResourceId = $"{this.InstanceId}:{this.ExecutionId}";
-                else
-                    this.ParentResourceId = deploymentContext.ParentId;
+                this.ParentResourceId = deploymentContext.ParentId;
                 this.SubscriptionId = deploymentContext.SubscriptionId;
                 this.ManagementGroupId = deploymentContext.ManagementGroupId;
             }

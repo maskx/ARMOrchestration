@@ -35,7 +35,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (string.IsNullOrEmpty(input.RootId))
             {
                 input.RootId = input.DeploymentId;
-                input.ParentId = $"{context.OrchestrationInstance.InstanceId}:{ context.OrchestrationInstance.ExecutionId}";
             }
 
             #region validate template
