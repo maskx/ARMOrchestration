@@ -8,7 +8,7 @@ namespace maskx.ARMOrchestration.Activities
 {
     public class AsyncRequestActivity : AsyncTaskActivity<AsyncRequestActivityInput, TaskResult>
     {
-        public static string Name { get { return "AsyncRequestActivity"; } }
+        public const string Name ="AsyncRequestActivity";
         private readonly ARMTemplateHelper templateHelper;
         private readonly maskx.OrchestrationService.Activity.AsyncRequestActivity asyncRequestActivity;
         private readonly IInfrastructure infrastructure;

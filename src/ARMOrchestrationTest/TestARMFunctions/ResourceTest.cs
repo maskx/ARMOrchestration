@@ -160,7 +160,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 if (r.Name == "ReferenceInProperty")
                 {
                     hasResource = true;
-                    var input = TestHelper.DataConverter.Deserialize<WaitDependsOnActivityInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -194,7 +194,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {
                     copyCount++;
                     Assert.True(int.TryParse(r.Name, out int i));
-                    var input = TestHelper.DataConverter.Deserialize<WaitDependsOnActivityInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded" + i, c.GetString());
@@ -221,7 +221,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 if (r.Name == "examplevm")
                 {
                     hasexamplevm = true;
-                    var input = TestHelper.DataConverter.Deserialize<WaitDependsOnActivityInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     Assert.True(p.RootElement.TryGetProperty("storageProfile", out JsonElement storageProfile));
                     Assert.True(storageProfile.TryGetProperty("dataDisks", out JsonElement dataDisks));

@@ -7,7 +7,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class RequestOrchestration : TaskOrchestration<TaskResult, AsyncRequestActivityInput>
     {
-        public static string Name { get { return "RequestOrchestration"; } }
+        public const string Name ="RequestOrchestration";
         private string eventName = string.Empty;
         private TaskCompletionSource<string> waitHandler = null;
         private readonly IInfrastructure infrastructure;

@@ -1,18 +1,14 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
-using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
     public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
-        public static string Name { get { return "ResourceOrchestration"; } }
+        public const string Name = "ResourceOrchestration";
         private readonly IInfrastructure infrastructure;
 
         private readonly ARMTemplateHelper templateHelper;
@@ -30,7 +26,9 @@ namespace maskx.ARMOrchestration.Orchestrations
             var resourceDeploy = input.Resource;
 
             #region Evaluate functions
-            resourceDeploy.Properties = resourceDeploy.ExpandProperties(input.Context,templateHelper.ARMfunctions,infrastructure);
+            var expandResult = await context.ScheduleTask<TaskResult>(ExpandResourcePropertiesActivity.Name, "1.0", input);
+            if (expandResult.Code != 200)
+                return expandResult;
             #endregion Evaluate functions
 
             #region plug-in

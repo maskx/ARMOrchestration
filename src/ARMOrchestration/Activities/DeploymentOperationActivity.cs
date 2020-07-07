@@ -5,7 +5,7 @@ namespace maskx.ARMOrchestration.Activities
 {
     public class DeploymentOperationActivity : TaskActivity<DeploymentOperation, TaskResult>
     {
-        public static string Name { get { return "DeploymentOperationActivity"; } }
+        public const string Name = "DeploymentOperationActivity";
         private readonly ARMTemplateHelper templateHelper;
 
         public DeploymentOperationActivity(ARMTemplateHelper templateHelper)

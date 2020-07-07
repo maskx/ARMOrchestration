@@ -8,7 +8,7 @@ namespace maskx.ARMOrchestration.Activities
 {
     public class WaitDependsOnActivity : AsyncTaskActivity<WaitDependsOnActivityInput, TaskResult>
     {
-        public static string Name { get { return "WaitDependsOnActivity"; } }
+        public const string Name = "WaitDependsOnActivity";
 
         private const string commandTemplate = @"
 insert into {0}
@@ -17,7 +17,7 @@ values
 (@RootId,@DeploymentId,@InstanceId,@ExecutionId,@EventName,@DependsOnName,GETUTCDATE())";
 
         private readonly string commandText;
-        private ARMOrchestrationOptions options;
+        private readonly ARMOrchestrationOptions options;
         private readonly ARMTemplateHelper templateHelper;
         private readonly IInfrastructure infrastructure;
 
@@ -47,10 +47,10 @@ values
                 {
                     db.AddStatement(this.commandText, new
                     {
-                        RootId=input.DeploymentContext.RootId,
-                        DeploymentId = input.DeploymentContext.DeploymentId,
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        input.DeploymentContext.RootId,
+                        input.DeploymentContext.DeploymentId,
+                        context.OrchestrationInstance.InstanceId,
+                        context.OrchestrationInstance.ExecutionId,
                         EventName = input.ProvisioningStage.ToString(),
                         DependsOnName = item
                     });

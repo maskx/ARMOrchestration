@@ -101,7 +101,7 @@ namespace ARMCreatorTest
             ARMOrchestartionFixture fixture, 
             string filename, 
             Dictionary<string, string> result,
-            string managementGroupId="")
+            string managementGroupId=null)
         {
             var templateString = TestHelper.GetFunctionInputContent(filename);
             var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
@@ -110,7 +110,7 @@ namespace ARMCreatorTest
                 Parameters = string.Empty,
                 CorrelationId = Guid.NewGuid().ToString("N"),
                 DeploymentName = filename.Replace('/', '-'),
-                SubscriptionId = string.IsNullOrEmpty(managementGroupId)?TestHelper.SubscriptionId:string.Empty,
+                SubscriptionId = string.IsNullOrEmpty(managementGroupId)?TestHelper.SubscriptionId:null,
                 ManagementGroupId=managementGroupId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 GroupId = Guid.NewGuid().ToString("N"),

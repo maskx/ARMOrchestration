@@ -2,13 +2,12 @@
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using System;
-using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
     public class ValidateTemplateActivity : TaskActivity<DeploymentOrchestrationInput, TaskResult>
     {
-        public static string Name { get { return "ValidateTemplateActivity"; } }
+        public const string Name = "ValidateTemplateActivity";
         private readonly ARMTemplateHelper templateHelper;
         private readonly IInfrastructure infrastructure;
 

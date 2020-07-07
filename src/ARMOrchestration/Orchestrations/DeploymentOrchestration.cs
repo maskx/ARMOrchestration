@@ -13,7 +13,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestration : TaskOrchestration<TaskResult, string>
     {
-        public static string Name { get { return "DeploymentOrchestration"; } }
+        public const string Name ="DeploymentOrchestration"; 
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
         private readonly ARMFunctions _ARMFunctions;
@@ -184,7 +184,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 // TODO: complete mode, delete resource not exist in template
             }
-            string rtv = string.Empty;
+            string rtv = null;
 
             #region After Deployment
 

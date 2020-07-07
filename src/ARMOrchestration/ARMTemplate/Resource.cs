@@ -3,6 +3,7 @@ using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -307,12 +308,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             string parentType)
         {
             if (resourceElement.TryGetProperty("copy", out JsonElement copy))
-                return ExpandCopyResource(resourceElement, copy,context,functions,infrastructure,parentName,parentType);
+                return ExpandCopyResource(resourceElement, copy, context, functions, infrastructure, parentName, parentType);
             return ParseInternal(resourceElement, context, functions, infrastructure, parentName, parentType);
         }
         private static List<Resource> ExpandCopyResource(
           JsonElement resource
-          ,JsonElement copyElement
+          , JsonElement copyElement
           , Dictionary<string, object> context
             , ARMFunctions functions
             , IInfrastructure infrastructure
@@ -348,20 +349,22 @@ namespace maskx.ARMOrchestration.ARMTemplate
             for (int i = 0; i < copy.Count; i++)
             {
                 copyindex[copy.Name] = i;
-                var Resources = ParseInternal(resource, copyContext, functions, infrastructure,parentName,parentType);
+                var rs = ParseInternal(resource, copyContext, functions, infrastructure, parentName, parentType);
 
-                Resources[0].CopyIndex = i;
-                Resources[0].CopyId = copy.Id;
-                Resources[0].CopyName = copy.Name;
-                CopyResource.Resources.Add(Resources[0].Name);
-                resources.AddRange(Resources);
+                rs[0].CopyIndex = i;
+                rs[0].CopyId = copy.Id;
+                rs[0].CopyName = copy.Name;
+                CopyResource.Resources.Add(rs[0].Name);
+                resources.AddRange(rs);
                 if (copy.Mode == Copy.SerialMode
                     && copy.BatchSize > 0
                     && i >= copy.BatchSize)
                 {
-                    Resources[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
+                    rs[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
                 }
             }
+            CopyResource.SubscriptionId = resources[1].SubscriptionId;
+            CopyResource.ManagementGroupId = resources[1].ManagementGroupId;
             return resources;
         }
         private static bool HandleDependsOn(Resource r, Dictionary<string, object> context)
@@ -379,7 +382,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return false;
         }
 
-        public string ExpandProperties(DeploymentContext deploymentContext,ARMFunctions functions,IInfrastructure infrastructure)
+        public string ExpandProperties(DeploymentContext deploymentContext, ARMFunctions functions, IInfrastructure infrastructure)
         {
             if (string.IsNullOrEmpty(this.Properties))
                 return string.Empty;

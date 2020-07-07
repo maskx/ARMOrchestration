@@ -56,6 +56,7 @@ namespace maskx.ARMOrchestration.Extensions
                     activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
                     activityTypes.Add((ValidateTemplateActivity.Name, "1.0", typeof(ValidateTemplateActivity)));
                     activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
+                    activityTypes.Add((ExpandResourcePropertiesActivity.Name, "1.0", typeof(ExpandResourcePropertiesActivity)));
                     return activityTypes;
                 };
                 return sqlServerConfiguration;
@@ -112,6 +113,7 @@ namespace maskx.ARMOrchestration.Extensions
                 activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
                 activityTypes.Add((ValidateTemplateActivity.Name, "1.0", typeof(ValidateTemplateActivity)));
                 activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
+                activityTypes.Add((ExpandResourcePropertiesActivity.Name, "1.0", typeof(ExpandResourcePropertiesActivity)));
                 return activityTypes;
             };
             services.UsingOrchestration(sqlServerConfiguration);
