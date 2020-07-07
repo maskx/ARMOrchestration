@@ -42,5 +42,11 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             TestHelper.OrchestrationTest(fixture,
                 "dependsOn/ConditionFalse");
         }
+        [Fact(DisplayName = "DeployDepondsOn")]
+        public void DeployDepondsOn()
+        {
+            TestHelper.OrchestrationTest(fixture,
+                "dependsOn/DeployDepondsOn");
+        }
     }
 }

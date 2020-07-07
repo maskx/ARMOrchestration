@@ -18,17 +18,18 @@ namespace maskx.ARMOrchestration.Workers
         private readonly TaskHubClient taskHubClient;
         private readonly DataConverter dataConverter = new JsonDataConverter();
 
-
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
-            IOptions<ARMOrchestrationOptions> options)
+            IOptions<ARMOrchestrationOptions> options,
+            IInfrastructure infrastructure)
         {
             this.options = options?.Value;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
             this.fetchCommandString = string.Format(fetchCommandTemplate,
                 this.options.Database.WaitDependsOnTableName,
                 this.options.Database.DeploymentOperationsTableName,
-                (int)ProvisioningStage.Successed);
+                (int)ProvisioningStage.Successed,
+                infrastructure.BuitinServiceTypes.Deployments);
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
         }
 
@@ -114,6 +115,7 @@ namespace maskx.ARMOrchestration.Workers
 IF(OBJECT_ID(@table) IS NULL)
 BEGIN
     CREATE TABLE {options.Database.WaitDependsOnTableName} (
+        [RootId] [nvarchar](50) NOT NULL,
         [DeploymentId] [nvarchar](50) NOT NULL,
         [InstanceId] [nvarchar](50) NOT NULL,
 	    [ExecutionId] [nvarchar](50) NOT NULL,
@@ -171,6 +173,7 @@ delete {0} where InstanceId=@InstanceId and ExecutionId=@ExecutionId and EventNa
         /// {0}: WaitDependsOn table name
         /// {1}: DeploymentOperations
         /// {2}: ResourceCommitSuccessed
+        /// {3} Deployment Service Type
         /// </summary>
         private const string fetchCommandTemplate = @"
 select t.InstanceId,t.ExecutionId,t.EventName,t.FailCount
@@ -184,7 +187,7 @@ from(
         ,COUNT(case when d.Stage<0 then 1 else null end) OVER (PARTITION BY w.InstanceId , w.ExecutionId,w.EventName) as FailCount
 	from {0} as w
 		left join {1} as d
-			on w.DeploymentId=d.DeploymentId
+			on (w.DeploymentId=d.DeploymentId or (w.RootId=d.RootId and d.Type=N'{3}'))
                 and d.ResourceId like N'%'+w.DependsOnName
 ) as t
 where t.WaitCount=t.SuccessCount or FailCount>0

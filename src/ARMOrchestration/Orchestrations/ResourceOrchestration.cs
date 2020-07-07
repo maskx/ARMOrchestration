@@ -30,7 +30,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             var resourceDeploy = input.Resource;
 
             #region Evaluate functions
-            resourceDeploy.Properties = templateHelper.ExpadResourceProperties(input.Resource, input.Context);
+            resourceDeploy.Properties = resourceDeploy.ExpandProperties(input.Context,templateHelper.ARMfunctions,infrastructure);
             #endregion Evaluate functions
 
             #region plug-in

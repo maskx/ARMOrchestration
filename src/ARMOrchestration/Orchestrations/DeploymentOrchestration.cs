@@ -31,10 +31,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
-            if (string.IsNullOrEmpty(input.DeploymentId))
-            {
-                input.DeploymentId = context.OrchestrationInstance.InstanceId;
-            }
+
             if (string.IsNullOrEmpty(input.RootId))
             {
                 input.RootId = input.DeploymentId;
@@ -52,6 +49,15 @@ namespace maskx.ARMOrchestration.Orchestrations
                     return valid;
                 }
                 input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+            }
+            else
+            {
+                helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure)
+                {
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Input = arg
+                }); ;
             }
 
             #endregion validate template
@@ -294,7 +300,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         !(bool)this._ARMFunctions.Evaluate(condition.GetString(), context))
                         continue;
                 }
-                writer.WriteProperty(item, context,helper.ARMfunctions,infrastructure);
+                writer.WriteProperty(item, context, helper.ARMfunctions, infrastructure);
             }
             writer.WriteEndObject();
 

@@ -12,9 +12,9 @@ namespace maskx.ARMOrchestration.Activities
 
         private const string commandTemplate = @"
 insert into {0}
-(DeploymentId,InstanceId,ExecutionId,EventName,DependsOnName,CreateTime)
+(RootId,DeploymentId,InstanceId,ExecutionId,EventName,DependsOnName,CreateTime)
 values
-(@DeploymentId,@InstanceId,@ExecutionId,@EventName,@DependsOnName,GETUTCDATE())";
+(@RootId,@DeploymentId,@InstanceId,@ExecutionId,@EventName,@DependsOnName,GETUTCDATE())";
 
         private readonly string commandText;
         private ARMOrchestrationOptions options;
@@ -47,6 +47,7 @@ values
                 {
                     db.AddStatement(this.commandText, new
                     {
+                        RootId=input.DeploymentContext.RootId,
                         DeploymentId = input.DeploymentContext.DeploymentId,
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,

@@ -45,6 +45,8 @@ namespace maskx.ARMOrchestration
                     this.ParentResourceId = $"{this.InstanceId}:{this.ExecutionId}";
                 else
                     this.ParentResourceId = deploymentContext.ParentId;
+                this.SubscriptionId = deploymentContext.SubscriptionId;
+                this.ManagementGroupId = deploymentContext.ManagementGroupId;
             }
             else
             {
@@ -52,6 +54,8 @@ namespace maskx.ARMOrchestration
                 this.Name = resource.Name;
                 this.Type = resource.Type;
                 this.ParentResourceId = string.IsNullOrEmpty(resource.CopyId) ? deploymentContext.DeploymentId : resource.CopyId;
+                this.SubscriptionId = resource.SubscriptionId;
+                this.ManagementGroupId = resource.ManagementGroupId;
             }
         }
 
