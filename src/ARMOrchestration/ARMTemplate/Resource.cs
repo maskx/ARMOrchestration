@@ -3,7 +3,6 @@ using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -358,12 +357,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 rs[0].CopyName = copy.Name;
                 CopyResource.Resources.Add(rs[0].Name);
                 resources.AddRange(rs);
-                if (copy.Mode == Copy.SerialMode
-                    && copy.BatchSize > 0
-                    && i >= copy.BatchSize)
-                {
-                    rs[0].DependsOn.Add(CopyResource.Resources[i - copy.BatchSize]);
-                }
             }
             CopyResource.SubscriptionId = resources[1].SubscriptionId;
             CopyResource.ManagementGroupId = resources[1].ManagementGroupId;

@@ -11,7 +11,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
     [Trait("ResourceOrchestration", "CopyIndex")]
     public class CopyIndexTest
     {
-        private ARMOrchestartionFixture fixture;
+        private readonly ARMOrchestartionFixture fixture;
 
         public CopyIndexTest(ARMOrchestartionFixture fixture)
         {
@@ -23,6 +23,12 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             TestHelper.OrchestrationTest(fixture,
                 "CopyIndex/ResourceIteration");
+        }
+        [Fact(DisplayName = "ResourceIteration_BatchSize")]
+        public void ResourceIteration_BatchSize()
+        {
+            TestHelper.OrchestrationTest(fixture,
+                "CopyIndex/ResourceIteration_BatchSize");
         }
 
         [Fact(DisplayName = "VariableIteration")]
@@ -71,8 +77,8 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 "CopyIndex/PropertyIteration");
         }
 
-        [Fact(DisplayName = "copyIndexOutput")]
-        public void copyIndexOutput()
+        [Fact(DisplayName = "CopyIndexOutput")]
+        public void CopyIndexOutput()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                   "CopyIndex/output");

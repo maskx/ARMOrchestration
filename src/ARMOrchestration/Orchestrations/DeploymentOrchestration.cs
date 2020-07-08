@@ -4,6 +4,7 @@ using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -146,22 +147,22 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Provisioning resources
             ConcurrentBag<Task<TaskResult>> tasks = new ConcurrentBag<Task<TaskResult>>();
 
-            //Dictionary<string, List<Resource>> copyDic = new Dictionary<string, List<Resource>>();
+            Dictionary<string, List<Resource>> copyDic = new Dictionary<string, List<Resource>>();
             foreach (var resource in input.Template.Resources.Values)
             {
-                if (resource.FullType == infrastructure.BuitinServiceTypes.Deployments)
+                if (resource.FullType == infrastructure.BuitinServiceTypes.Deployments
+                    || resource.Type == Copy.ServiceType)
                     continue;
-                //if (!string.IsNullOrEmpty(resource.CopyId))
-                //{
-                //    if (!copyDic.TryGetValue(resource.CopyName, out List<Resource> rList))
-                //    {
-                //        rList = new List<Resource>();
-                //        copyDic.Add(resource.CopyName, rList);
-                //    }
-                //    rList.Add(resource);
-                //    continue;
-                //}
-
+                if (!string.IsNullOrEmpty(resource.CopyId))
+                {
+                    if (!copyDic.TryGetValue(resource.CopyName, out List<Resource> rList))
+                    {
+                        rList = new List<Resource>();
+                        copyDic.Add(resource.CopyName, rList);
+                    }
+                    rList.Add(resource);
+                    continue;
+                }
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                     ResourceOrchestration.Name,
                     "1.0",
@@ -178,29 +179,16 @@ namespace maskx.ARMOrchestration.Orchestrations
                     "1.0",
                    DataConverter.Serialize(deploy.Value)));
             }
-            //Parallel.ForEach(copyDic.Keys, (key) => {
-            //    var c = input.Template.Resources[key] as CopyResource;
-            //    if (c.Mode == Copy.ParallelMode)
-            //    {
-            //        foreach (var resource in copyDic[key])
-            //        {
-            //            tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-            //                ResourceOrchestration.Name,
-            //                "1.0",
-            //                new ResourceOrchestrationInput()
-            //                {
-            //                    Resource = resource,
-            //                    Context = input,
-            //                }));
-            //        }
-
-            //    }
-            //    else
-            //    {
-
-            //    }
-
-            //});
+            foreach (var key in copyDic.Keys)
+            {
+                var c = input.Template.Resources[key] as CopyResource;
+                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new CopyOrchestrationInput()
+                {
+                    Resource = c,
+                    Context = input,
+                    Resources = copyDic[key]
+                }));
+            }
 
             await Task.WhenAll(tasks.ToArray());
             foreach (var t in tasks)
@@ -267,7 +255,15 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (!string.IsNullOrEmpty(input.Template.Outputs))
             {
-                rtv = this.GetOutputs(input);
+                try
+                {
+                    rtv = this.GetOutputs(input);
+                }
+                catch (Exception ex)
+                {
+                    rtv = ex.Message;
+                }
+
             }
 
             #endregion get template outputs
@@ -281,7 +277,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             });
             return new TaskResult() { Code = 200, Content = rtv };
         }
-
         private TaskCompletionSource<string> waitHandler = null;
 
         public override void OnEvent(OrchestrationContext context, string name, string input)

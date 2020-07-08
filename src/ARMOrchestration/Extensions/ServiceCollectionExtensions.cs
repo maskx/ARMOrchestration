@@ -43,6 +43,7 @@ namespace maskx.ARMOrchestration.Extensions
                     orchList.Add((ResourceOrchestration.Name, "1.0", typeof(ResourceOrchestration)));
                     orchList.Add((DeploymentOrchestration.Name, "1.0", typeof(DeploymentOrchestration)));
                     orchList.Add((RequestOrchestration.Name, "1.0", typeof(RequestOrchestration)));
+                    orchList.Add((CopyOrchestration.Name, "1.0", typeof(CopyOrchestration)));
                     return orchList;
                 };
                 sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>
@@ -100,6 +101,7 @@ namespace maskx.ARMOrchestration.Extensions
                 orchList.Add((ResourceOrchestration.Name, "1.0", typeof(ResourceOrchestration)));
                 orchList.Add((DeploymentOrchestration.Name, "1.0", typeof(DeploymentOrchestration)));
                 orchList.Add((RequestOrchestration.Name, "1.0", typeof(RequestOrchestration)));
+                orchList.Add((CopyOrchestration.Name, "1.0", typeof(CopyOrchestration)));
                 return orchList;
             };
             sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>

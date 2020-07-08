@@ -33,49 +33,48 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region plug-in
 
-            if (resourceDeploy.Type != Copy.ServiceType)
+
+            if (infrastructure.InjectBefroeProvisioning)
             {
-                if (infrastructure.InjectBefroeProvisioning)
+                var injectBefroeProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                             RequestOrchestration.Name,
+                             "1.0",
+                             new AsyncRequestActivityInput()
+                             {
+                                 InstanceId = context.OrchestrationInstance.InstanceId,
+                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                 ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning,
+                                 DeploymentContext = input.Context,
+                                 Resource = resourceDeploy
+                             });
+                if (injectBefroeProvisioningResult.Code != 200)
                 {
-                    var injectBefroeProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                 RequestOrchestration.Name,
-                                 "1.0",
-                                 new AsyncRequestActivityInput()
-                                 {
-                                     InstanceId = context.OrchestrationInstance.InstanceId,
-                                     ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                     ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning,
-                                     DeploymentContext = input.Context,
-                                     Resource = resourceDeploy
-                                 });
-                    if (injectBefroeProvisioningResult.Code != 200)
-                    {
-                        return injectBefroeProvisioningResult;
-                    }
-                }
-
-                if (infrastructure.BeforeResourceProvisioningOrchestation != null)
-                {
-                    foreach (var t in infrastructure.BeforeResourceProvisioningOrchestation)
-                    {
-                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
-                        if (r.Code != 200)
-                        {
-                            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                            {
-                                InstanceId = context.OrchestrationInstance.InstanceId,
-                                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                Stage = ProvisioningStage.BeforeResourceProvisioningFailed,
-                                Input = DataConverter.Serialize(input),
-                                Result = DataConverter.Serialize(r)
-                            });
-                            return r;
-                        }
-
-                        input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
-                    }
+                    return injectBefroeProvisioningResult;
                 }
             }
+
+            if (infrastructure.BeforeResourceProvisioningOrchestation != null)
+            {
+                foreach (var t in infrastructure.BeforeResourceProvisioningOrchestation)
+                {
+                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                    if (r.Code != 200)
+                    {
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.BeforeResourceProvisioningFailed,
+                            Input = DataConverter.Serialize(input),
+                            Result = DataConverter.Serialize(r)
+                        });
+                        return r;
+                    }
+
+                    input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
+                }
+            }
+
 
             #endregion plug-in
 
@@ -111,78 +110,73 @@ namespace maskx.ARMOrchestration.Orchestrations
             #endregion DependsOn
 
             #region Provisioning Resource
-
-            if (resourceDeploy.Type != Copy.ServiceType)
+            var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                      RequestOrchestration.Name,
+                      "1.0",
+                      new AsyncRequestActivityInput()
+                      {
+                          InstanceId = context.OrchestrationInstance.InstanceId,
+                          ExecutionId = context.OrchestrationInstance.ExecutionId,
+                          ProvisioningStage = ProvisioningStage.ProvisioningResource,
+                          DeploymentContext = input.Context,
+                          Resource = resourceDeploy
+                      });
+            if (createResourceResult.Code != 200)
             {
-                var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                          RequestOrchestration.Name,
-                          "1.0",
-                          new AsyncRequestActivityInput()
-                          {
-                              InstanceId = context.OrchestrationInstance.InstanceId,
-                              ExecutionId = context.OrchestrationInstance.ExecutionId,
-                              ProvisioningStage = ProvisioningStage.ProvisioningResource,
-                              DeploymentContext = input.Context,
-                              Resource = resourceDeploy
-                          });
-                if (createResourceResult.Code != 200)
-                {
-                    return createResourceResult;
-                }
+                return createResourceResult;
             }
+
 
             #endregion Provisioning Resource
 
-            if (resourceDeploy.Type != Copy.ServiceType)
+            #region After Resource Provisioning
+
+            if (infrastructure.AfterResourceProvisioningOrchestation != null)
             {
-                #region After Resource Provisioning
-
-                if (infrastructure.AfterResourceProvisioningOrchestation != null)
+                foreach (var t in infrastructure.AfterResourceProvisioningOrchestation)
                 {
-                    foreach (var t in infrastructure.AfterResourceProvisioningOrchestation)
+                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                    if (r.Code != 200)
                     {
-                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
-                        if (r.Code != 200)
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
                         {
-                            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                            {
-                                InstanceId = context.OrchestrationInstance.InstanceId,
-                                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
-                                Input = DataConverter.Serialize(input),
-                                Result = DataConverter.Serialize(r)
-                            });
-                            return r;
-                        }
-
-                        input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
+                            Input = DataConverter.Serialize(input),
+                            Result = DataConverter.Serialize(r)
+                        });
+                        return r;
                     }
+
+                    input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
                 }
+            }
 
-                #endregion After Resource Provisioning
+            #endregion After Resource Provisioning
 
-                if (infrastructure.InjectAfterProvisioning)
+            if (infrastructure.InjectAfterProvisioning)
+            {
+                if (infrastructure.InjectBeforeDeployment)
                 {
-                    if (infrastructure.InjectBeforeDeployment)
+                    var injectAfterProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
+                                 RequestOrchestration.Name,
+                                 "1.0",
+                                 new AsyncRequestActivityInput()
+                                 {
+                                     InstanceId = context.OrchestrationInstance.InstanceId,
+                                     ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                     ProvisioningStage = ProvisioningStage.InjectAfterProvisioning,
+                                     DeploymentContext = input.Context,
+                                     Resource = resourceDeploy
+                                 });
+                    if (injectAfterProvisioningResult.Code != 200)
                     {
-                        var injectAfterProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                     RequestOrchestration.Name,
-                                     "1.0",
-                                     new AsyncRequestActivityInput()
-                                     {
-                                         InstanceId = context.OrchestrationInstance.InstanceId,
-                                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                         ProvisioningStage = ProvisioningStage.InjectAfterProvisioning,
-                                         DeploymentContext = input.Context,
-                                         Resource = resourceDeploy
-                                     });
-                        if (injectAfterProvisioningResult.Code != 200)
-                        {
-                            return injectAfterProvisioningResult;
-                        }
+                        return injectAfterProvisioningResult;
                     }
                 }
             }
+
 
             #region Ready Resource
 
@@ -200,13 +194,13 @@ namespace maskx.ARMOrchestration.Orchestrations
         }
 
         private TaskCompletionSource<string> dependsOnWaitHandler = null;
-
         public override void OnEvent(OrchestrationContext context, string name, string input)
         {
             if (this.dependsOnWaitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.dependsOnWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.dependsOnWaitHandler.SetResult(input);
             }
+
         }
     }
 }
