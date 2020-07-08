@@ -81,7 +81,6 @@ namespace maskx.ARMOrchestration
             });
 
             operation.ExecutionId = instance.ExecutionId;
-            operation.ParentResourceId = $"{instance.InstanceId}:{instance.ExecutionId}";
             return operation;
         }
 

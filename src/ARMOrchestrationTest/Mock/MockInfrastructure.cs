@@ -19,7 +19,10 @@ namespace ARMOrchestrationTest.Mock
         {
             this.serviceProvider = serviceProvider;
         }
-
+        public (string GroupId, string GroupType, string HierarchyId) GetGroupInfo(string managementGroupId, string subscriptionId, string resourceGroupName)
+        {
+            return ("3128C563-AC63-488E-8507-C47B3B9C0DBD", "ResourceGroup","001004005008");
+        }
         public TaskResult Providers(string providerNamespace, string resourceType)
         {
             return new TaskResult();

@@ -11,7 +11,7 @@ namespace maskx.ARMOrchestration
     /// </summary>
     public interface IInfrastructure
     {
-      //  void ValidateResource(string resource, DeploymentContext context);
+        (string GroupId, string GroupType, string HierarchyId) GetGroupInfo(string managementGroupId, string subscriptionId, string resourceGroupName);
         /// <summary>
         /// Convert the message to the define format of communication table
         /// </summary>

@@ -131,15 +131,15 @@ namespace maskx.ARMOrchestration.Orchestrations
                 writer.Flush();
                 template = Encoding.UTF8.GetString(ms.ToArray());
             }
-
+            var (groupId,groupType,hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
             var deployInput = new DeploymentOrchestrationInput()
             {
                 RootId = deploymentContext.RootId,
                 DeploymentId = Guid.NewGuid().ToString("N"),
                 ParentId =deploymentContext.GetResourceId(infrastructure),
-                GroupId = deploymentContext.GroupId,
-                GroupType = deploymentContext.GroupType,
-                HierarchyId = deploymentContext.HierarchyId,
+                GroupId = groupId,
+                GroupType = groupType,
+                HierarchyId = hierarchyId,
                 CorrelationId = deploymentContext.CorrelationId,
                 SubscriptionId = resource.SubscriptionId,
                 ManagementGroupId = resource.ManagementGroupId,

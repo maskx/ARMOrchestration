@@ -324,13 +324,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
             DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
 
-            Resource CopyResource = new Resource()
+            var CopyResource = new CopyResource()
             {
                 Name = copy.Name,
                 Type = Copy.ServiceType,
                 FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
                 FullType = $"{infrastructure.BuitinServiceTypes.Deployments}/{Copy.ServiceType}",
-                ResouceId = copy.Id
+                ResouceId = copy.Id,
+                Mode=copy.Mode,
+                BatchSize = copy.BatchSize
             };
             List<Resource> resources = new List<Resource>
             {
