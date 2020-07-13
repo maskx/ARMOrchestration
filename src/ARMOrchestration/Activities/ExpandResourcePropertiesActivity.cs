@@ -34,7 +34,7 @@ namespace maskx.ARMOrchestration.Activities
             {
                 return new TaskResult() { Code = 500, Content = ex.Message };
             }
-            return new TaskResult() { Code = 200 };
+            return new TaskResult() { Code = 200 ,Content=this.DataConverter.Serialize(input.Resource)};
         }
     }
 }

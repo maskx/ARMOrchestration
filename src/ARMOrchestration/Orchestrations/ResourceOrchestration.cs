@@ -23,13 +23,14 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-            var resourceDeploy = input.Resource;
-
+          
             #region Evaluate functions
             var expandResult = await context.ScheduleTask<TaskResult>(ExpandResourcePropertiesActivity.Name, "1.0", input);
             if (expandResult.Code != 200)
                 return expandResult;
             #endregion Evaluate functions
+
+            var resourceDeploy = DataConverter.Deserialize<Resource>(expandResult.Content);
 
             #region plug-in
 
