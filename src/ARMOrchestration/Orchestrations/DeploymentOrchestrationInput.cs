@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentOrchestrationInput : DeploymentContext
     {
-        public static DeploymentOrchestrationInput  Validate(DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
+        public static DeploymentOrchestrationInput Validate(DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
         {
             if (input.Template != null)
                 return input;
@@ -20,7 +20,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 #region Deployment
                 if (res.FullType == infrastructure.BuitinServiceTypes.Deployments)
                 {
-                    var deploy = Parse(res, input, functions,infrastructure);
+                    var deploy = Parse(res, input, functions, infrastructure);
                     input.Deployments.Add(deploy.DeploymentName, deploy);
                 }
                 #endregion
@@ -58,10 +58,12 @@ namespace maskx.ARMOrchestration.Orchestrations
             var rootElement = doc.RootElement;
 
             var mode = DeploymentMode.Incremental;
-            if (rootElement.TryGetProperty("mode", out JsonElement _mode)
-                && _mode.GetString().Equals(DeploymentMode.Complete.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (rootElement.TryGetProperty("mode", out JsonElement _mode))
             {
-                mode = DeploymentMode.Complete;
+                if (_mode.GetString().Equals(DeploymentMode.Complete.ToString(), StringComparison.OrdinalIgnoreCase))
+                    mode = DeploymentMode.Complete;
+                if (_mode.GetString().Equals(DeploymentMode.OnlyCreation.ToString(), StringComparison.OrdinalIgnoreCase))
+                    mode = DeploymentMode.OnlyCreation;
             }
             string template = string.Empty;
             if (rootElement.TryGetProperty("template", out JsonElement _template))
@@ -131,12 +133,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 writer.Flush();
                 template = Encoding.UTF8.GetString(ms.ToArray());
             }
-            var (groupId,groupType,hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
+            var (groupId, groupType, hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
             var deployInput = new DeploymentOrchestrationInput()
             {
                 RootId = deploymentContext.RootId,
                 DeploymentId = Guid.NewGuid().ToString("N"),
-                ParentId =deploymentContext.GetResourceId(infrastructure),
+                ParentId = deploymentContext.GetResourceId(infrastructure),
                 GroupId = groupId,
                 GroupType = groupType,
                 HierarchyId = hierarchyId,
@@ -153,9 +155,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                 ApiVersion = resource.ApiVersion,
                 CreateByUserId = deploymentContext.CreateByUserId,
                 LastRunUserId = deploymentContext.LastRunUserId,
-                DependsOn=resource.DependsOn
+                DependsOn = resource.DependsOn
             };
-            return Validate(deployInput,functions,infrastructure);
+            return Validate(deployInput, functions, infrastructure);
         }
         public List<string> DependsOn { get; set; } = new List<string>();
         public Dictionary<string, DeploymentOrchestrationInput> Deployments { get; set; } = new Dictionary<string, DeploymentOrchestrationInput>();
