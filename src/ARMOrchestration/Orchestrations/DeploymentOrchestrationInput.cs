@@ -155,7 +155,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                 ApiVersion = resource.ApiVersion,
                 CreateByUserId = deploymentContext.CreateByUserId,
                 LastRunUserId = deploymentContext.LastRunUserId,
-                DependsOn = resource.DependsOn
+                DependsOn = resource.DependsOn,
+                Extensions = deploymentContext.Extensions,
+                TenantId = deploymentContext.TenantId
             };
             return Validate(deployInput, functions, infrastructure);
         }

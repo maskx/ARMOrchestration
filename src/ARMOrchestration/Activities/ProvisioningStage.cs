@@ -4,15 +4,15 @@
     {
         Pending = 0,
         // begin deployment special
+        
+        ValidateTemplate = 100,
+        ValidateTemplateFailed = -100,
 
-        InjectBeforeDeployment = 100,
-        InjectBeforeDeploymentFailed = -100,
+        InjectBeforeDeployment = 200,
+        InjectBeforeDeploymentFailed = -200,
 
-        BeforeDeployment = 200,
-        BeforeDeploymentFailed = -200,
-
-        ValidateTemplate = 300,
-        ValidateTemplateFailed = -300,
+        BeforeDeployment = 300,
+        BeforeDeploymentFailed = -300,
 
         // end deployment special
 
@@ -21,14 +21,17 @@
 
         // begin resource special
 
-        InjectBefroeProvisioning = 500,
-        InjectBefroeProvisioningFailed = -500,
+        ExpandResourceProperties=500,
+        ExpandResourcePropertiesFailed=-500,
 
-        BeforeResourceProvisioning = 600,
-        BeforeResourceProvisioningFailed = -600,
+        InjectBefroeProvisioning = 600,
+        InjectBefroeProvisioningFailed = -600,
 
-        ProvisioningResource = 700,
-        ProvisioningResourceFailed = -700,
+        BeforeResourceProvisioning = 700,
+        BeforeResourceProvisioningFailed = -700,
+
+        ProvisioningResource = 800,
+        ProvisioningResourceFailed = -800,
 
         AfterResourceProvisioningOrchestation = 1000,
         AfterResourceProvisioningOrchestationFailed = -1000,

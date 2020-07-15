@@ -27,7 +27,17 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region Evaluate functions
             var expandResult = await context.ScheduleTask<TaskResult>(ExpandResourcePropertiesActivity.Name, "1.0", input);
             if (expandResult.Code != 200)
+            {
+                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
+                {
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Stage = ProvisioningStage.ExpandResourcePropertiesFailed,
+                    Input = this.DataConverter.Serialize(input)
+                });
                 return expandResult;
+            }
+               
             #endregion Evaluate functions
 
             var resourceDeploy = DataConverter.Deserialize<Resource>(expandResult.Content);

@@ -27,6 +27,7 @@ namespace maskx.ARMOrchestration.Activities
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Stage=ProvisioningStage.ExpandResourceProperties,
                     Input = this.DataConverter.Serialize(input)
                 });
             }
