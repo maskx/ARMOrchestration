@@ -18,7 +18,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             foreach (var res in input.Template.Resources.Values)
             {
                 #region Deployment
-                if (res.FullType == infrastructure.BuitinServiceTypes.Deployments)
+                if (res.FullType == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     var deploy = Parse(res, input, functions, infrastructure);
                     input.Deployments.Add(deploy.DeploymentName, deploy);

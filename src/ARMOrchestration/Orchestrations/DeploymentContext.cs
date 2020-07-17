@@ -85,7 +85,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 resourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{this.ManagementGroupId}";
             if (!string.IsNullOrEmpty(this.ResourceGroup))
                 resourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{this.ResourceGroup}";
-            resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuitinServiceTypes.Deployments}/{this.DeploymentName}";
+            resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{this.DeploymentName}";
             return resourceId;
         }
     }

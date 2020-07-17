@@ -150,7 +150,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             Dictionary<string, List<Resource>> copyDic = new Dictionary<string, List<Resource>>();
             foreach (var resource in input.Template.Resources.Values)
             {
-                if (resource.FullType == infrastructure.BuitinServiceTypes.Deployments
+                if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments
                     || resource.Type == Copy.ServiceType)
                     continue;
                 if (!string.IsNullOrEmpty(resource.CopyId))
@@ -303,8 +303,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             // TODO: set location
             writer.WriteString("location", deploymentContext.ResourceGroup);
             writer.WriteString("name", deploymentContext.DeploymentName);
-            // TODO: set type
-            writer.WriteString("type", deploymentContext.Mode.ToString());
+            writer.WriteString("type", infrastructure.BuiltinServiceTypes.Deployments);
 
             #region properties
 

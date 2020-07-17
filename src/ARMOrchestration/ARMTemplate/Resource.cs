@@ -274,7 +274,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
             if (resourceElement.TryGetProperty("properties", out JsonElement properties))
             {
-                if (r.FullType == infrastructure.BuitinServiceTypes.Deployments)
+                if (r.FullType == infrastructure.BuiltinServiceTypes.Deployments)
                     r.Properties = properties.GetRawText();
                 else
                 {
@@ -328,7 +328,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Name = copy.Name,
                 Type = Copy.ServiceType,
                 FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
-                FullType = $"{infrastructure.BuitinServiceTypes.Deployments}/{Copy.ServiceType}",
+                FullType = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
                 ResouceId = copy.Id,
                 Mode=copy.Mode,
                 BatchSize = copy.BatchSize

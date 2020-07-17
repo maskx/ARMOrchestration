@@ -82,7 +82,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 copy.Input = input.GetRawText();
             }
             copy.Id = functions.ResourceId(deployContext, new object[] {
-                $"{infrastructure.BuitinServiceTypes.Deployments}/{Copy.ServiceType}",
+                $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
                 deployContext.DeploymentName,
                 copy.Name
             });

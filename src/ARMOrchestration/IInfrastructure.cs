@@ -65,7 +65,7 @@ namespace maskx.ARMOrchestration
         /// </returns>
         TaskResult Providers(string providerNamespace, string resourceType);
 
-        BuiltinServiceTypes BuitinServiceTypes { get; set; }
+        BuiltinServiceTypes BuiltinServiceTypes { get; set; }
         BuiltinPathSegment BuiltinPathSegment { get; set; }
 
         /// <summary>

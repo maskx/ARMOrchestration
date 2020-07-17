@@ -37,9 +37,9 @@ namespace maskx.ARMOrchestration
                 }
                 if (!string.IsNullOrEmpty(deploymentContext.ResourceGroup))
                     this.ResourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deploymentContext.ResourceGroup}";
-                this.ResourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuitinServiceTypes.Deployments}/{deploymentContext.DeploymentName}";
+                this.ResourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{deploymentContext.DeploymentName}";
 
-                this.Type = infrastructure.BuitinServiceTypes.Deployments;
+                this.Type = infrastructure.BuiltinServiceTypes.Deployments;
                 this.Name = deploymentContext.DeploymentName;
                 this.ParentResourceId = deploymentContext.ParentId;
                 this.SubscriptionId = deploymentContext.SubscriptionId;
