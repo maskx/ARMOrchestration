@@ -23,7 +23,39 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-          
+            var resourceDeploy = input.Resource;
+
+            #region DependsOn
+
+            if (resourceDeploy.DependsOn.Count > 0)
+            {
+                dependsOnWaitHandler = new TaskCompletionSource<string>();
+                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
+                    new WaitDependsOnActivityInput()
+                    {
+                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
+                        DeploymentContext = input.Context,
+                        Resource = resourceDeploy,
+                        DependsOn = resourceDeploy.DependsOn
+                    });
+                await dependsOnWaitHandler.Task;
+                var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
+                if (r.Code != 200)
+                {
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.DependsOnWaitedFailed,
+                        Input = DataConverter.Serialize(input),
+                        Result = DataConverter.Serialize(r)
+                    });
+                    return r;
+                }
+            }
+
+            #endregion DependsOn
+
             #region Evaluate functions
             var expandResult = await context.ScheduleTask<TaskResult>(ExpandResourcePropertiesActivity.Name, "1.0", input);
             if (expandResult.Code != 200)
@@ -40,7 +72,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                
             #endregion Evaluate functions
 
-            var resourceDeploy = DataConverter.Deserialize<Resource>(expandResult.Content);
+            resourceDeploy = DataConverter.Deserialize<Resource>(expandResult.Content);
 
             #region plug-in
 
@@ -88,37 +120,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
 
             #endregion plug-in
-
-            #region DependsOn
-
-            if (resourceDeploy.DependsOn.Count > 0)
-            {
-                dependsOnWaitHandler = new TaskCompletionSource<string>();
-                await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
-                    new WaitDependsOnActivityInput()
-                    {
-                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
-                        DeploymentContext = input.Context,
-                        Resource = resourceDeploy,
-                        DependsOn = resourceDeploy.DependsOn
-                    });
-                await dependsOnWaitHandler.Task;
-                var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
-                if (r.Code != 200)
-                {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
-                    {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Input = DataConverter.Serialize(input),
-                        Result = DataConverter.Serialize(r)
-                    });
-                    return r;
-                }
-            }
-
-            #endregion DependsOn
 
             #region Provisioning Resource
             var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
