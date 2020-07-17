@@ -35,7 +35,7 @@ namespace ARMOrchestrationTest.PluginTests
 
         [Fact(DisplayName = "Test")]
         public void Test()
-        {
+        { 
             var client = serviceProvider.GetService<OrchestrationWorkerClient>();
             var instance = serviceProvider.GetService<ARMOrchestrationClient>().Run(
                 new DeploymentOrchestrationInput()

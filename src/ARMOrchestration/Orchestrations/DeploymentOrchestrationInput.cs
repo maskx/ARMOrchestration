@@ -15,7 +15,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (input.Template != null)
                 return input;
             input.Template = Template.Parse(input.TemplateContent, input, functions, infrastructure);
-            foreach (var res in input.Template.Resources.Values)
+            foreach (var res in input.Template.Resources)
             {
                 #region Deployment
                 if (res.FullType == infrastructure.BuiltinServiceTypes.Deployments)

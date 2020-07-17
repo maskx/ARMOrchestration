@@ -23,11 +23,10 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-            var resourceDeploy = input.Resource;
-
+    
             #region DependsOn
 
-            if (resourceDeploy.DependsOn.Count > 0)
+            if (input.Resource.DependsOn.Count > 0)
             {
                 dependsOnWaitHandler = new TaskCompletionSource<string>();
                 await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
@@ -35,14 +34,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         ProvisioningStage = ProvisioningStage.DependsOnWaited,
                         DeploymentContext = input.Context,
-                        Resource = resourceDeploy,
-                        DependsOn = resourceDeploy.DependsOn
+                        Resource = input.Resource,
+                        DependsOn = input.Resource.DependsOn
                     });
                 await dependsOnWaitHandler.Task;
                 var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
                 if (r.Code != 200)
                 {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -50,7 +49,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Input = DataConverter.Serialize(input),
                         Result = DataConverter.Serialize(r)
                     });
-                    return r;
                 }
             }
 
@@ -72,7 +70,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                
             #endregion Evaluate functions
 
-            resourceDeploy = DataConverter.Deserialize<Resource>(expandResult.Content);
+            input.Resource= DataConverter.Deserialize<Resource>(expandResult.Content);
 
             #region plug-in
 
@@ -88,7 +86,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
                                  ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning,
                                  DeploymentContext = input.Context,
-                                 Resource = resourceDeploy
+                                 Resource = input.Resource
                              });
                 if (injectBefroeProvisioningResult.Code != 200)
                 {
@@ -103,7 +101,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
                     {
-                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -131,7 +129,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                           ExecutionId = context.OrchestrationInstance.ExecutionId,
                           ProvisioningStage = ProvisioningStage.ProvisioningResource,
                           DeploymentContext = input.Context,
-                          Resource = resourceDeploy
+                          Resource = input.Resource
                       });
             if (createResourceResult.Code != 200)
             {
@@ -150,7 +148,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
                     {
-                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -180,7 +178,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                      ExecutionId = context.OrchestrationInstance.ExecutionId,
                                      ProvisioningStage = ProvisioningStage.InjectAfterProvisioning,
                                      DeploymentContext = input.Context,
-                                     Resource = resourceDeploy
+                                     Resource = input.Resource
                                  });
                     if (injectAfterProvisioningResult.Code != 200)
                     {
@@ -192,7 +190,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region Ready Resource
 
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, resourceDeploy)
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,

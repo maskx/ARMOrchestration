@@ -35,8 +35,8 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture, "extensionResourceId", result);
         }
-        [Fact(DisplayName = "subscriptionResourceId")]
-        public void subscriptionResourceId()
+        [Fact(DisplayName = "SubscriptionResourceId")]
+        public void SubscriptionResourceId()
         {
             Dictionary<string, string> result = new Dictionary<string, string>()
             {

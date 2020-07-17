@@ -21,7 +21,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string Variables { get; set; }
 
-        public Dictionary<string, Resource> Resources { get; set; } = new Dictionary<string, Resource>();
+        public ResourceCollection Resources { get; set; } = new ResourceCollection();
 
         public Functions Functions { get; set; }
 
@@ -86,7 +86,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 foreach (var r in Resource.Parse(resource, context, functions, infrastructure, string.Empty, string.Empty))
                 {
                     if (r.Condition)
-                        template.Resources.Add(r.Name, r);
+                        template.Resources.Add(r);
                     else
                         template.ConditionFalseResources.Add(r.Name);
                 }
@@ -117,7 +117,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 writer.WriteRawString("outputs", this.Outputs);
             writer.WritePropertyName("resources");
             writer.WriteStartArray();
-            foreach (var r in Resources.Values)
+            foreach (var r in Resources)
             {
                 writer.WriteRawString(r.ToString());
             }

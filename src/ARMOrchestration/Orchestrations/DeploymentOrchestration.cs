@@ -148,7 +148,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             ConcurrentBag<Task<TaskResult>> tasks = new ConcurrentBag<Task<TaskResult>>();
 
             Dictionary<string, List<Resource>> copyDic = new Dictionary<string, List<Resource>>();
-            foreach (var resource in input.Template.Resources.Values)
+            foreach (var resource in input.Template.Resources)
             {
                 if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments
                     || resource.Type == Copy.ServiceType)

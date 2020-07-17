@@ -904,7 +904,7 @@ namespace maskx.ARMOrchestration.Functions
                 return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
             return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
-
+       
         public string SubscriptionResourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
