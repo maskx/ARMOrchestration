@@ -822,7 +822,7 @@ namespace maskx.ARMOrchestration.Functions
                     string id = resourceName;
                     if (resourceName.IndexOf('/') < 0)
                     {
-                        id = context.Template.Resources[resourceName].ResouceId;
+                        id = context.Template.Resources[resourceName].ResourceId;
                     }
                     var taskResult = this.infrastructure.Reference(context, id, apiVersion, full);
                     if (taskResult.Code == 200)

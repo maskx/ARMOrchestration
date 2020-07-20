@@ -73,7 +73,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public string SubscriptionId { get; set; }
         public string ManagementGroupId { get; set; }
 
-        public string ResouceId { get; set; }
+        public string ResourceId { get; set; }
         public string CopyId { get; set; }
         public int CopyIndex { get; set; }
         public string CopyName { get; set; }
@@ -218,7 +218,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     r.FullType
                 };
                 pars.AddRange(r.FullName.Split('/'));
-                r.ResouceId = functions.ResourceId(
+                r.ResourceId = functions.ResourceId(
                    deploymentContext,
                    pars.ToArray());
             }
@@ -230,7 +230,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     r.FullType
                 };
                 pars.AddRange(r.FullName.Split('/'));
-                r.ResouceId = functions.SubscriptionResourceId(deploymentContext, pars.ToArray());
+                r.ResourceId = functions.SubscriptionResourceId(deploymentContext, pars.ToArray());
             }
             else
             {
@@ -239,7 +239,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     r.FullType
                 };
                 pars.AddRange(r.FullName.Split('/'));
-                r.ResouceId = functions.TenantResourceId(pars.ToArray());
+                r.ResourceId = functions.TenantResourceId(pars.ToArray());
             }
 
             #endregion ResouceId
@@ -329,9 +329,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Type = Copy.ServiceType,
                 FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
                 FullType = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
-                ResouceId = copy.Id,
+                ResourceId = copy.Id,
                 Mode=copy.Mode,
-                BatchSize = copy.BatchSize
+                BatchSize = copy.BatchSize,
             };
             List<Resource> resources = new List<Resource>
             {
@@ -360,6 +360,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
             CopyResource.SubscriptionId = resources[1].SubscriptionId;
             CopyResource.ManagementGroupId = resources[1].ManagementGroupId;
+            CopyResource.SKU = resources[1].SKU;
+            CopyResource.Plan = resources[1].Plan;
+            CopyResource.Kind = resources[1].Kind;
+            CopyResource.Zones = resources[1].Zones;
+            CopyResource.Location = resources[1].Location;
             return resources;
         }
         private static bool HandleDependsOn(Resource r, Dictionary<string, object> context)

@@ -47,7 +47,7 @@ namespace maskx.ARMOrchestration
             }
             else
             {
-                this.ResourceId = resource.ResouceId;
+                this.ResourceId = resource.ResourceId;
                 this.Name = resource.FullName;
                 this.Type = resource.FullType;
                 this.ParentResourceId = string.IsNullOrEmpty(resource.CopyId) ? deploymentContext.GetResourceId(infrastructure) : resource.CopyId;

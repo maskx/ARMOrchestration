@@ -23,7 +23,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-    
             #region DependsOn
 
             if (input.Resource.DependsOn.Count > 0)
@@ -49,6 +48,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Input = DataConverter.Serialize(input),
                         Result = DataConverter.Serialize(r)
                     });
+                    return r;
                 }
             }
 
@@ -67,10 +67,10 @@ namespace maskx.ARMOrchestration.Orchestrations
                 });
                 return expandResult;
             }
-               
+
             #endregion Evaluate functions
 
-            input.Resource= DataConverter.Deserialize<Resource>(expandResult.Content);
+            input.Resource = DataConverter.Deserialize<Resource>(expandResult.Content);
 
             #region plug-in
 
