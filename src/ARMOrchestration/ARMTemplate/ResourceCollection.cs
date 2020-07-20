@@ -22,7 +22,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         throw new KeyNotFoundException(name);
                     foreach (var r in rs)
                     {
-                        if (r.ResouceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
+                        if (r.ResourceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
                             return r;
                     }
                     throw new KeyNotFoundException(name);
@@ -48,7 +48,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     return false;
                 foreach (var r in rs)
                 {
-                    if (r.ResouceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
+                    if (r.ResourceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
                     {
                         resource = r;
                         return true;
@@ -85,7 +85,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             foreach (var r in rs)
             {
                 // item already in clollection
-                if (r.ResouceId.Equals(item.ResouceId, StringComparison.OrdinalIgnoreCase))
+                if (r.ResourceId.Equals(item.ResourceId, StringComparison.OrdinalIgnoreCase))
                     return;
             }
             rs.Add(item);
@@ -106,7 +106,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return false;
             foreach (var r in rs)
             {
-                if (r.ResouceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
+                if (r.ResourceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
             return false;
@@ -119,7 +119,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return false;
             foreach (var r in rs)
             {
-                if (r.ResouceId.Equals(item.FullName,StringComparison.OrdinalIgnoreCase))
+                if (r.ResourceId.Equals(item.FullName,StringComparison.OrdinalIgnoreCase))
                     return true;
             }
             return false;
