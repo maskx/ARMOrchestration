@@ -51,7 +51,7 @@ WHEN MATCHED THEN
                 "DeploymentOperationsActivity",
                deploymentOperation.InstanceId,
                 deploymentOperation.ExecutionId,
-                $"{deploymentOperation.ResourceId}-{deploymentOperation.Stage}",
+                $"{deploymentOperation.Type}:{deploymentOperation.ResourceId}:{(int)deploymentOperation.Stage}",
                 deploymentOperation.Input,
                 deploymentOperation.Stage.ToString());
 
