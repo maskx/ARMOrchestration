@@ -160,7 +160,7 @@ WHEN MATCHED THEN
                 result.Changes.Add(new WhatIfChange()
                 {
                     ChangeType = ChangeType.Create,
-                    ResourceId = resource.ResouceId
+                    ResourceId = resource.ResourceId
                 });
             }
         }
