@@ -331,7 +331,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 FullType = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
                 ResouceId = copy.Id,
                 Mode=copy.Mode,
-                BatchSize = copy.BatchSize
+                BatchSize = copy.BatchSize,
             };
             List<Resource> resources = new List<Resource>
             {
@@ -360,6 +360,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
             CopyResource.SubscriptionId = resources[1].SubscriptionId;
             CopyResource.ManagementGroupId = resources[1].ManagementGroupId;
+            CopyResource.SKU = resources[1].SKU;
+            CopyResource.Plan = resources[1].Plan;
+            CopyResource.Kind = resources[1].Kind;
+            CopyResource.Zones = resources[1].Zones;
+            CopyResource.Location = resources[1].Location;
             return resources;
         }
         private static bool HandleDependsOn(Resource r, Dictionary<string, object> context)
