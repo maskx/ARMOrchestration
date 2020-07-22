@@ -38,13 +38,26 @@ namespace maskx.ARMOrchestration.Orchestrations
                         else
                             throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
                     }
+                    // check duplicated dependsOn
+                    if (HasSameName(res.DependsOn,i-1,dependsOnName))
+                        res.DependsOn.RemoveAt(i);
                 }
                 // TODO: check circular dependencies
                 #endregion
             }
             return input;
         }
-
+        private static bool HasSameName(List<string> collection,int index,string name)
+        {
+            if (index == 0)
+                return false;
+            for (int i = index; i >=0; i--)
+            {
+                if (collection[i] == name)
+                    return true;
+            }
+            return false;
+        }
         public static DeploymentOrchestrationInput Parse(Resource resource,
                   DeploymentContext deploymentContext,
                   ARMFunctions functions,
