@@ -168,7 +168,30 @@ namespace ARMOrchestrationTest.TestARMFunctions
             }
             Assert.True(hasResource);
         }
-
+        [Fact(DisplayName = "2ReferenceDependsOn")]
+        public void TwoReferenceDependsOn()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+            };
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/2referenceDependsOn", result);
+            var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
+            bool hasResource = false;
+            foreach (var r in rs)
+            {
+                if (r.Name == "ReferenceInProperty")
+                {
+                    hasResource = true;
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var p = JsonDocument.Parse(input.Resource.Properties);
+                    var c = p.RootElement.GetProperty("comment");
+                    Assert.Equal("Succeeded2020-3-11", c.GetString());
+                    var c2 = p.RootElement.GetProperty("comment2");
+                    Assert.Equal("Completed222", c2.GetString());
+                }
+            }
+            Assert.True(hasResource);
+        }
         [Fact(DisplayName = "ReferenceResourceIteration")]
         public void ReferenceResourceIteration()
         {

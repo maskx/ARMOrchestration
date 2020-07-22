@@ -811,8 +811,8 @@ namespace maskx.ARMOrchestration.Functions
                         {
                             dependsOn = new List<string>();
                             cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                            dependsOn.Add(resourceName);
                         }
+                        dependsOn.Add(resourceName);
                     }
                     cxt.TryAdd(ContextKeys.NEED_REEVALUATE, true);
                     args.Result = new FakeJsonValue(resourceName);
@@ -900,7 +900,7 @@ namespace maskx.ARMOrchestration.Functions
                 nestr += $"/{fullnames[typeIndex]}/{item}";
                 typeIndex++;
             }
-            if(string.IsNullOrEmpty(resourceGroupName))
+            if (string.IsNullOrEmpty(resourceGroupName))
                 return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
             return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
