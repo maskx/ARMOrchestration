@@ -49,7 +49,7 @@ WHEN MATCHED THEN
             TraceActivityEventSource.Log.TraceEvent(
                 TraceEventType.Information,
                 "DeploymentOperationsActivity",
-               deploymentOperation.InstanceId,
+                deploymentOperation.InstanceId,
                 deploymentOperation.ExecutionId,
                 $"{deploymentOperation.Type}:{deploymentOperation.ResourceId}:{(int)deploymentOperation.Stage}",
                 deploymentOperation.Input,

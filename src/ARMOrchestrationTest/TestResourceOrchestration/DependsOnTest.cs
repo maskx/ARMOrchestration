@@ -86,5 +86,11 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 }
             }
         }
+        [Fact(DisplayName = "DependsOnFullname")]
+        public void DependsOnFullname()
+        {
+            TestHelper.OrchestrationTest(fixture,
+                "dependsOn/dependsOnFullname");
+        }
     }
 }
