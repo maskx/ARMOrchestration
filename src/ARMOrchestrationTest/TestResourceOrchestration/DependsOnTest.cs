@@ -86,6 +86,58 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 }
             }
         }
+        [Fact(DisplayName = "ServiceTypeNameAndName")]
+        public void ServiceTypeNameAndName()
+        {
+            var instance = TestHelper.OrchestrationTest(fixture,
+                 "dependsOn/ServiceTypeNameAndName");
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            foreach (var r in resources)
+            {
+                if (r.Name == "resource2")
+                {
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
+                }
+            }
+        }
+        [Fact(DisplayName = "DuplicatedServiceTypeName")]
+        public void DuplicatedServiceTypeName()
+        {
+            var instance = TestHelper.OrchestrationTest(fixture,
+                 "dependsOn/DuplicatedServiceTypeName");
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            foreach (var r in resources)
+            {
+                if (r.Name == "resource2")
+                {
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
+                }
+            }
+        }
+        [Fact(DisplayName = "DiffServiceTypeSameName")]
+        public void DiffServiceTypeSameName()
+        {
+            var instance = TestHelper.OrchestrationTest(fixture,
+                 "dependsOn/DiffServiceTypeSameName");
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            foreach (var r in resources)
+            {
+                if (r.Name == "resource2")
+                {
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    Assert.Equal(2, input.Resource.DependsOn.Count);
+                    Assert.Contains("rp/st/resource1", input.Resource.DependsOn);
+                    Assert.Contains("rp/st1/resource1", input.Resource.DependsOn);
+                }
+            }
+        }
         [Fact(DisplayName = "DependsOnFullname")]
         public void DependsOnFullname()
         {
