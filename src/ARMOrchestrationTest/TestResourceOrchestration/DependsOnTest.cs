@@ -1,5 +1,9 @@
 ﻿using ARMCreatorTest;
+using DurableTask.Core;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
+using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Orchestrations;
 
 namespace ARMOrchestrationTest.TestResourceOrchestration
 {
@@ -47,6 +51,40 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             TestHelper.OrchestrationTest(fixture,
                 "dependsOn/DeployDepondsOn");
+        }
+        [Fact(DisplayName = "DuplicatedName")]
+        public void DuplicatedName()
+        {
+            var instance = TestHelper.OrchestrationTest(fixture,
+                 "dependsOn/DuplicatedName");
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            foreach (var r in resources)
+            {
+                if (r.Name == "resource2")
+                {
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal("resource1", input.Resource.DependsOn[0]);
+                }
+            }
+        }
+        [Fact(DisplayName = "NameAndServiceTypeName")]
+        public void NameAndServiceTypeName()
+        {
+            var instance = TestHelper.OrchestrationTest(fixture,
+                 "dependsOn/NameAndServiceTypeName");
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            foreach (var r in resources)
+            {
+                if (r.Name == "resource2")
+                {
+                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal("resource1", input.Resource.DependsOn[0]);
+                }
+            }
         }
     }
 }
