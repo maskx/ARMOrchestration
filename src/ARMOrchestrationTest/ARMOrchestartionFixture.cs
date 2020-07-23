@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using Xunit;
 
-namespace ARMCreatorTest
+namespace ARMOrchestrationTest
 {
     public class ARMOrchestartionFixture 
     {

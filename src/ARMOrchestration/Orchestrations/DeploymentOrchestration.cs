@@ -58,7 +58,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Input = arg
+                    Input = arg,
+                    Stage=ProvisioningStage.ValidateTemplate
                 }); ;
             }
 
@@ -81,6 +82,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                              });
                 if (injectBeforeDeploymenteResult.Code != 200)
                 {
+                    helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.BeforeDeploymentFailed,
+                        Result = DataConverter.Serialize(injectBeforeDeploymenteResult)
+                    });
                     return injectBeforeDeploymenteResult;
                 }
             }
@@ -165,7 +173,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                     ResourceOrchestration.Name,
-                    "1.0",
+                    "1.0",// todo: change to resource.ApiVersion
                     new ResourceOrchestrationInput()
                     {
                         Resource = resource,
@@ -176,7 +184,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                    DeploymentOrchestration.Name,
-                    "1.0",
+                    "1.0",// todo: change to deploy.Value.ApiVersion
                    DataConverter.Serialize(deploy.Value)));
             }
             foreach (var key in copyDic.Keys)

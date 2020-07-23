@@ -12,7 +12,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace ARMCreatorTest.TestARMFunctions
+namespace ARMOrchestrationTest.TestARMFunctions
 {
     /// <summary>
     /// ARMFunctionsTest

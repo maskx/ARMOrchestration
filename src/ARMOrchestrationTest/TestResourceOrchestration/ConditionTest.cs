@@ -1,6 +1,6 @@
 ﻿using Xunit;
 
-namespace ARMCreatorTest.TestResourceOrchestration
+namespace ARMOrchestrationTest.TestResourceOrchestration
 {
     [Collection("WebHost ARMOrchestartion")]
     [Trait("c", "ResourceOrchestration")]

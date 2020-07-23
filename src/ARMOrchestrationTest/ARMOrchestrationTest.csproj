@@ -108,6 +108,12 @@
     <None Update="TestARMFunctions\json\reference\2referenceDependsOn.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestARMFunctions\json\reference\IncluedServiceTypeNotExist.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestARMFunctions\json\reference\IncluedServiceTypeDependsOn.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestARMFunctions\json\subscriptionResourceId.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

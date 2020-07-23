@@ -799,8 +799,10 @@ namespace maskx.ARMOrchestration.Functions
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
                     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                     // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
-
-                    if (resourceName.IndexOf('/') < 0)
+                    // reference 'ResourceProvider/ServiceType/ResourceName' will create a implicit dependency
+                    if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
+                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
+                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
                     {
                         List<string> dependsOn;
                         if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
@@ -904,7 +906,7 @@ namespace maskx.ARMOrchestration.Functions
                 return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
             return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
-       
+
         public string SubscriptionResourceId(DeploymentContext input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;

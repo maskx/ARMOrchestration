@@ -1,4 +1,4 @@
-﻿using ARMCreatorTest;
+﻿using ARMOrchestrationTest;
 using System.Collections.Generic;
 using Xunit;
 

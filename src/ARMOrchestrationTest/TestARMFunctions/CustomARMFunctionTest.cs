@@ -5,7 +5,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
-namespace ARMCreatorTest.TestARMFunctions
+namespace ARMOrchestrationTest.TestARMFunctions
 {
     internal class CustomARMFunctionTest
     {

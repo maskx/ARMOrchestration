@@ -28,7 +28,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                                    ResourceOrchestration.Name,
-                                   "1.0",
+                                   "1.0", // todo: change to resource.ApiVersion
                                    new ResourceOrchestrationInput()
                                    {
                                        Resource = resource,

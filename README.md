@@ -68,14 +68,4 @@ for more information about Communication Processor, please reference https://git
 
 ## DeploymentOrchestrationInput
 
-|Name|Description|
-|-|-|
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
-|ApiVersion||
+

@@ -1,21 +1,15 @@
 ﻿using ARMOrchestrationTest.Mock;
 using DurableTask.Core;
-using DurableTask.Core.Common;
 using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
-using maskx.DurableTask.SQLServer;
-using maskx.DurableTask.SQLServer.Settings;
-using maskx.DurableTask.SQLServer.SQL;
-using maskx.DurableTask.SQLServer.Tracking;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -24,7 +18,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace ARMCreatorTest
+namespace ARMOrchestrationTest
 {
     public static class TestHelper
     {
@@ -96,42 +90,15 @@ namespace ARMCreatorTest
             var templatString = TestHelper.GetFunctionInputContent(filename);
             return new JsonValue(templatString).GetNodeStringValue(path);
         }
-
         public static OrchestrationInstance FunctionTest(
-            ARMOrchestartionFixture fixture, 
-            string filename, 
+            ARMOrchestartionFixture fixture,
+            string filename,
             Dictionary<string, string> result,
-            string managementGroupId=null)
+            string managementGroupId = null)
         {
+            var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename, managementGroupId);
+            var outputString = taskResult.Content;
             var templateString = TestHelper.GetFunctionInputContent(filename);
-            var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
-            {
-                TemplateContent = templateString,
-                Parameters = string.Empty,
-                CorrelationId = Guid.NewGuid().ToString("N"),
-                DeploymentName = filename.Replace('/', '-'),
-                SubscriptionId = string.IsNullOrEmpty(managementGroupId)?TestHelper.SubscriptionId:null,
-                ManagementGroupId=managementGroupId,
-                ResourceGroup = TestHelper.ResourceGroup,
-                GroupId = Guid.NewGuid().ToString("N"),
-                GroupType = "ResourceGroup",
-                HierarchyId = "001002003004005",
-                CreateByUserId = TestHelper.CreateByUserId,
-                ApiVersion = "1.0",
-                TenantId = TestHelper.TenantId,
-                DeploymentId = Guid.NewGuid().ToString("N")
-            }).Result;
-            var instance = new OrchestrationInstance() { InstanceId=deployment.InstanceId,ExecutionId=deployment.ExecutionId};
-            TaskCompletionSource<string> t = new TaskCompletionSource<string>();
-
-            fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
-            {
-                if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
-                    t.SetResult(args.Result);
-            });
-            t.Task.Wait();
-            var outputString = DataConverter.Deserialize<TaskResult>(t.Task.Result).Content;
-
             using var templateDoc = JsonDocument.Parse(templateString);
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
@@ -151,6 +118,41 @@ namespace ARMCreatorTest
                 }
             }
             return instance;
+        }
+        public static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(
+            ARMOrchestartionFixture fixture,
+            string filename,
+            string managementGroupId = null)
+        {
+            var templateString = TestHelper.GetFunctionInputContent(filename);
+            var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
+            {
+                TemplateContent = templateString,
+                Parameters = string.Empty,
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                DeploymentName = filename.Replace('/', '-'),
+                SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? TestHelper.SubscriptionId : null,
+                ManagementGroupId = managementGroupId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005",
+                CreateByUserId = TestHelper.CreateByUserId,
+                ApiVersion = "1.0",
+                TenantId = TestHelper.TenantId,
+                DeploymentId = Guid.NewGuid().ToString("N")
+            }).Result;
+            var instance = new OrchestrationInstance() { InstanceId = deployment.InstanceId, ExecutionId = deployment.ExecutionId };
+            TaskCompletionSource<string> t = new TaskCompletionSource<string>();
+
+            fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
+            {
+                if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
+                    t.SetResult(args.Result);
+            });
+            t.Task.Wait();
+            var reslut = DataConverter.Deserialize<TaskResult>(t.Task.Result);
+            return (instance, reslut);
         }
 
         public static IHostBuilder CreateHostBuilder(

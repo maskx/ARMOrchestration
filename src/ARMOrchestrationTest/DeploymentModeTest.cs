@@ -1,4 +1,4 @@
-﻿namespace ARMCreatorTest
+﻿namespace ARMOrchestrationTest
 {
     public class DeploymentModeTest
     {
