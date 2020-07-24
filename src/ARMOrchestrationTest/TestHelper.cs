@@ -225,8 +225,18 @@ namespace ARMOrchestrationTest
                  });
              });
         }
-
         public static OrchestrationInstance OrchestrationTest(ARMOrchestartionFixture fixture,
+            string filename,
+            Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
+            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
+        {
+            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, isValidateOrchestration, validate);
+            Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
+            var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
+            Assert.Equal(200, response.Code);
+            return instance;
+        }
+        public static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
             Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
@@ -263,18 +273,16 @@ namespace ARMOrchestrationTest
                 validate?.Invoke(instance, r);
             }
             var taskHubClient = new TaskHubClient(fixture.ServiceProvider.GetService<IOrchestrationServiceClient>());
+            OrchestrationState result;
             while (true)
             {
-                var result = taskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+                result = taskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
-                    Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
-                    var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
-                    Assert.Equal(200, response.Code);
                     break;
                 }
             }
-            return instance;
+            return (instance, result);
         }
     }
 }

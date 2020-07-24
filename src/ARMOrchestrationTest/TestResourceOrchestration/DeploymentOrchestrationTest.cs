@@ -1,4 +1,6 @@
 ﻿using ARMOrchestrationTest;
+using DurableTask.Core;
+using maskx.OrchestrationService;
 using System.Collections.Generic;
 using Xunit;
 
@@ -19,11 +21,11 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "HasResourceFail")]
         public void HasResourceFail()
         {
-            Dictionary<string, string> result = new Dictionary<string, string>()
-            {
-            };
-            var instance = TestHelper.OrchestrationTest(this.fixture, "HasResourceFail");
-            var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
+            var (instance,result) = TestHelper.OrchestrationTestNotCheckResult(this.fixture, "HasResourceFail");
+            Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
+            var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
+            Assert.Equal(500, response.Code);
+            var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.ExecutionId).Result;
             foreach (var r in rs)
             {
                 if (r.Name == "fail")

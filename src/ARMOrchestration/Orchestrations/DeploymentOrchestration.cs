@@ -59,7 +59,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Input = arg,
-                    Stage=ProvisioningStage.ValidateTemplate
+                    Stage = ProvisioningStage.ValidateTemplate
                 }); ;
             }
 
@@ -173,7 +173,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                     ResourceOrchestration.Name,
-                    "1.0",// todo: change to resource.ApiVersion
+                    "1.0",
                     new ResourceOrchestrationInput()
                     {
                         Resource = resource,
@@ -184,7 +184,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                    DeploymentOrchestration.Name,
-                    "1.0",// todo: change to deploy.Value.ApiVersion
+                    "1.0",
                    DataConverter.Serialize(deploy.Value)));
             }
             foreach (var key in copyDic.Keys)
@@ -269,9 +269,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 catch (Exception ex)
                 {
+                    hasFailResource = true;
                     rtv = ex.Message;
                 }
-
             }
 
             #endregion get template outputs
@@ -283,7 +283,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Stage = hasFailResource ? ProvisioningStage.Failed : ProvisioningStage.Successed,
                 Result = rtv
             });
-            return new TaskResult() { Code = 200, Content = rtv };
+            return new TaskResult() { Code = hasFailResource ? 500 : 200, Content = rtv };
         }
         private TaskCompletionSource<string> waitHandler = null;
 
