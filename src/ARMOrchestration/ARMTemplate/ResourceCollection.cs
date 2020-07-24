@@ -36,6 +36,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     return rs[0];
                 }
             }
+            set
+            {
+                Remove(value);
+                Add(value);
+            }
         }
         public bool TryGetValue(string name, out Resource resource)
         {
