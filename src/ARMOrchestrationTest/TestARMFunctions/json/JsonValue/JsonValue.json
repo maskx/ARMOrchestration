@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+  },
+  "resources": [
+  ],
+  "outputs": {
+    "indexer_indexer": {
+      "type": "int",
+      "value": "[json('[[1,2],[\"a\",\"b\"]]')[1][0]]"
+    },
+    "indexer_Memberindexer": {
+      "type": "int",
+      "value": "[json('[{\"FF\":[\"a\",\"b\"]}]')[0].FF[0]]"
+    }
+  }
+}

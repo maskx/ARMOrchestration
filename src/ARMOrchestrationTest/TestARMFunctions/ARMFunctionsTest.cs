@@ -775,5 +775,18 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         #endregion String
+
+
+        [Trait("ARMFunctions", "JsonValue")]
+        [Fact(DisplayName = "Indexer")]
+        public void Indexer()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                {"indexer_indexer","a"},
+                { "indexer_Memberindexer","a"}
+            };
+            TestHelper.FunctionTest(this.fixture, "JsonValue/JsonValue", result);
+        }
     }
 }

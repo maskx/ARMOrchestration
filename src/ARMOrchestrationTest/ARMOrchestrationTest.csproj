@@ -102,6 +102,9 @@
     <None Update="Templates\NestTemplate\NestTemplate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestARMFunctions\json\JsonValue\JsonValue.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestARMFunctions\json\managementResourceId.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
