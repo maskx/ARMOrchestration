@@ -22,6 +22,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var deploy = Parse(res, input, functions, infrastructure);
                     input.Deployments.Add(deploy.DeploymentName, deploy);
+                    foreach (var item in deploy.Deployments.Values)
+                    {
+                        input.Deployments.Add(item.DeploymentName, item);
+                    }
+                    deploy.Deployments.Clear();
                 }
                 #endregion
 
@@ -195,6 +200,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Extensions = deploymentContext.Extensions,
                 TenantId = deploymentContext.TenantId
             };
+
             return Validate(deployInput, functions, infrastructure);
         }
         public List<string> DependsOn { get; set; } = new List<string>();

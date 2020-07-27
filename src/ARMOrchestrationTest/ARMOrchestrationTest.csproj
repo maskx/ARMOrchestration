@@ -321,6 +321,9 @@
     <None Update="ValidateTemplateTests\Template\ExpressionsInNestedTemplates-inner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="ValidateTemplateTests\Template\DoubleNestTemplate.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="ValidateTemplateTests\Template\NestTemplate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

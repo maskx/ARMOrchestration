@@ -32,13 +32,13 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var r = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
             {
-                DeploymentName= "EmptyTemplate",
+                DeploymentName = "EmptyTemplate",
                 TemplateContent = GetTemplate("Empty")
             }, functions, infrastructure);
             Assert.NotNull(r);
             Assert.Empty(r.Template.Resources);
             Assert.Empty(r.Deployments);
-            var s= r.Template.ToString();
+            var s = r.Template.ToString();
             using var doc = JsonDocument.Parse(s);
             var root = doc.RootElement;
 
@@ -148,7 +148,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = TestHelper.GetJsonFileContent("Templates/CopyIndex/PropertyIteration")
             }, functions, infrastructure);
-          
+
             Assert.Single(Deployment.Template.Resources);
             var resource = Deployment.Template.Resources.First();
             using var doc = JsonDocument.Parse(resource.Properties);
@@ -221,6 +221,49 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             using var doc1 = JsonDocument.Parse(s);
             var root1 = doc1.RootElement;
         }
+        [Fact(DisplayName = "DoubleNestTemplate")]
+        public void DoubleNestTemplate()
+        {
+            var Deployment = DeploymentOrchestrationInput.Validate(new DeploymentOrchestrationInput()
+            {
+                DeploymentName = "DoubleNestTemplate",
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                TemplateContent = GetTemplate("DoubleNestTemplate"),
+                DeploymentId = Guid.NewGuid().ToString("N"),
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005"
+            }, functions, infrastructure);
+
+            Assert.Equal(2, Deployment.Deployments.Count);
+
+            var d1 = Deployment.Deployments["nestedTemplate1"];
+            Assert.Equal("2017-05-10", d1.ApiVersion);
+            Assert.Equal(Deployment.RootId, d1.RootId);
+            Assert.NotNull(d1.DeploymentId);
+            Assert.Empty(d1.Deployments);
+
+            Assert.NotNull(d1.Template);
+            var t = d1.Template;
+            Assert.Single(t.Resources);
+            var res = t.Resources.First();
+            Assert.Equal("nestedTemplate2", res.FullName);
+            Assert.Equal("Microsoft.Resources/deployments", res.FullType);
+           
+            var d2 = Deployment.Deployments["nestedTemplate2"];
+            Assert.Equal("2017-05-10", d2.ApiVersion);
+            Assert.Equal(Deployment.RootId, d2.RootId);
+            Assert.NotNull(d2.DeploymentId);
+            Assert.Empty(d2.Deployments);
+
+            Assert.NotNull(d2.Template);
+            var t2 = d2.Template;
+            Assert.Single(t2.Resources);
+            var res2 = t2.Resources.First();
+            Assert.Equal("storageAccount1", res2.FullName);
+            Assert.Equal("Microsoft.Storage/storageAccounts", res2.FullType);
+        }
 
         [Fact(DisplayName = "ExpressionEvaluationScopeInner")]
         public void ExpressionEvaluationScopeInner()
@@ -232,7 +275,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
                 ResourceGroup = TestHelper.ResourceGroup,
                 TemplateContent = GetTemplate("ExpressionsInNestedTemplates-inner")
             }, functions, infrastructure);
-           
+
             Assert.Single(Deployment.Deployments);
             var d = Deployment.Deployments.First().Value;
             Assert.Equal("nestedTemplate1", d.DeploymentName);
