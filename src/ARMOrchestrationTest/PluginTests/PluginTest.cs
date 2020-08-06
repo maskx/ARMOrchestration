@@ -35,7 +35,7 @@ namespace ARMOrchestrationTest.PluginTests
 
         [Fact(DisplayName = "Test")]
         public void Test()
-        { 
+        {
             var client = serviceProvider.GetService<OrchestrationWorkerClient>();
             var instance = serviceProvider.GetService<ARMOrchestrationClient>().Run(
                 new DeploymentOrchestrationInput()
@@ -43,8 +43,7 @@ namespace ARMOrchestrationTest.PluginTests
                     ApiVersion = "1.0",
                     DeploymentName = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
-                    Template = new Template(),
-                    TemplateContent = TestHelper.GetJsonFileContent("PluginTests/NestTemplate"),
+                    Template = TestHelper.GetJsonFileContent("PluginTests/NestTemplate"),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     CorrelationId = Guid.NewGuid().ToString("N"),
@@ -56,7 +55,7 @@ namespace ARMOrchestrationTest.PluginTests
                 }).Result;
             while (true)
             {
-                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { ExecutionId=instance.ExecutionId,InstanceId=instance.InstanceId}, TimeSpan.FromSeconds(30)).Result;
+                var result = client.WaitForOrchestrationAsync(new OrchestrationInstance() { ExecutionId = instance.ExecutionId, InstanceId = instance.InstanceId }, TimeSpan.FromSeconds(30)).Result;
                 if (result != null)
                 {
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);

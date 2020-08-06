@@ -28,6 +28,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         {
             this.fixture = fixture;
         }
+
         [Fact(DisplayName = "left bracket")]
         public void LeftBracket()
         {
@@ -37,6 +38,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture, "LeftBracket", result);
         }
+
         [Fact(DisplayName = "escape double quotes")]
         public void EscapeDoubleQuotes()
         {
@@ -46,6 +48,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture, "EscapeDoubleQuotes", result);
         }
+
         #region Array and object
 
         [Trait("ARMFunctions", "Array and object")]
@@ -578,6 +581,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture, "format", result);
         }
+
         [Trait("ARMFunctions", "String")]
         [Fact(DisplayName = "guid")]
         public void guid()
@@ -592,6 +596,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             Assert.Equal("b74a9217-f91d-54f5-86a8-bd998e2d611d", abc1);
             Assert.Equal("51e07a2f-6c47-2383-a3ea-376e5bd2df27", xyz2);
         }
+
         [Trait("ARMFunctions", "String")]
         [Fact(DisplayName = "uniqueString")]
         public void uniqueString()
@@ -606,6 +611,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             Assert.Equal("4tmzhlnssjckt", abc1);
             Assert.Equal("k6gotveobkoyh", xyz2);
         }
+
         [Trait("ARMFunctions", "String")]
         [Fact(DisplayName = "newGuid")]
         public void newGuid()
@@ -622,7 +628,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 },
                 Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
                 {
-                    TemplateContent = templateString,
+                    Template = templateString,
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     DeploymentName = filename.Replace('/', '-'),
@@ -775,7 +781,6 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         #endregion String
-
 
         [Trait("ARMFunctions", "JsonValue")]
         [Fact(DisplayName = "Indexer")]

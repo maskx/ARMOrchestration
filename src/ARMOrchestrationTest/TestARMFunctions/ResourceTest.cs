@@ -32,6 +32,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture, "extensionResourceId", result);
         }
+
         [Fact(DisplayName = "SubscriptionResourceId")]
         public void SubscriptionResourceId()
         {
@@ -43,6 +44,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
              };
             TestHelper.FunctionTest(this.fixture, "subscriptionResourceId", result);
         }
+
         [Fact(DisplayName = "ManagementGroupResourceid")]
         public void ManagementGroupResourceid()
         {
@@ -52,8 +54,9 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"WithOutManagementGroupId",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1"},
                 {"NestResource",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
              };
-            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result,TestHelper.ManagemntGroupId);
+            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result, TestHelper.ManagemntGroupId);
         }
+
         [Fact(DisplayName = "resourceid")]
         public void Resourceid()
         {
@@ -93,9 +96,9 @@ namespace ARMOrchestrationTest.TestARMFunctions
             object rtv = functions.Evaluate(
                 "[listId('resourceId','2019-01-02')]",
                 new Dictionary<string, object>() {
-                    {"armcontext",new DeploymentContext(){
+                    {"armcontext",new DeploymentOrchestrationInput(){
                         Template=new Template() } }
-                });
+                }); ;
             Assert.NotNull(rtv);
         }
 
@@ -103,8 +106,9 @@ namespace ARMOrchestrationTest.TestARMFunctions
         public void ListResourceInPrepareTime()
         {
             Dictionary<string, object> cxt = new Dictionary<string, object>() {
-                    {"armcontext",new DeploymentContext(){
-                        Template=new Template() } },{ContextKeys.IS_PREPARE,true }
+                    {"armcontext",new DeploymentOrchestrationInput(){
+                        Template=new Template() ,
+                        IsRuntime=false}}
                 };
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
@@ -129,7 +133,5 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             TestHelper.FunctionTest(this.fixture, "resourceGroup", result);
         }
-
-       
     }
 }

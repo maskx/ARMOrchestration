@@ -1,10 +1,17 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
     public class DeploymentContext
     {
+        [JsonIgnore]
+        public IServiceProvider ServiceProvider { get; set; }
+
+        public bool IsRuntime { get; set; } = false;
+
         /// <summary>
         /// group Id
         /// </summary>
@@ -48,7 +55,25 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// </summary>
         public DeploymentMode Mode { get; set; } = DeploymentMode.Incremental;
 
-        public Template Template { get; set; }
+        private Template template = null;
+
+        public Template Template
+        {
+            get
+            {
+                if (template == null && TemplateLink != null)
+                {
+                    // get template from templateLink
+                }
+                return template;
+            }
+            set
+            {
+                template = value;
+                template.Input = (DeploymentOrchestrationInput)this;
+            }
+        }
+
         public string Parameters { get; set; }
         public string ApiVersion { get; set; }
 
@@ -56,7 +81,8 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// When a deployment fails, you can automatically redeploy an earlier, successful deployment from your deployment history. This functionality is useful if you've got a known good state for your infrastructure deployment and want to revert to this state.
         /// </summary>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error"/>
-        public bool RollbackToLastDeployment { get; set; } = false;
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error#rest-api"/>
+        public bool OnErrorDeployment { get; set; } = false;
 
         /// <summary>
         /// the user id of create this deployment
@@ -75,7 +101,39 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public TemplateLink TemplateLink { get; set; }
         public ParametersLink ParametersLink { get; set; }
-        public string TemplateContent { get; set; }
+        public List<string> DependsOn { get; set; } = new List<string>();
+        private Dictionary<string, DeploymentOrchestrationInput> _Deployments;
+
+        public Dictionary<string, DeploymentOrchestrationInput> Deployments
+        {
+            get
+            {
+                if (template == null)
+                {
+                    _Deployments = new Dictionary<string, DeploymentOrchestrationInput>();
+                }
+                return _Deployments;
+            }
+        }
+
+        /// <summary>
+        ///  all resource in this Deployment
+        /// </summary>
+        public IEnumerable<Resource> EnumerateResource()
+        {
+            foreach (var r in this.Template.Resources)
+            {
+                yield return r;
+            }
+            foreach (var d in this.Deployments.Values)
+            {
+                foreach (var r in d.EnumerateResource())
+                {
+                    yield return r;
+                }
+            }
+        }
+
         public string GetResourceId(IInfrastructure infrastructure)
         {
             string resourceId = string.Empty;

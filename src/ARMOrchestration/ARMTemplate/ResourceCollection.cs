@@ -9,7 +9,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
     public class ResourceCollection : ICollection<Resource>
     {
         private readonly ConcurrentDictionary<string, List<Resource>> _Resources = new ConcurrentDictionary<string, List<Resource>>();
-       
+
         public Resource this[string name]
         {
             get
@@ -17,7 +17,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 int index = name.LastIndexOf('/');
                 if (index > 0)
                 {
-                    string n = name.Substring(index+1);
+                    string n = name.Substring(index + 1);
                     if (!this._Resources.TryGetValue(n, out List<Resource> rs))
                         throw new KeyNotFoundException(name);
                     foreach (var r in rs)
@@ -42,13 +42,14 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Add(value);
             }
         }
+
         public bool TryGetValue(string name, out Resource resource)
         {
             resource = null;
             int index = name.LastIndexOf('/');
             if (index > 0)
             {
-                string n = name.Substring(index+1);
+                string n = name.Substring(index + 1);
                 if (!this._Resources.TryGetValue(n, out List<Resource> rs))
                     return false;
                 foreach (var r in rs)
@@ -58,7 +59,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         resource = r;
                         return true;
                     }
-
                 }
                 return false;
             }
@@ -70,6 +70,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return true;
             }
         }
+
         public int Count
         {
             get
@@ -106,7 +107,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             int index = name.LastIndexOf('/');
             if (index < 0)
                 return this._Resources.ContainsKey(name);
-            string n = name.Substring(index+1);
+            string n = name.Substring(index + 1);
             if (!this._Resources.TryGetValue(n, out List<Resource> rs))
                 return false;
             foreach (var r in rs)
@@ -115,7 +116,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     return true;
             }
             return false;
-
         }
 
         public bool Contains(Resource item)
@@ -124,7 +124,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return false;
             foreach (var r in rs)
             {
-                if (r.ResourceId.Equals(item.FullName,StringComparison.OrdinalIgnoreCase))
+                if (r.ResourceId.Equals(item.FullName, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
             return false;
@@ -174,7 +174,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
             }
             return false;
-
         }
 
         IEnumerator IEnumerable.GetEnumerator()

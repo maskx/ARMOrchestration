@@ -2,6 +2,8 @@
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
+using System;
+using System.ComponentModel.Design;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
@@ -20,11 +22,14 @@ values
         private readonly ARMOrchestrationOptions options;
         private readonly ARMTemplateHelper templateHelper;
         private readonly IInfrastructure infrastructure;
+        private readonly IServiceProvider _ServiceProvider;
 
         public WaitDependsOnActivity(IOptions<ARMOrchestrationOptions> options,
             ARMTemplateHelper templateHelper,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+          IServiceProvider serviceProvider)
         {
+            this._ServiceProvider = serviceProvider;
             this.options = options?.Value;
             this.templateHelper = templateHelper;
             this.infrastructure = infrastructure;
@@ -33,6 +38,7 @@ values
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, WaitDependsOnActivityInput input)
         {
+            input.ServiceProvider = _ServiceProvider;
             DeploymentOperation deploymentOperation = new DeploymentOperation(input.DeploymentContext, this.infrastructure, input.Resource)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,

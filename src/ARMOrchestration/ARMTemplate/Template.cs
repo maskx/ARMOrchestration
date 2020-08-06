@@ -1,134 +1,192 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public class Template
     {
-        public string Schema { get; set; }
+        [JsonProperty]
+        private string _RawString { get; set; }
 
-        public string ContentVersion { get; set; }
+        public DeploymentOrchestrationInput Input { get; set; }
 
-        public string ApiProfile { get; set; }
+        private IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
 
-        public string Parameters { get; set; }
+        private JsonDocument json = null;
 
-        public string Variables { get; set; }
+        internal JsonElement RootElement
+        {
+            get
+            {
+                if (json == null)
+                    json = JsonDocument.Parse(_RawString);
+                return json.RootElement;
+            }
+        }
 
-        public ResourceCollection Resources { get; set; } = new ResourceCollection();
+        public Template()
+        {
+            _RawString = "{}";
+        }
 
-        public Functions Functions { get; set; }
+        public void Dispose()
+        {
+            if (json != null)
+                json.Dispose();
+        }
 
-        public string Outputs { get; set; }
+        public static implicit operator Template(string rawString)
+        {
+            return new Template() { _RawString = rawString };
+        }
+
+        public string Schema
+        {
+            get
+            {
+                if (!RootElement.TryGetProperty("$schema", out JsonElement schema))
+                    throw new Exception("not find $schema in template");
+                return schema.GetString();
+            }
+        }
+
+        public string ContentVersion
+        {
+            get
+            {
+                if (!RootElement.TryGetProperty("contentVersion", out JsonElement contentVersion))
+                    throw new Exception("not find contentVersion in template");
+                return contentVersion.GetString();
+            }
+        }
+
+        public string ApiProfile
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("apiProfile", out JsonElement apiProfile))
+                    return apiProfile.GetString();
+                return string.Empty;
+            }
+        }
+
+        public string Parameters
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("parameters", out JsonElement parameters))
+                    return parameters.GetRawText();
+                return string.Empty;
+            }
+        }
+
+        public string _Variables = null;
+
+        public string Variables
+        {
+            get
+            {
+                if (_Variables == null)
+                {
+                    _Variables = string.Empty;
+                    if (RootElement.TryGetProperty("variables", out JsonElement variables))
+                    {
+                        // variable can refernce variable, so must set variables value before expand
+                        _Variables = variables.GetRawText();
+                        _Variables = variables.ExpandObject(new Dictionary<string, object>() {
+                            { ContextKeys.ARM_CONTEXT,Input} },
+                            ServiceProvider.GetService<ARMFunctions>(),
+                            ServiceProvider.GetService<IInfrastructure>());
+                    }
+                }
+                return _Variables;
+            }
+        }
+
+        private void ExpandResource(JsonElement element, Dictionary<string, object> context, string parentName = null, string parentType = null)
+        {
+            DeploymentOrchestrationInput input = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+            foreach (var resource in element.EnumerateArray())
+            {
+                var r = new Resource(resource, input, parentName, parentType);
+                _Resources.Add(r);
+                if (resource.TryGetProperty("resources", out JsonElement _resources))
+                {
+                    ExpandResource(_resources, context, r.FullName, r.FullType);
+                }
+            }
+        }
+
+        private ResourceCollection _Resources;
+
+        public ResourceCollection Resources
+        {
+            get
+            {
+                if (_Resources == null)
+                {
+                    if (!RootElement.TryGetProperty("resources", out JsonElement resources))
+                        throw new Exception("not find resources in template");
+
+                    _Resources = new ResourceCollection();
+                    ExpandResource(resources, new Dictionary<string, object> {
+                        { ContextKeys.ARM_CONTEXT, this.Input }
+                    });
+                }
+
+                return _Resources;
+            }
+        }
+
+        public Functions Functions
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("functions", out JsonElement funcs))
+
+                    return Functions.Parse(funcs);
+                return null;
+            }
+        }
+
+        public string Outputs
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("outputs", out JsonElement outputs))
+                    return outputs.GetRawText();
+                return string.Empty;
+            }
+        }
 
         /// <summary>
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-subscription
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-to-management-group
         /// </summary>
-        public DeployLevel DeployLevel { get; set; }
-
-        internal List<string> ConditionFalseResources { get; private set; } = new List<string>();
-        public static Template Parse(JsonElement root, DeploymentContext input, ARMFunctions functions, IInfrastructure infrastructure)
+        public DeployLevel DeployLevel
         {
-            Template template = new Template();
-            input.Template = template;
-            Dictionary<string, object> context = new Dictionary<string, object>() {
-                {ContextKeys.ARM_CONTEXT, input},
-                {ContextKeys.IS_PREPARE,true }
-            };
-            if (!root.TryGetProperty("$schema", out JsonElement schema))
-                throw new Exception("not find $schema in template");
-            template.Schema = schema.GetString();
-
-            if (!root.TryGetProperty("contentVersion", out JsonElement contentVersion))
-                throw new Exception("not find contentVersion in template");
-            template.ContentVersion = contentVersion.GetString();
-
-            if (template.Schema.EndsWith("deploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
-                template.DeployLevel = DeployLevel.ResourceGroup;
-            else if (template.Schema.EndsWith("subscriptionDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
-                template.DeployLevel = DeployLevel.Subscription;
-            else if (template.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
-                template.DeployLevel = DeployLevel.ManagemnetGroup;
-            else
+            get
+            {
+                if (this.Schema.EndsWith("deploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                    return DeployLevel.ResourceGroup;
+                if (this.Schema.EndsWith("subscriptionDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                    return DeployLevel.Subscription;
+                if (this.Schema.EndsWith("managementGroupDeploymentTemplate.json#", StringComparison.InvariantCultureIgnoreCase))
+                    return DeployLevel.ManagemnetGroup;
                 throw new Exception("wrong $shema setting");
-
-            if (!root.TryGetProperty("resources", out JsonElement resources))
-                throw new Exception("not find resources in template");
-
-
-            if (root.TryGetProperty("apiProfile", out JsonElement apiProfile))
-                template.ApiProfile = apiProfile.GetString();
-
-            if (root.TryGetProperty("parameters", out JsonElement parameters))
-                template.Parameters = parameters.GetRawText();
-
-            if (root.TryGetProperty("outputs", out JsonElement outputs))
-                template.Outputs = outputs.GetRawText();
-            if (root.TryGetProperty("variables", out JsonElement variables))
-            {
-                // cos var can reference var
-                template.Variables = variables.GetRawText();
-                template.Variables = variables.ExpandObject(context, functions, infrastructure);
             }
-            if (root.TryGetProperty("functions", out JsonElement funcs))
-            {
-                template.Functions = Functions.Parse(funcs);
-            }
-            foreach (var resource in resources.EnumerateArray())
-            {
-                foreach (var r in Resource.Parse(resource, context, functions, infrastructure, string.Empty, string.Empty))
-                {
-                    if (r.Condition)
-                        template.Resources.Add(r);
-                    else
-                        template.ConditionFalseResources.Add(r.Name);
-                }
-            }
-            return template;
-        }
-        public static Template Parse(string content, DeploymentContext input, ARMFunctions functions, IInfrastructure infrastructure)
-        {
-            using JsonDocument doc = JsonDocument.Parse(content);
-            return Parse(doc.RootElement, input, functions, infrastructure);
         }
 
         public override string ToString()
         {
-            using MemoryStream ms = new MemoryStream();
-            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-            writer.WriteStartObject();
-
-            writer.WriteString("$schema", this.Schema);
-            writer.WriteString("contentVersion", this.ContentVersion);
-            if (!string.IsNullOrEmpty(this.ApiProfile))
-                writer.WriteString("apiProfile", this.ApiProfile);
-            if (!string.IsNullOrEmpty(this.Parameters))
-                writer.WriteRawString("parameters", this.Parameters);
-            if (!string.IsNullOrEmpty(this.Variables))
-                writer.WriteRawString("variables", this.Variables);
-            if (!string.IsNullOrEmpty(this.Outputs))
-                writer.WriteRawString("outputs", this.Outputs);
-            writer.WritePropertyName("resources");
-            writer.WriteStartArray();
-            foreach (var r in Resources)
-            {
-                writer.WriteRawString(r.ToString());
-            }
-            writer.WriteEndArray();
-            if(this.Functions!=null)
-            {
-                writer.WriteRawString("functions",this.Functions.ToString());
-            }
-            writer.WriteEndObject();
-            writer.Flush();
-            return Encoding.UTF8.GetString(ms.ToArray());
+            return this._RawString;
         }
     }
 }

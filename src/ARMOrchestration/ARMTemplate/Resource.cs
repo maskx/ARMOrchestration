@@ -1,6 +1,8 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
+using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,38 +15,182 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// 部署服务需提供以下API
     /// https://docs.microsoft.com/en-us/rest/api/resources/
     /// </summary>
-    public class Resource
+    [JsonObject(MemberSerialization.OptIn)]
+    public class Resource : IDisposable
     {
-        public bool Condition { get; set; } = true;
+        private Dictionary<string, object> _Context;
 
-        public string ApiVersion { get; set; }
+        internal Dictionary<string, object> Context
+        {
+            get
+            {
+                if (_Context == null)
+                {
+                    _Context = new Dictionary<string, object> { { ContextKeys.ARM_CONTEXT, Input } };
+                    if (Copy != null && CopyIndex.HasValue)
+                    {
+                        _Context.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { Copy.Name, this.CopyIndex.Value } });
+                        _Context.Add(ContextKeys.CURRENT_LOOP_NAME, Copy.Name);
+                    }
+                }
+                return _Context;
+            }
+        }
+
+        public DeploymentOrchestrationInput Input { get; set; }
+        protected readonly JsonElement? _Element;
+        protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
+
+        internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
+
+        [JsonProperty]
+        public string RawString
+        {
+            get { return RootElement.GetRawText(); }
+            set { json = JsonDocument.Parse(value); }
+        }
+
+        [JsonProperty]
+        protected readonly string _ParentName;
+
+        [JsonProperty]
+        protected readonly string _ParentType;
+
+        private JsonDocument json = null;
+
+        internal JsonElement RootElement
+        {
+            get
+            {
+                if (!_Element.HasValue)
+                {
+                    if (json == null)
+                        json = JsonDocument.Parse(RawString);
+                    return json.RootElement;
+                }
+                return _Element.Value;
+            }
+        }
+
+        public Resource()
+        {
+        }
+
+        public Resource(JsonElement element, DeploymentOrchestrationInput input, string parentName = null, string parentType = null)
+        {
+            this.Input = input;
+            this._Element = element;
+            this._ParentName = parentName;
+            this._ParentType = parentType;
+        }
+
+        public bool Condition
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("condition", out JsonElement condition))
+                {
+                    if (condition.ValueKind == JsonValueKind.False)
+                        return false;
+                    if (condition.ValueKind == JsonValueKind.True)
+                        return true;
+                    if (condition.ValueKind == JsonValueKind.String)
+                        return (bool)this._Functions.Evaluate(condition.GetString(), Context);
+                    return true;
+                }
+                return true;
+            }
+        }
+
+        public string ApiVersion
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("apiVersion", out JsonElement apiVersion))
+                    return apiVersion.GetString();
+                throw new Exception("not find apiVersion in resource node");
+            }
+        }
 
         /// <summary>
         /// the type set in template
         /// </summary>
-        public string Type { get; set; }
+        public string Type
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("type", out JsonElement type))
+                    return type.GetString();
+                throw new Exception("not find type in resource node");
+            }
+        }
 
         /// <summary>
         /// the type of resource
         /// the child resource is parentType/childType
         /// </summary>
-        public string FullType { get; set; }
+        public string FullType
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(this._ParentType))
+                    return this.Type;
+                return $"{this._ParentType}/{this.Type}";
+            }
+        }
 
         /// <summary>
         /// the name set in template
         /// </summary>
-        public string Name { get; set; }
+        public string Name
+        {
+            get
+            {
+                if (Copy != null && !CopyIndex.HasValue)
+                    return Copy.Name;
+                if (RootElement.TryGetProperty("name", out JsonElement name))
+                    return this._Functions.Evaluate(name.GetString(), Context).ToString();
+                throw new Exception("not find name in resource node");
+            }
+        }
 
         /// <summary>
         /// the name of resource
         /// the child resource is parentName/childName
         /// </summary>
-        public string FullName { get; set; }
+        public string FullName
+        {
+            get
+            {
+                if (Copy != null && !CopyIndex.HasValue)
+                    return Copy.FullName;
+                if (string.IsNullOrEmpty(_ParentName))
+                    return this.Name;
+                return $"{_ParentName}/{this.Name}";
+            }
+        }
 
-        public string Location { get; set; }
+        public string Location
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("location", out JsonElement location))
+                    return this._Functions.Evaluate(location.GetString(), Context).ToString();
+                return string.Empty;
+            }
+        }
 
-        public string Comments { get; set; }
-        public List<string> Resources { get; set; } = new List<string>();
+        public string Comments
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("comments", out JsonElement comments))
+                    return comments.GetString();
+                return string.Empty;
+            }
+        }
+
+        private List<string> _DependsOn;
 
         /// <summary>
         /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
@@ -58,25 +204,250 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
         ///
         /// </summary>
-        public List<string> DependsOn { get; set; } = new List<string>();
+        public List<string> DependsOn
+        {
+            get
+            {
+                LazyLoadDependsOnAnProperties();
+                return _DependsOn;
+            }
+        }
 
-        public string Properties { get; set; }
+        private string _Properties;
 
-        public SKU SKU { get; set; }
+        public string Properties
+        {
+            get
+            {
+                LazyLoadDependsOnAnProperties();
+                return _Properties;
+            }
+        }
 
-        public string Kind { get; set; }
+        private void LazyLoadDependsOnAnProperties()
+        {
+            if (_DependsOn != null)
+                return;
+            _DependsOn = new List<string>();
+            if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
+            {
+                using var dd = JsonDocument.Parse(dependsOn.GetRawText());
+                foreach (var item in dd.RootElement.EnumerateArray())
+                {
+                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), Context).ToString());
+                }
+            }
+            if (RootElement.TryGetProperty("properties", out JsonElement properties))
+            {
+                var infrastructure = ServiceProvider.GetService<IInfrastructure>();
+                if (this.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+                    _Properties = properties.GetRawText();
+                else
+                {
+                    _Properties = properties.ExpandObject(Context, _Functions, infrastructure);
+                    // if there has Implicit dependency by reference function in properties
+                    // the reference function should be evaluate at provisioning time
+                    // so keep the original text
+                    if (_Context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
+                    {
+                        _DependsOn.AddRange(conditionDep as List<string>);
+                        _Context.Remove(ContextKeys.DEPENDSON);
+                    }
+                }
+            }
+            for (int i = _DependsOn.Count - 1; i >= 0; i--)
+            {
+                string dependsOnName = _DependsOn[i];
+                if (!Input.Template.Resources.TryGetValue(dependsOnName, out Resource r))
+                {
+                    throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
+                }
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
+                // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
+                if (!r.Condition)
+                    _DependsOn.RemoveAt(i);
+                // check duplicated dependsOn
+                var n1 = string.Empty;
+                var n2 = dependsOnName;
+                var n_index = dependsOnName.LastIndexOf('/');
+                if (n_index > 0)
+                {
+                    n1 = n2.Substring(0, n_index);
+                    n2 = n2.Substring(n_index + 1, n2.Length - n_index - 1);
+                }
+                if (0 <= _DependsOn.FindIndex(0, i, (str) =>
+                  {
+                      var c1 = string.Empty;
+                      var c2 = str;
+                      var c_index = str.LastIndexOf('/');
+                      if (c_index > 0)
+                      {
+                          c1 = c2.Substring(0, c_index);
+                          c2 = c2.Substring(c_index + 1, c2.Length - c_index - 1);
+                      }
+                      if (c2 == n2)
+                      {
+                          if (string.IsNullOrEmpty(c1))
+                              return true;
+                          if (string.IsNullOrEmpty(n1))
+                              return true;
+                          if (c1 == n1)
+                              return true;
+                      }
+                      return false;
+                  }))
+                    _DependsOn.RemoveAt(i);
+            }
+        }
 
-        public string Plan { get; set; }
-        public List<string> Zones { get; set; } = new List<string>();
-        public string ResourceGroup { get; set; }
+        public SKU SKU
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("sku", out JsonElement sku))
+                    return SKU.Parse(sku, _Functions, Context);
+                return new SKU() { Name = SKU.Default };
+            }
+        }
 
-        public string SubscriptionId { get; set; }
-        public string ManagementGroupId { get; set; }
+        public string Kind
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("kind", out JsonElement kind))
+                    return kind.GetString();
+                return string.Empty;
+            }
+        }
 
-        public string ResourceId { get; set; }
+        public string Plan
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("plan", out JsonElement plan))
+                    return plan.GetRawText();
+                return string.Empty;
+            }
+        }
+
+        private List<string> _Zones = new List<string>();
+
+        public List<string> Zones
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("zones", out JsonElement zones))
+                {
+                    if (zones.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var z in zones.EnumerateArray())
+                        {
+                            _Zones.Add(_Functions.Evaluate(z.GetString(), Context).ToString());
+                        }
+                    }
+                    else if (zones.ValueKind == JsonValueKind.String)
+                    {
+                        var arr = _Functions.Evaluate(zones.GetString(), Context) as JsonValue;
+                        if (arr == null || arr.ValueKind != JsonValueKind.Array)
+                            throw new Exception("wrong value of zones");
+                        for (int i = 0; i < arr.Length; i++)
+                        {
+                            _Zones.Add(arr[i].ToString());
+                        }
+                    }
+                }
+                return _Zones;
+            }
+        }
+
+        public string ResourceGroup
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
+                    return _Functions.Evaluate(resourceGroup.GetString(), Context).ToString();
+                else
+                    return (Context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ResourceGroup;
+            }
+        }
+
+        public string SubscriptionId
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
+                    return _Functions.Evaluate(subscriptionId.GetString(), Context).ToString();
+                else
+                    return (Context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).SubscriptionId;
+            }
+        }
+
+        public string ManagementGroupId
+        {
+            get
+            {
+                if (RootElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
+                    return _Functions.Evaluate(managementGroupId.GetString(), Context).ToString();
+                else
+                    return (Context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ManagementGroupId;
+            }
+        }
+
+        public string ResourceId
+        {
+            get
+            {
+                if (Copy != null && !CopyIndex.HasValue)
+                    return Copy.Id;
+                if (Input.Template.DeployLevel == DeployLevel.ResourceGroup)
+                {
+                    List<object> pars = new List<object>                {
+                    SubscriptionId,
+                    ResourceGroup,
+                    FullType
+                };
+                    pars.AddRange(FullName.Split('/'));
+                    return _Functions.ResourceId(Input, pars.ToArray());
+                }
+                if (Input.Template.DeployLevel == DeployLevel.Subscription)
+                {
+                    List<object> pars = new List<object>
+                {
+                    SubscriptionId,
+                    FullType
+                };
+                    pars.AddRange(FullName.Split('/'));
+                    return _Functions.SubscriptionResourceId(Input, pars.ToArray());
+                }
+
+                List<object> pars1 = new List<object>
+                {
+                    FullType
+                };
+                pars1.AddRange(FullName.Split('/'));
+                return _Functions.TenantResourceId(pars1.ToArray());
+            }
+        }
+
         public string CopyId { get; set; }
-        public int CopyIndex { get; set; }
+
+        /// <summary>
+        /// if CopyIndex has value, means this is a expanded resource
+        /// </summary>
+        [JsonProperty]
+        public int? CopyIndex { get; set; }
+
         public string CopyName { get; set; }
+
+        public Copy Copy
+        {
+            get
+            {
+                if (!RootElement.TryGetProperty("copy", out JsonElement copy))
+                    return null;
+                return Copy.Parse(copy, Context, _Functions, ServiceProvider.GetService<IInfrastructure>());
+            }
+        }
 
         public override string ToString()
         {
@@ -129,8 +500,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             using var doc = JsonDocument.Parse(rawString);
             return Parse(doc.RootElement, context, functions, infrastructure, parentName, parentType);
-
         }
+
         private static List<Resource> ParseInternal(
             JsonElement resourceElement
             , Dictionary<string, object> context
@@ -141,127 +512,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
             List<Resource> resources = new List<Resource>();
-            Resource r = new Resource();
+            Resource r = null;
             resources.Add(r);
-
-            if (resourceElement.TryGetProperty("condition", out JsonElement condition))
-            {
-                if (condition.ValueKind == JsonValueKind.False)
-                    r.Condition = false;
-                else if (condition.ValueKind == JsonValueKind.String)
-                    r.Condition = (bool)functions.Evaluate(condition.GetString(), context);
-            }
-
-            if (resourceElement.TryGetProperty("apiVersion", out JsonElement apiVersion))
-                r.ApiVersion = apiVersion.GetString();
-            else
-                throw new Exception("not find apiVersion in resource node");
-
-            if (resourceElement.TryGetProperty("type", out JsonElement type))
-                r.Type = type.GetString();
-            else
-                throw new Exception("not find type in resource node");
-
-            if (!string.IsNullOrEmpty(parentType))
-                r.FullType = $"{parentType}/{r.Type}";
-            else
-                r.FullType = r.Type;
-
-            if (resourceElement.TryGetProperty("name", out JsonElement name))
-                r.Name = functions.Evaluate(name.GetString(), context).ToString();
-            else
-                throw new Exception("not find name in resource node");
-
-            if (!string.IsNullOrEmpty(parentName))
-                r.FullName = $"{parentName}/{r.Name}";
-            else
-                r.FullName = r.Name;
-
-            if (resourceElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
-                r.ResourceGroup = functions.Evaluate(resourceGroup.GetString(), context).ToString();
-            else
-                r.ResourceGroup = deploymentContext.ResourceGroup;
-
-            if (resourceElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
-                r.SubscriptionId = functions.Evaluate(subscriptionId.GetString(), context).ToString();
-            else
-                r.SubscriptionId = deploymentContext.SubscriptionId;
-
-            if (resourceElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
-                r.ManagementGroupId = functions.Evaluate(managementGroupId.GetString(), context).ToString();
-            else
-                r.ManagementGroupId = deploymentContext.ManagementGroupId;
-
-            if (resourceElement.TryGetProperty("location", out JsonElement location))
-                r.Location = functions.Evaluate(location.GetString(), context).ToString();
-
-            if (resourceElement.TryGetProperty("comments", out JsonElement comments))
-                r.Comments = comments.GetString();
-
-            if (resourceElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
-            {
-                using var dd = JsonDocument.Parse(dependsOn.GetRawText());
-                foreach (var item in dd.RootElement.EnumerateArray())
-                {
-                    r.DependsOn.Add(functions.Evaluate(item.GetString(), context).ToString());
-                }
-            }
-
-            #region ResouceId
-
-            if (deploymentContext.Template.DeployLevel == DeployLevel.ResourceGroup)
-            {
-                List<object> pars = new List<object>
-                {
-                    r.SubscriptionId,
-                    r.ResourceGroup,
-                    r.FullType
-                };
-                pars.AddRange(r.FullName.Split('/'));
-                r.ResourceId = functions.ResourceId(
-                   deploymentContext,
-                   pars.ToArray());
-            }
-            else if (deploymentContext.Template.DeployLevel == DeployLevel.Subscription)
-            {
-                List<object> pars = new List<object>
-                {
-                    r.SubscriptionId,
-                    r.FullType
-                };
-                pars.AddRange(r.FullName.Split('/'));
-                r.ResourceId = functions.SubscriptionResourceId(deploymentContext, pars.ToArray());
-            }
-            else
-            {
-                List<object> pars = new List<object>
-                {
-                    r.FullType
-                };
-                pars.AddRange(r.FullName.Split('/'));
-                r.ResourceId = functions.TenantResourceId(pars.ToArray());
-            }
-
-            #endregion ResouceId
-
-            if (resourceElement.TryGetProperty("sku", out JsonElement sku))
-                r.SKU = SKU.Parse(sku, functions, context);
-            else
-                r.SKU = new SKU() { Name = SKU.Default };
-
-            if (resourceElement.TryGetProperty("kind", out JsonElement kind))
-                r.Kind = kind.GetString();
-
-            if (resourceElement.TryGetProperty("plan", out JsonElement plan))
-                r.Plan = plan.GetRawText();
-
-            if (resourceElement.TryGetProperty("zones", out JsonElement zones))
-            {
-                foreach (var z in zones.EnumerateArray())
-                {
-                    r.Zones.Add(functions.Evaluate(z.GetString(), context).ToString());
-                }
-            }
 
             if (context.ContainsKey(ContextKeys.DEPENDSON))
             {
@@ -272,32 +524,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
             if (!r.Condition)
                 return resources;
 
-            if (resourceElement.TryGetProperty("properties", out JsonElement properties))
-            {
-                if (r.FullType == infrastructure.BuiltinServiceTypes.Deployments)
-                    r.Properties = properties.GetRawText();
-                else
-                {
-                    r.Properties = properties.ExpandObject(context, functions, infrastructure);
-                    // if there has Implicit dependency by reference function in properties
-                    // the reference function should be evaluate at provisioning time
-                    // so keep the original text
-                    if (HandleDependsOn(r, context))
-                        r.Properties = properties.GetRawText();
-                }
-            }
             if (resourceElement.TryGetProperty("resources", out JsonElement _resources))
             {
                 foreach (var childres in _resources.EnumerateArray())
                 {
                     //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/child-resource-name-type
                     var childResult = Resource.Parse(childres.GetRawText(), context, functions, infrastructure, r.Name, r.Type);
-                    r.Resources.Add(childResult[0].Name);
+                    //  r.Resources.Add(childResult[0].Name);
                     resources.AddRange(childResult);
                 }
             }
             return resources;
         }
+
         public static List<Resource> Parse(
             JsonElement resourceElement
             , Dictionary<string, object> context
@@ -310,6 +549,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return ExpandCopyResource(resourceElement, copy, context, functions, infrastructure, parentName, parentType);
             return ParseInternal(resourceElement, context, functions, infrastructure, parentName, parentType);
         }
+
         private static List<Resource> ExpandCopyResource(
           JsonElement resource
           , JsonElement copyElement
@@ -323,16 +563,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
             DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
 
-            var CopyResource = new CopyResource()
-            {
-                Name = copy.Name,
-                Type = Copy.ServiceType,
-                FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
-                FullType = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
-                ResourceId = copy.Id,
-                Mode=copy.Mode,
-                BatchSize = copy.BatchSize,
-            };
+            CopyResource CopyResource = null;
+            //new CopyResource()
+            //{
+            //    //Name = copy.Name,
+            //    //Type = Copy.ServiceType,
+            //    //FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
+            //    //FullType = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
+            //    //ResourceId = copy.Id,
+            //    Mode = copy.Mode,
+            //    BatchSize = copy.BatchSize,
+            //};
             List<Resource> resources = new List<Resource>
             {
                 CopyResource
@@ -355,18 +596,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 rs[0].CopyIndex = i;
                 rs[0].CopyId = copy.Id;
                 rs[0].CopyName = copy.Name;
-                CopyResource.Resources.Add(rs[0].Name);
+                //  CopyResource.Resources.Add(rs[0].Name);
                 resources.AddRange(rs);
             }
-            CopyResource.SubscriptionId = resources[1].SubscriptionId;
-            CopyResource.ManagementGroupId = resources[1].ManagementGroupId;
-            CopyResource.SKU = resources[1].SKU;
-            CopyResource.Plan = resources[1].Plan;
-            CopyResource.Kind = resources[1].Kind;
-            CopyResource.Zones = resources[1].Zones;
-            CopyResource.Location = resources[1].Location;
+            //CopyResource.SubscriptionId = resources[1].SubscriptionId;
+            //CopyResource.ManagementGroupId = resources[1].ManagementGroupId;
+            //CopyResource.SKU = resources[1].SKU;
+            //CopyResource.Plan = resources[1].Plan;
+            //CopyResource.Kind = resources[1].Kind;
+            //CopyResource.Zones = resources[1].Zones;
+            //CopyResource.Location = resources[1].Location;
             return resources;
         }
+
         private static bool HandleDependsOn(Resource r, Dictionary<string, object> context)
         {
             if (context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
@@ -392,10 +634,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (!string.IsNullOrEmpty(this.CopyName))
                 {
                     cxt.Add(ContextKeys.CURRENT_LOOP_NAME, this.CopyName);
-                    cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { this.CopyName, this.CopyIndex } });
+                    cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { this.CopyName, this.CopyIndex.Value } });
                 }
                 return doc.RootElement.ExpandObject(cxt, functions, infrastructure);
             }
+        }
+
+        public void Dispose()
+        {
+            if (json != null)
+                json.Dispose();
         }
     }
 }

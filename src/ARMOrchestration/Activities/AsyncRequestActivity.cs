@@ -2,21 +2,25 @@
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
+using System;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
     public class AsyncRequestActivity : AsyncTaskActivity<AsyncRequestActivityInput, TaskResult>
     {
-        public const string Name ="AsyncRequestActivity";
+        public const string Name = "AsyncRequestActivity";
         private readonly ARMTemplateHelper templateHelper;
         private readonly maskx.OrchestrationService.Activity.AsyncRequestActivity asyncRequestActivity;
         private readonly IInfrastructure infrastructure;
+        private readonly IServiceProvider _ServiceProvider;
 
         public AsyncRequestActivity(IOptions<CommunicationWorkerOptions> options,
             ARMTemplateHelper templateHelper,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            IServiceProvider serviceProvider)
         {
+            this._ServiceProvider = serviceProvider;
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
             asyncRequestActivity = new maskx.OrchestrationService.Activity.AsyncRequestActivity(options);
@@ -24,6 +28,7 @@ namespace maskx.ARMOrchestration.Activities
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, AsyncRequestActivityInput input)
         {
+            input.ServiceProvider = _ServiceProvider;
             templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentContext, infrastructure, input.Resource)
             {
                 InstanceId = input.InstanceId,

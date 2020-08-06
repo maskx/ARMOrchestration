@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
+﻿using Dynamitey;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
@@ -14,10 +15,11 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             if (input.Template != null)
                 return input;
-            input.Template = Template.Parse(input.TemplateContent, input, functions, infrastructure);
+            //input.Template = Template.Parse(input.Template.ToString(), input, functions, infrastructure);
             foreach (var res in input.Template.Resources)
             {
                 #region Deployment
+
                 if (res.FullType == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     var deploy = Parse(res, input, functions, infrastructure);
@@ -28,9 +30,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                     deploy.Deployments.Clear();
                 }
-                #endregion
+
+                #endregion Deployment
 
                 #region dependsOn
+
                 for (int i = res.DependsOn.Count - 1; i >= 0; i--)
                 {
                     string dependsOnName = res.DependsOn[i];
@@ -38,20 +42,22 @@ namespace maskx.ARMOrchestration.Orchestrations
                     // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
                     if (!input.Template.Resources.ContainsKey(dependsOnName))
                     {
-                        if (input.Template.ConditionFalseResources.Contains(dependsOnName))
-                            res.DependsOn.RemoveAt(i);
-                        else
-                            throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
+                        //if (input.Template.ConditionFalseResources.Contains(dependsOnName))
+                        //    res.DependsOn.RemoveAt(i);
+                        //else
+                        //    throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
                     }
                     // check duplicated dependsOn
                     if (HasSameName(res.DependsOn, i - 1, dependsOnName))
                         res.DependsOn.RemoveAt(i);
                 }
                 // TODO: check circular dependencies
-                #endregion
+
+                #endregion dependsOn
             }
             return input;
         }
+
         private static bool HasSameName(List<string> collection, int index, string name)
         {
             if (index < 0)
@@ -86,6 +92,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             return false;
         }
+
         public static DeploymentOrchestrationInput Parse(Resource resource,
                   DeploymentContext deploymentContext,
                   ARMFunctions functions,
@@ -189,7 +196,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 ResourceGroup = resource.ResourceGroup,
                 DeploymentName = resource.Name,
                 Mode = mode,
-                TemplateContent = template,
+                Template = template,
                 TemplateLink = templateLink,
                 Parameters = parameters,
                 ParametersLink = parametersLink,
@@ -203,7 +210,5 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             return Validate(deployInput, functions, infrastructure);
         }
-        public List<string> DependsOn { get; set; } = new List<string>();
-        public Dictionary<string, DeploymentOrchestrationInput> Deployments { get; set; } = new Dictionary<string, DeploymentOrchestrationInput>();
     }
 }

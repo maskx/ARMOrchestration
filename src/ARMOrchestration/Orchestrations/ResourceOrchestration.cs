@@ -1,7 +1,10 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
@@ -10,19 +13,24 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public const string Name = "ResourceOrchestration";
         private readonly IInfrastructure infrastructure;
-
+        private readonly IServiceProvider _ServiceProvider;
         private readonly ARMTemplateHelper templateHelper;
 
         public ResourceOrchestration(
             IInfrastructure infrastructure,
-            ARMTemplateHelper templateHelper)
+            ARMTemplateHelper templateHelper,
+            IServiceProvider serviceProvider)
         {
+            this._ServiceProvider = serviceProvider;
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
+            input.ServiceProvider = _ServiceProvider;
+            input.Context.IsRuntime = true;
+
             #region DependsOn
 
             if (input.Resource.DependsOn.Count > 0)
@@ -54,26 +62,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion DependsOn
 
-            #region Evaluate functions
-            var expandResult = await context.ScheduleTask<TaskResult>(ExpandResourcePropertiesActivity.Name, "1.0", input);
-            if (expandResult.Code != 200)
-            {
-                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
-                {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.ExpandResourcePropertiesFailed,
-                    Input = this.DataConverter.Serialize(input)
-                });
-                return expandResult;
-            }
-
-            #endregion Evaluate functions
-
-            input.Resource = DataConverter.Deserialize<Resource>(expandResult.Content);
-
             #region plug-in
-
 
             if (infrastructure.InjectBefroeProvisioning)
             {
@@ -116,10 +105,10 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
             }
 
-
             #endregion plug-in
 
             #region Provisioning Resource
+
             var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
                       RequestOrchestration.Name,
                       "1.0",
@@ -135,7 +124,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 return createResourceResult;
             }
-
 
             #endregion Provisioning Resource
 
@@ -187,7 +175,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
             }
 
-
             #region Ready Resource
 
             templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
@@ -204,13 +191,13 @@ namespace maskx.ARMOrchestration.Orchestrations
         }
 
         private TaskCompletionSource<string> dependsOnWaitHandler = null;
+
         public override void OnEvent(OrchestrationContext context, string name, string input)
         {
             if (this.dependsOnWaitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.dependsOnWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
             {
                 this.dependsOnWaitHandler.SetResult(input);
             }
-
         }
     }
 }

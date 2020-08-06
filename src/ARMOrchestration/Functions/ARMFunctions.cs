@@ -1,5 +1,6 @@
 ﻿using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.Expression;
@@ -392,7 +393,6 @@ namespace maskx.ARMOrchestration.Functions
                                 args.Result = JsonValue.GetElementValue(v);
                             }
                         }
-
                     }
                     if (!args.HasResult)
                     {
@@ -420,11 +420,29 @@ namespace maskx.ARMOrchestration.Functions
 
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 using var defineDoc = JsonDocument.Parse(vars);
-                if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
+                if (defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
                 {
-                    throw new Exception($"ARM Template does not define the variables:{par1}");
+                    //if (parEleDef.TryGetProperty("copy", out JsonElement copyVarE))
+                    //{
+                    //    args.Result = new JsonValue(parEleDef.ExpandObject(cxt, this, infrastructure));
+                    //}
+                    //else
+                    args.Result = JsonValue.GetElementValue(parEleDef);
                 }
-                args.Result = JsonValue.GetElementValue(parEleDef);
+                //else if (defineDoc.RootElement.TryGetProperty("copy", out JsonElement copyE))
+                //{
+                //    var s1 = copyE.ExpadCopy(cxt, this, infrastructure);
+                //    using var copyDoc = JsonDocument.Parse(s1);
+
+                //    if (copyDoc.RootElement.TryGetProperty(par1, out JsonElement copyVarE))
+                //    {
+                //        args.Result = JsonValue.GetElementValue(copyVarE);
+                //    }
+                //    else
+                //        throw new Exception($"ARM Template does not define the variables:{par1}");
+                //}
+                else
+                    throw new Exception($"ARM Template does not define the variables:{par1}");
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
@@ -456,7 +474,7 @@ namespace maskx.ARMOrchestration.Functions
                 };
                 JObject properties = new JObject
                 {
-                    { "template", JObject.Parse(deploymentOrchestrationInput.TemplateContent) }
+                    { "template", JObject.Parse(deploymentOrchestrationInput.Template.ToString()) }
                 };
                 if (string.IsNullOrEmpty(input.Parameters))
                     properties.Add("parameters", new JObject());
@@ -794,29 +812,28 @@ namespace maskx.ARMOrchestration.Functions
                 bool full = false;
                 if (pars.Length > 2)
                     full = "full".Equals(pars[2].ToString(), StringComparison.InvariantCultureIgnoreCase);
-                if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
+                // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
+                // reference 'ResourceProvider/ServiceType/ResourceName' will create a implicit dependency
+                if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
+                || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
+                || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
                 {
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#implicit-dependency
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
-                    // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
-                    // reference 'ResourceProvider/ServiceType/ResourceName' will create a implicit dependency
-                    if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
-                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
-                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
+                    List<string> dependsOn;
+                    if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
                     {
-                        List<string> dependsOn;
-                        if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
-                        {
-                            dependsOn = d as List<string>;
-                        }
-                        else
-                        {
-                            dependsOn = new List<string>();
-                            cxt.Add(ContextKeys.DEPENDSON, dependsOn);
-                        }
-                        dependsOn.Add(resourceName);
+                        dependsOn = d as List<string>;
                     }
-                    cxt.TryAdd(ContextKeys.NEED_REEVALUATE, true);
+                    else
+                    {
+                        dependsOn = new List<string>();
+                        cxt.Add(ContextKeys.DEPENDSON, dependsOn);
+                    }
+                    dependsOn.Add(resourceName);
+                }
+                if (!context.IsRuntime)
+                {
                     args.Result = new FakeJsonValue(resourceName);
                 }
                 else
@@ -1021,7 +1038,7 @@ namespace maskx.ARMOrchestration.Functions
                         {
                             var pars = args.EvaluateParameters(context);
                             var resourceName = pars[0].ToString();
-                            if (cxt.ContainsKey(ContextKeys.IS_PREPARE))
+                            if (!(cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext).IsRuntime)
                             {
                                 if (resourceName.IndexOf('/') < 0)
                                 {

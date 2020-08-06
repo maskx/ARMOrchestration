@@ -22,6 +22,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// </summary>
         public string Name { get; set; }
 
+        public string FullName { get { return $"{this.FullType}/{this.Name}"; } }
+        public string Type { get; set; }
+        public string FullType { get { return Type; } }
+
         /// <summary>
         /// number-of-iterations
         /// </summary>
@@ -41,17 +45,23 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// values-for-the-property-or-variable
         /// </summary>
         public string Input { get; set; }
+
         public static Copy Parse(string rawString, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
         {
             using var doc = JsonDocument.Parse(rawString);
             return Parse(doc.RootElement, context, functions, infrastructure);
         }
+
         public static Copy Parse(JsonElement root, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
         {
             var copy = new Copy();
+            copy.Type = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}";
             var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
             if (root.TryGetProperty("name", out JsonElement name))
+            {
                 copy.Name = name.GetString();
+            }
+
             if (root.TryGetProperty("count", out JsonElement count))
             {
                 if (count.ValueKind == JsonValueKind.Number)

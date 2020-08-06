@@ -9,29 +9,39 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class CopyOrchestration : TaskOrchestration<TaskResult, CopyOrchestrationInput>
+    public class CopyOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
         public const string Name = "CopyOrchestration";
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
-        public CopyOrchestration(ARMTemplateHelper helper, IInfrastructure infrastructure)
+        private readonly IServiceProvider _ServiceProvider;
+
+        public CopyOrchestration(ARMTemplateHelper helper, IInfrastructure infrastructure, IServiceProvider service)
         {
+            this._ServiceProvider = service;
             this.helper = helper;
             this.infrastructure = infrastructure;
         }
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, CopyOrchestrationInput input)
+
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-            var copy = input.Resource as CopyResource;
+            input.ServiceProvider = _ServiceProvider;
+            var copy = input.Resource.Copy;
             ConcurrentBag<string> msg = new ConcurrentBag<string>();
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
-            foreach (var resource in input.Resources)
+
+            for (int i = 0; i < copy.Count; i++)
             {
                 tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                                    ResourceOrchestration.Name,
-                                   "1.0", 
+                                   "1.0",
                                    new ResourceOrchestrationInput()
                                    {
-                                       Resource = resource,
+                                       Resource = new Resource()
+                                       {
+                                           RawString = input.Resource.RawString,
+                                           CopyIndex = i
+                                       },
                                        Context = input.Context,
                                    }));
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)
@@ -60,7 +70,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             if (msg.Count > 0)
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, copy)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -72,7 +82,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             else
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, copy)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,

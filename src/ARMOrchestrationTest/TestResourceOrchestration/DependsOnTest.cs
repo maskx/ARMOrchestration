@@ -44,12 +44,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             TestHelper.OrchestrationTest(fixture,
                 "dependsOn/ConditionFalse");
         }
+
         [Fact(DisplayName = "DeployDepondsOn")]
         public void DeployDepondsOn()
         {
             TestHelper.OrchestrationTest(fixture,
                 "dependsOn/DeployDepondsOn");
         }
+
         [Fact(DisplayName = "DuplicatedName")]
         public void DuplicatedName()
         {
@@ -62,11 +64,13 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 if (r.Name == "resource2")
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Single(input.Resource.DependsOn);
                     Assert.Equal("resource1", input.Resource.DependsOn[0]);
                 }
             }
         }
+
         [Fact(DisplayName = "NameAndServiceTypeName")]
         public void NameAndServiceTypeName()
         {
@@ -79,11 +83,13 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 if (r.Name == "resource2")
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Single(input.Resource.DependsOn);
                     Assert.Equal("resource1", input.Resource.DependsOn[0]);
                 }
             }
         }
+
         [Fact(DisplayName = "ServiceTypeNameAndName")]
         public void ServiceTypeNameAndName()
         {
@@ -96,11 +102,13 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 if (r.Name == "resource2")
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Single(input.Resource.DependsOn);
                     Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
                 }
             }
         }
+
         [Fact(DisplayName = "DuplicatedServiceTypeName")]
         public void DuplicatedServiceTypeName()
         {
@@ -113,11 +121,13 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 if (r.Name == "resource2")
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Single(input.Resource.DependsOn);
                     Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
                 }
             }
         }
+
         [Fact(DisplayName = "DiffServiceTypeSameName")]
         public void DiffServiceTypeSameName()
         {
@@ -130,12 +140,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 if (r.Name == "resource2")
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(2, input.Resource.DependsOn.Count);
                     Assert.Contains("rp/st/resource1", input.Resource.DependsOn);
                     Assert.Contains("rp/st1/resource1", input.Resource.DependsOn);
                 }
             }
         }
+
         [Fact(DisplayName = "DependsOnFullname")]
         public void DependsOnFullname()
         {

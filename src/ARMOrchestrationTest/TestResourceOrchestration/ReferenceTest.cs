@@ -18,6 +18,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             this.fixture = fixture;
         }
+
         [Fact(DisplayName = "ReferenceNoDependsOn")]
         public void ReferenceNoDependsOn()
         {
@@ -46,6 +47,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -69,6 +71,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -76,6 +79,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             }
             Assert.True(hasResource);
         }
+
         [Fact(DisplayName = "IncluedServiceTypeNotExist")]
         public void IncluedServiceTypeNotExist()
         {
@@ -85,12 +89,12 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             var resourceList = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resourceList)
             {
-               var tr= TestHelper.DataConverter.Deserialize<TaskResult>(r.Result);
+                var tr = TestHelper.DataConverter.Deserialize<TaskResult>(r.Result);
                 Assert.NotEqual(200, tr.Code);
                 Assert.Equal("cannot find dependson resource named 'Microsoft.Storage/storageAccounts1/examplestorage'", tr.Content);
-
             }
         }
+
         [Fact(DisplayName = "2ReferenceDependsOn")]
         public void TwoReferenceDependsOn()
         {
@@ -106,6 +110,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -115,6 +120,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             }
             Assert.True(hasResource);
         }
+
         [Fact(DisplayName = "ReferenceResourceIteration")]
         public void ReferenceResourceIteration()
         {
@@ -141,6 +147,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     copyCount++;
                     Assert.True(int.TryParse(r.Name, out int i));
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     using var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded" + i, c.GetString());
@@ -168,6 +175,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     hasexamplevm = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     Assert.True(p.RootElement.TryGetProperty("storageProfile", out JsonElement storageProfile));
                     Assert.True(storageProfile.TryGetProperty("dataDisks", out JsonElement dataDisks));

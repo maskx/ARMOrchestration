@@ -20,12 +20,15 @@ namespace maskx.ARMOrchestration.Orchestrations
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
         private readonly ARMFunctions _ARMFunctions;
+        private readonly IServiceProvider _ServiceProvider;
 
         public DeploymentOrchestration(
             ARMTemplateHelper helper,
             IInfrastructure infrastructure,
-            ARMFunctions aRMFunctions)
+            ARMFunctions aRMFunctions,
+            IServiceProvider serviceProvider)
         {
+            this._ServiceProvider = serviceProvider;
             this._ARMFunctions = aRMFunctions;
             this.helper = helper;
             this.infrastructure = infrastructure;
@@ -34,7 +37,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
-
+            input.ServiceProvider = this._ServiceProvider;
             if (string.IsNullOrEmpty(input.RootId))
             {
                 input.RootId = input.DeploymentId;
@@ -43,25 +46,25 @@ namespace maskx.ARMOrchestration.Orchestrations
             #region validate template
 
             // when Template had value, this orchestration call by internal, the template string content already be parsed
-            if (input.Template == null || input.Deployments.Count > 0)
+            //if (input.Template == null || input.Deployments.Count > 0)
+            //{
+            //    var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
+            //    if (valid.Code != 200)
+            //    {
+            //        return valid;
+            //    }
+            //    input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
+            //}
+            //else
+            //{
+            helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure)
             {
-                var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
-                if (valid.Code != 200)
-                {
-                    return valid;
-                }
-                input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
-            }
-            else
-            {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure)
-                {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Input = arg,
-                    Stage = ProvisioningStage.ValidateTemplate
-                }); ;
-            }
+                InstanceId = context.OrchestrationInstance.InstanceId,
+                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                Input = arg,
+                Stage = ProvisioningStage.ValidateTemplate
+            });
+            //}
 
             #endregion validate template
 
@@ -153,49 +156,40 @@ namespace maskx.ARMOrchestration.Orchestrations
             bool hasFailResource = false;
 
             #region Provisioning resources
+
             ConcurrentBag<Task<TaskResult>> tasks = new ConcurrentBag<Task<TaskResult>>();
 
-            Dictionary<string, List<Resource>> copyDic = new Dictionary<string, List<Resource>>();
             foreach (var resource in input.Template.Resources)
             {
-                if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments
-                    || resource.Type == Copy.ServiceType)
+                if (!resource.Condition)
                     continue;
-                if (!string.IsNullOrEmpty(resource.CopyId))
+                if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    if (!copyDic.TryGetValue(resource.CopyName, out List<Resource> rList))
-                    {
-                        rList = new List<Resource>();
-                        copyDic.Add(resource.CopyName, rList);
-                    }
-                    rList.Add(resource);
-                    continue;
+                    var deploy = DeploymentOrchestrationInput.Parse(resource, input, _ARMFunctions, infrastructure);
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                        DeploymentOrchestration.Name,
+                        "1.0",
+                        DataConverter.Serialize(deploy)));
                 }
-                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                    ResourceOrchestration.Name,
-                    "1.0",
-                    new ResourceOrchestrationInput()
+                else if (resource.Copy != null)
+                {
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new ResourceOrchestrationInput()
                     {
                         Resource = resource,
-                        Context = input,
+                        Context = input
                     }));
-            }
-            foreach (var deploy in input.Deployments)
-            {
-                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                   DeploymentOrchestration.Name,
-                    "1.0",
-                   DataConverter.Serialize(deploy.Value)));
-            }
-            foreach (var key in copyDic.Keys)
-            {
-                var c = input.Template.Resources[key] as CopyResource;
-                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new CopyOrchestrationInput()
+                }
+                else
                 {
-                    Resource = c,
-                    Context = input,
-                    Resources = copyDic[key]
-                }));
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                                       ResourceOrchestration.Name,
+                                       "1.0",
+                                       new ResourceOrchestrationInput()
+                                       {
+                                           Resource = resource,
+                                           Context = input,
+                                       }));
+                }
             }
 
             await Task.WhenAll(tasks.ToArray());
@@ -210,10 +204,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion Provisioning resources
 
-            if (input.Mode == DeploymentMode.Complete)
-            {
-                // TODO: complete mode, delete resource not exist in template
-            }
+            input.IsRuntime = true;
             string rtv = null;
 
             #region After Deployment
@@ -285,6 +276,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             });
             return new TaskResult() { Code = hasFailResource ? 500 : 200, Content = rtv };
         }
+
         private TaskCompletionSource<string> waitHandler = null;
 
         public override void OnEvent(OrchestrationContext context, string name, string input)
@@ -295,7 +287,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
         }
 
-        private string GetOutputs(DeploymentContext deploymentContext)
+        private string GetOutputs(DeploymentOrchestrationInput deploymentContext)
         {
             // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
             string outputs = deploymentContext.Template.Outputs;

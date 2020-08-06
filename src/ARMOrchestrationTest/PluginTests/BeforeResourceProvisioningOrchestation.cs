@@ -9,8 +9,9 @@ namespace ARMOrchestrationTest.PluginTests
     {
         public override Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
-            input.Resource.Name += "_BeforeResourceProvisioning";
-            return Task.FromResult( new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) });
+            // todo: need find method to test this
+            //input.Resource.Name += "_BeforeResourceProvisioning";
+            return Task.FromResult(new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) });
         }
     }
 }

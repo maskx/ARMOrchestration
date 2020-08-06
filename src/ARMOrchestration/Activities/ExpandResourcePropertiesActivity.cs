@@ -12,22 +12,24 @@ namespace maskx.ARMOrchestration.Activities
         private readonly ARMFunctions functions;
         private readonly IInfrastructure infrastructure;
         private readonly ARMTemplateHelper helper;
+
         public ExpandResourcePropertiesActivity(ARMFunctions functions, IInfrastructure infrastructure, ARMTemplateHelper helper)
         {
             this.functions = functions;
             this.infrastructure = infrastructure;
             this.helper = helper;
         }
+
         protected override TaskResult Execute(TaskContext context, ResourceOrchestrationInput input)
         {
             try
             {
-                input.Resource.Properties = input.Resource.ExpandProperties(input.Context, functions, infrastructure);
+                //  input.Resource.Properties = input.Resource.ExpandProperties(input.Context, functions, infrastructure);
                 helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage=ProvisioningStage.ExpandResourceProperties,
+                    Stage = ProvisioningStage.ExpandResourceProperties,
                     Input = this.DataConverter.Serialize(input)
                 });
             }
@@ -35,7 +37,7 @@ namespace maskx.ARMOrchestration.Activities
             {
                 return new TaskResult() { Code = 500, Content = ex.Message };
             }
-            return new TaskResult() { Code = 200 ,Content=this.DataConverter.Serialize(input.Resource)};
+            return new TaskResult() { Code = 200, Content = this.DataConverter.Serialize(input.Resource) };
         }
     }
 }

@@ -52,6 +52,7 @@ namespace ARMOrchestrationTest
                 return Configuration.GetConnectionString("dbConnection");
             }
         }
+
         static TestHelper()
         {
             Configuration = new ConfigurationBuilder()
@@ -90,6 +91,7 @@ namespace ARMOrchestrationTest
             var templatString = TestHelper.GetFunctionInputContent(filename);
             return new JsonValue(templatString).GetNodeStringValue(path);
         }
+
         public static OrchestrationInstance FunctionTest(
             ARMOrchestartionFixture fixture,
             string filename,
@@ -97,6 +99,7 @@ namespace ARMOrchestrationTest
             string managementGroupId = null)
         {
             var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename, managementGroupId);
+            Assert.Equal(200, taskResult.Code);
             var outputString = taskResult.Content;
             var templateString = TestHelper.GetFunctionInputContent(filename);
             using var templateDoc = JsonDocument.Parse(templateString);
@@ -119,6 +122,7 @@ namespace ARMOrchestrationTest
             }
             return instance;
         }
+
         public static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(
             ARMOrchestartionFixture fixture,
             string filename,
@@ -127,7 +131,7 @@ namespace ARMOrchestrationTest
             var templateString = TestHelper.GetFunctionInputContent(filename);
             var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
             {
-                TemplateContent = templateString,
+                Template = templateString,
                 Parameters = string.Empty,
                 CorrelationId = Guid.NewGuid().ToString("N"),
                 DeploymentName = filename.Replace('/', '-'),
@@ -225,6 +229,7 @@ namespace ARMOrchestrationTest
                  });
              });
         }
+
         public static OrchestrationInstance OrchestrationTest(ARMOrchestartionFixture fixture,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
@@ -236,6 +241,7 @@ namespace ARMOrchestrationTest
             Assert.Equal(200, response.Code);
             return instance;
         }
+
         public static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
@@ -244,7 +250,7 @@ namespace ARMOrchestrationTest
             var id = Guid.NewGuid().ToString("N");
             var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
             {
-                TemplateContent = TestHelper.GetTemplateContent(filename),
+                Template = TestHelper.GetTemplateContent(filename),
                 Parameters = string.Empty,
                 CorrelationId = Guid.NewGuid().ToString("N"),
                 DeploymentName = filename.Replace('/', '-'),
