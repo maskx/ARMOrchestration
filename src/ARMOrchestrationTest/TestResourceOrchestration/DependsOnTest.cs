@@ -65,7 +65,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("resource1", input.Resource.DependsOn[0]);
                 }
             }
@@ -84,7 +84,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("resource1", input.Resource.DependsOn[0]);
                 }
             }
@@ -103,7 +103,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
                 }
             }
@@ -122,7 +122,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 {
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Single(input.Resource.DependsOn);
+                    Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
                 }
             }

@@ -190,7 +190,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private List<string> _DependsOn;
+        private DependsOnCollection _DependsOn;
 
         /// <summary>
         /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
@@ -204,7 +204,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
         ///
         /// </summary>
-        public List<string> DependsOn
+        public DependsOnCollection DependsOn
         {
             get
             {
@@ -228,13 +228,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             if (_DependsOn != null)
                 return;
-            _DependsOn = new List<string>();
+            _DependsOn = new DependsOnCollection();
             if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
             {
                 using var dd = JsonDocument.Parse(dependsOn.GetRawText());
                 foreach (var item in dd.RootElement.EnumerateArray())
                 {
-                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), Context).ToString());
+                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), Context).ToString(), Input.Template.Resources);
                 }
             }
             if (RootElement.TryGetProperty("properties", out JsonElement properties))
@@ -250,53 +250,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     // so keep the original text
                     if (_Context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
                     {
-                        _DependsOn.AddRange(conditionDep as List<string>);
+                        _DependsOn.AddRange(conditionDep as List<string>, Input.Template.Resources);
                         _Context.Remove(ContextKeys.DEPENDSON);
                     }
                 }
-            }
-            for (int i = _DependsOn.Count - 1; i >= 0; i--)
-            {
-                string dependsOnName = _DependsOn[i];
-                if (!Input.Template.Resources.TryGetValue(dependsOnName, out Resource r))
-                {
-                    throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
-                }
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
-                // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
-                if (!r.Condition)
-                    _DependsOn.RemoveAt(i);
-                // check duplicated dependsOn
-                var n1 = string.Empty;
-                var n2 = dependsOnName;
-                var n_index = dependsOnName.LastIndexOf('/');
-                if (n_index > 0)
-                {
-                    n1 = n2.Substring(0, n_index);
-                    n2 = n2.Substring(n_index + 1, n2.Length - n_index - 1);
-                }
-                if (0 <= _DependsOn.FindIndex(0, i, (str) =>
-                  {
-                      var c1 = string.Empty;
-                      var c2 = str;
-                      var c_index = str.LastIndexOf('/');
-                      if (c_index > 0)
-                      {
-                          c1 = c2.Substring(0, c_index);
-                          c2 = c2.Substring(c_index + 1, c2.Length - c_index - 1);
-                      }
-                      if (c2 == n2)
-                      {
-                          if (string.IsNullOrEmpty(c1))
-                              return true;
-                          if (string.IsNullOrEmpty(n1))
-                              return true;
-                          if (c1 == n1)
-                              return true;
-                      }
-                      return false;
-                  }))
-                    _DependsOn.RemoveAt(i);
             }
         }
 
@@ -607,21 +564,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             //CopyResource.Zones = resources[1].Zones;
             //CopyResource.Location = resources[1].Location;
             return resources;
-        }
-
-        private static bool HandleDependsOn(Resource r, Dictionary<string, object> context)
-        {
-            if (context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
-            {
-                r.DependsOn.AddRange(conditionDep as List<string>);
-                context.Remove(ContextKeys.DEPENDSON);
-            }
-            if (context.ContainsKey(ContextKeys.NEED_REEVALUATE))
-            {
-                context.Remove(ContextKeys.NEED_REEVALUATE);
-                return true;
-            }
-            return false;
         }
 
         public string ExpandProperties(DeploymentContext deploymentContext, ARMFunctions functions, IInfrastructure infrastructure)

@@ -1,7 +1,6 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using System;
-using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Activities
 {
@@ -10,7 +9,7 @@ namespace maskx.ARMOrchestration.Activities
         public DeploymentOrchestrationInput DeploymentContext { get; set; }
         public Resource Resource { get; set; }
         public ProvisioningStage ProvisioningStage { get; set; }
-        public List<string> DependsOn { get; set; }
+        public DependsOnCollection DependsOn { get; set; }
         private IServiceProvider _ServiceProvider;
 
         internal IServiceProvider ServiceProvider

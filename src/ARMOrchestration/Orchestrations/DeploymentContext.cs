@@ -101,7 +101,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public TemplateLink TemplateLink { get; set; }
         public ParametersLink ParametersLink { get; set; }
-        public List<string> DependsOn { get; set; } = new List<string>();
+        public DependsOnCollection DependsOn { get; set; } = new DependsOnCollection();
         private Dictionary<string, DeploymentOrchestrationInput> _Deployments;
 
         public Dictionary<string, DeploymentOrchestrationInput> Deployments

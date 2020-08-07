@@ -1,5 +1,4 @@
-﻿using Dynamitey;
-using maskx.ARMOrchestration.ARMTemplate;
+﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
@@ -32,65 +31,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
 
                 #endregion Deployment
-
-                #region dependsOn
-
-                for (int i = res.DependsOn.Count - 1; i >= 0; i--)
-                {
-                    string dependsOnName = res.DependsOn[i];
-                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
-                    // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
-                    if (!input.Template.Resources.ContainsKey(dependsOnName))
-                    {
-                        //if (input.Template.ConditionFalseResources.Contains(dependsOnName))
-                        //    res.DependsOn.RemoveAt(i);
-                        //else
-                        //    throw new Exception($"cannot find dependson resource named '{dependsOnName}'");
-                    }
-                    // check duplicated dependsOn
-                    if (HasSameName(res.DependsOn, i - 1, dependsOnName))
-                        res.DependsOn.RemoveAt(i);
-                }
-                // TODO: check circular dependencies
-
-                #endregion dependsOn
             }
             return input;
-        }
-
-        private static bool HasSameName(List<string> collection, int index, string name)
-        {
-            if (index < 0)
-                return false;
-            for (int i = index; i >= 0; i--)
-            {
-                var n1 = string.Empty;
-                var n2 = name;
-                var c1 = string.Empty;
-                var c2 = collection[i];
-                var n_index = name.LastIndexOf('/');
-                var c_index = collection[i].LastIndexOf('/');
-                if (n_index > 0)
-                {
-                    n1 = name.Substring(0, n_index);
-                    n2 = name.Substring(n_index + 1, name.Length - n_index - 1);
-                }
-                if (c_index > 0)
-                {
-                    c1 = c2.Substring(0, c_index);
-                    c2 = c2.Substring(c_index + 1, c2.Length - c_index - 1);
-                }
-                if (c2 == n2)
-                {
-                    if (string.IsNullOrEmpty(c1))
-                        return true;
-                    if (string.IsNullOrEmpty(n1))
-                        return true;
-                    if (c1 == n1)
-                        return true;
-                }
-            }
-            return false;
         }
 
         public static DeploymentOrchestrationInput Parse(Resource resource,
