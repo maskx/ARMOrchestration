@@ -74,7 +74,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         public void ResourceidInternl()
         {
             var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
-            DeploymentContext context = new DeploymentContext();
+            DeploymentOrchestrationInput context = new DeploymentOrchestrationInput();
             List<object> pars = new List<object>
             {
                 TestHelper.SubscriptionId,

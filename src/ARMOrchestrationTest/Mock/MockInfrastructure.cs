@@ -19,10 +19,12 @@ namespace ARMOrchestrationTest.Mock
         {
             this.serviceProvider = serviceProvider;
         }
+
         public (string GroupId, string GroupType, string HierarchyId) GetGroupInfo(string managementGroupId, string subscriptionId, string resourceGroupName)
         {
-            return ("3128C563-AC63-488E-8507-C47B3B9C0DBD", "ResourceGroup","001004005008");
+            return ("3128C563-AC63-488E-8507-C47B3B9C0DBD", "ResourceGroup", "001004005008");
         }
+
         public TaskResult Providers(string providerNamespace, string resourceType)
         {
             return new TaskResult();
@@ -67,13 +69,13 @@ namespace ARMOrchestrationTest.Mock
             return r;
         }
 
-        public TaskResult List(DeploymentContext context, string resourceId, string apiVersion, string functionValues = "", string value = "")
+        public TaskResult List(DeploymentOrchestrationInput context, string resourceId, string apiVersion, string functionValues = "", string value = "")
         {
             var ret = TestHelper.GetJsonFileContent($"Mock/Response/list");
             return new TaskResult() { Content = ret };
         }
 
-        public TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false)
+        public TaskResult Reference(DeploymentOrchestrationInput context, string resourceName, string apiVersion = "", bool full = false)
         {
             string c = string.Empty;
             var pars = resourceName.TrimStart('/').Split('/');
@@ -114,7 +116,7 @@ namespace ARMOrchestrationTest.Mock
         public bool InjectBefroeProvisioning { get; set; } = false;
         public bool InjectAfterProvisioning { get; set; } = false;
 
-        public TaskResult WhatIf(DeploymentContext context, string resourceName)
+        public TaskResult WhatIf(DeploymentOrchestrationInput context, string resourceName)
         {
             // var r = context.Template.Resources[resourceName];
             var c = TestHelper.GetJsonFileContent($"Mock/Response/{resourceName}");

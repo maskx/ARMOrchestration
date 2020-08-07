@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration
         {
         }
 
-        public DeploymentOperation(DeploymentContext deploymentContext, IInfrastructure infrastructure, Resource resource = null)
+        public DeploymentOperation(DeploymentOrchestrationInput deploymentContext, IInfrastructure infrastructure, Resource resource = null)
         {
             this.GroupType = deploymentContext.GroupType;
             this.GroupId = deploymentContext.GroupId;

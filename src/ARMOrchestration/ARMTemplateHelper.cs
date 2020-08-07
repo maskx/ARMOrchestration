@@ -164,11 +164,5 @@ WHEN MATCHED THEN
                 });
             }
         }
-    
-        [Obsolete("using Resource.ExpandProperties(DeploymentContext deploymentContext,ARMFunctions functions,IInfrastructure infrastructure) instead")]
-        public string ExpadResourceProperties(Resource resource, DeploymentContext deploymentContext)
-        {
-            return resource.ExpandProperties(deploymentContext, ARMfunctions, infrastructure);
-        }
     }
 }

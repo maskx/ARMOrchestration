@@ -377,7 +377,7 @@ namespace maskx.ARMOrchestration.Functions
                 {
                     if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                         throw new Exception("cannot find context in parameters function");
-                    var context = armcxt as DeploymentContext;
+                    var context = armcxt as DeploymentOrchestrationInput;
 
                     if (!string.IsNullOrEmpty(context.Parameters))
                     {
@@ -416,7 +416,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                     return;
-                string vars = (armcxt as DeploymentContext).Template.Variables;
+                string vars = (armcxt as DeploymentOrchestrationInput).Template.Variables;
 
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 using var defineDoc = JsonDocument.Parse(vars);
@@ -449,7 +449,7 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("deployment", (args, cxt) =>
             {
-                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 int stage = 0;
                 DeploymentOrchestrationInput deploymentOrchestrationInput = null;
                 using (var db = new DbAccess(options.Database.ConnectionString))
@@ -775,7 +775,7 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("resourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 var t = input.Template;
                 if (t.DeployLevel == DeployLevel.ResourceGroup)
                     args.Result = ResourceId(input, pars);
@@ -787,13 +787,13 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("managementgroupresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 args.Result = ManagementResourceId(input, pars);
             });
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
-                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 args.Result = SubscriptionResourceId(input, pars);
             });
             Functions.Add("tenantresourceid", (args, cxt) =>
@@ -805,7 +805,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 var pars = args.EvaluateParameters(cxt);
                 string resourceName = pars[0].ToString();
-                var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 string apiVersion = string.Empty;
                 if (pars.Length > 1)
                     apiVersion = pars[1].ToString();
@@ -850,7 +850,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("resourcegroup", (args, cxt) =>
             {
-                var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+                var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 var taskResult = this.infrastructure.Reference(
                     context,
                     $"/{infrastructure.BuiltinPathSegment.Subscription}/{context.SubscriptionId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{context.ResourceGroup}",
@@ -869,7 +869,7 @@ namespace maskx.ARMOrchestration.Functions
             #endregion Resource
         }
 
-        public string ResourceId(DeploymentContext input, params object[] pars)
+        public string ResourceId(DeploymentOrchestrationInput input, params object[] pars)
         {
             string groupType = infrastructure.BuiltinPathSegment.Subscription;
             string groupId = input.SubscriptionId;
@@ -924,7 +924,7 @@ namespace maskx.ARMOrchestration.Functions
             return $"/{groupType}/{groupId}/{infrastructure.BuiltinPathSegment.ResourceGroup}/{resourceGroupName}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public string SubscriptionResourceId(DeploymentContext input, params object[] pars)
+        public string SubscriptionResourceId(DeploymentOrchestrationInput input, params object[] pars)
         {
             string subscriptionId = input.SubscriptionId;
             string[] fullnames;
@@ -953,7 +953,7 @@ namespace maskx.ARMOrchestration.Functions
             return $"/{infrastructure.BuiltinPathSegment.Subscription}/{subscriptionId}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
-        public string ManagementResourceId(DeploymentContext input, params object[] pars)
+        public string ManagementResourceId(DeploymentOrchestrationInput input, params object[] pars)
         {
             string managementId = input.ManagementGroupId;
             string[] fullnames;
@@ -1038,7 +1038,7 @@ namespace maskx.ARMOrchestration.Functions
                         {
                             var pars = args.EvaluateParameters(context);
                             var resourceName = pars[0].ToString();
-                            if (!(cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext).IsRuntime)
+                            if (!(cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).IsRuntime)
                             {
                                 if (resourceName.IndexOf('/') < 0)
                                 {
@@ -1060,7 +1060,7 @@ namespace maskx.ARMOrchestration.Functions
                             else
                             {
                                 var r = this.infrastructure.List(
-                                                                cxt[ContextKeys.ARM_CONTEXT] as DeploymentContext,
+                                                                cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput,
                                                                 resourceName,
                                                                 pars[1].ToString(),
                                                                 pars.Length == 3 ? pars[2].ToString() : string.Empty,
@@ -1108,7 +1108,7 @@ namespace maskx.ARMOrchestration.Functions
             member = null;
             if (!context.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                 return false;
-            var udfs = (armcxt as DeploymentContext).Template.Functions;
+            var udfs = (armcxt as DeploymentOrchestrationInput).Template.Functions;
             if (udfs == null)
                 return false;
             var names = function.Split('.');

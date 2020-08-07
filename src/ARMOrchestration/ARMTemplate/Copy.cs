@@ -56,7 +56,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             var copy = new Copy();
             copy.Type = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}";
-            var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+            var deployContext = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
             if (root.TryGetProperty("name", out JsonElement name))
             {
                 copy.Name = name.GetString();

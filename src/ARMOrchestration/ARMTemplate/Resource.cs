@@ -18,6 +18,25 @@ namespace maskx.ARMOrchestration.ARMTemplate
     [JsonObject(MemberSerialization.OptIn)]
     public class Resource : IDisposable
     {
+        [JsonProperty]
+        public string RawString
+        {
+            get { return RootElement.GetRawText(); }
+            set { json = JsonDocument.Parse(value); }
+        }
+
+        [JsonProperty]
+        protected readonly string _ParentName;
+
+        [JsonProperty]
+        protected readonly string _ParentType;
+
+        /// <summary>
+        /// if CopyIndex has value, means this is a expanded resource
+        /// </summary>
+        [JsonProperty]
+        public int? CopyIndex { get; set; }
+
         private Dictionary<string, object> _Context;
 
         internal Dictionary<string, object> Context
@@ -42,19 +61,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
         internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
-
-        [JsonProperty]
-        public string RawString
-        {
-            get { return RootElement.GetRawText(); }
-            set { json = JsonDocument.Parse(value); }
-        }
-
-        [JsonProperty]
-        protected readonly string _ParentName;
-
-        [JsonProperty]
-        protected readonly string _ParentType;
 
         private JsonDocument json = null;
 
@@ -287,32 +293,37 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private List<string> _Zones = new List<string>();
+        private List<string> _Zones;
 
         public List<string> Zones
         {
             get
             {
-                if (RootElement.TryGetProperty("zones", out JsonElement zones))
+                if (_Zones == null)
                 {
-                    if (zones.ValueKind == JsonValueKind.Array)
+                    _Zones = new List<string>();
+                    if (RootElement.TryGetProperty("zones", out JsonElement zones))
                     {
-                        foreach (var z in zones.EnumerateArray())
+                        if (zones.ValueKind == JsonValueKind.Array)
                         {
-                            _Zones.Add(_Functions.Evaluate(z.GetString(), Context).ToString());
+                            foreach (var z in zones.EnumerateArray())
+                            {
+                                _Zones.Add(_Functions.Evaluate(z.GetString(), Context).ToString());
+                            }
                         }
-                    }
-                    else if (zones.ValueKind == JsonValueKind.String)
-                    {
-                        var arr = _Functions.Evaluate(zones.GetString(), Context) as JsonValue;
-                        if (arr == null || arr.ValueKind != JsonValueKind.Array)
-                            throw new Exception("wrong value of zones");
-                        for (int i = 0; i < arr.Length; i++)
+                        else if (zones.ValueKind == JsonValueKind.String)
                         {
-                            _Zones.Add(arr[i].ToString());
+                            var arr = _Functions.Evaluate(zones.GetString(), Context) as JsonValue;
+                            if (arr == null || arr.ValueKind != JsonValueKind.Array)
+                                throw new Exception("wrong value of zones");
+                            for (int i = 0; i < arr.Length; i++)
+                            {
+                                _Zones.Add(arr[i].ToString());
+                            }
                         }
                     }
                 }
+
                 return _Zones;
             }
         }
@@ -388,12 +399,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string CopyId { get; set; }
 
-        /// <summary>
-        /// if CopyIndex has value, means this is a expanded resource
-        /// </summary>
-        [JsonProperty]
-        public int? CopyIndex { get; set; }
-
         public string CopyName { get; set; }
 
         public Copy Copy
@@ -467,7 +472,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             , string parentName,
             string parentType)
         {
-            DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+            var deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
             List<Resource> resources = new List<Resource>();
             Resource r = null;
             resources.Add(r);
@@ -518,7 +523,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             Copy copy = Copy.Parse(copyElement, context, functions, infrastructure);
 
-            DeploymentContext deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentContext;
+            var deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
 
             CopyResource CopyResource = null;
             //new CopyResource()
@@ -566,7 +571,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return resources;
         }
 
-        public string ExpandProperties(DeploymentContext deploymentContext, ARMFunctions functions, IInfrastructure infrastructure)
+        public string ExpandProperties(DeploymentOrchestrationInput deploymentContext, ARMFunctions functions, IInfrastructure infrastructure)
         {
             if (string.IsNullOrEmpty(this.Properties))
                 return string.Empty;

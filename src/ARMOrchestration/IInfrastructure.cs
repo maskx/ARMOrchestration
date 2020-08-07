@@ -12,6 +12,7 @@ namespace maskx.ARMOrchestration
     public interface IInfrastructure
     {
         (string GroupId, string GroupType, string HierarchyId) GetGroupInfo(string managementGroupId, string subscriptionId, string resourceGroupName);
+
         /// <summary>
         /// Convert the message to the define format of communication table
         /// </summary>
@@ -28,7 +29,7 @@ namespace maskx.ARMOrchestration
         /// <param name="functionValues">An object that has values for the function. Only provide this object for functions that support receiving an object with parameter values</param>
         /// <param name="value"></param>
         /// <returns></returns>
-        TaskResult List(DeploymentContext context, string resourceId, string apiVersion, string functionValues = "", string value = "");
+        TaskResult List(DeploymentOrchestrationInput context, string resourceId, string apiVersion, string functionValues = "", string value = "");
 
         /// <summary>
         /// <see cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#reference"/>
@@ -48,9 +49,9 @@ namespace maskx.ARMOrchestration
         /// <returns>
         /// an object representing a resource's runtime state
         /// </returns>
-        TaskResult Reference(DeploymentContext context, string resourceName, string apiVersion = "", bool full = false);
+        TaskResult Reference(DeploymentOrchestrationInput context, string resourceName, string apiVersion = "", bool full = false);
 
-        TaskResult WhatIf(DeploymentContext context, string resourceName);
+        TaskResult WhatIf(DeploymentOrchestrationInput context, string resourceName);
 
         /// <summary>
         /// <see cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#providers"/>

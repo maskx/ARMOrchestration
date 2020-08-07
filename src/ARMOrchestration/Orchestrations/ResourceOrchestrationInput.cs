@@ -9,6 +9,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public bool IsRedeployment { get; set; } = false;
         public Resource Resource { get; set; }
         public DeploymentOrchestrationInput Context { get; set; }
+
         private IServiceProvider _ServiceProvider;
 
         [JsonIgnore]
