@@ -1,6 +1,5 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
@@ -8,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -45,18 +45,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region validate template
 
-            // when Template had value, this orchestration call by internal, the template string content already be parsed
-            //if (input.Template == null || input.Deployments.Count > 0)
-            //{
-            //    var valid = await context.ScheduleTask<TaskResult>(ValidateTemplateActivity.Name, "1.0", input);
-            //    if (valid.Code != 200)
-            //    {
-            //        return valid;
-            //    }
-            //    input = DataConverter.Deserialize<DeploymentOrchestrationInput>(valid.Content);
-            //}
-            //else
-            //{
             helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
@@ -64,7 +52,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Input = arg,
                 Stage = ProvisioningStage.ValidateTemplate
             });
-            //}
 
             #endregion validate template
 
@@ -80,7 +67,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                  InstanceId = context.OrchestrationInstance.InstanceId,
                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
                                  ProvisioningStage = ProvisioningStage.InjectBeforeDeployment,
-                                 DeploymentContext = input,
+
                                  Resource = null
                              });
                 if (injectBeforeDeploymenteResult.Code != 200)
@@ -131,10 +118,16 @@ namespace maskx.ARMOrchestration.Orchestrations
                 await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
                     new WaitDependsOnActivityInput()
                     {
-                        ProvisioningStage = ProvisioningStage.DependsOnWaited,
-                        DeploymentContext = input,
-                        Resource = null,
-                        DependsOn = input.DependsOn
+                        DependsOn = input.DependsOn.ToList(),
+                        DeploymentId = input.DeploymentId,
+                        RootId = input.RootId,
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        DeploymentOperation = new DeploymentOperation(input, infrastructure)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId
+                        }
                     });
                 await waitHandler.Task;
                 var r = DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
@@ -163,21 +156,24 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (!resource.Condition)
                     continue;
-                if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+
+                // copy should be executed before BuiltinServiceTypes.Deployments
+                // because BuiltinServiceTypes.Deployments can be a copy resource
+                if (resource.Copy != null)
+                {
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new ResourceOrchestrationInput()
+                    {
+                        Resource = resource,
+                        Input = input
+                    }));
+                }
+                else if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     var deploy = DeploymentOrchestrationInput.Parse(resource, input, _ARMFunctions, infrastructure);
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         DeploymentOrchestration.Name,
                         "1.0",
                         DataConverter.Serialize(deploy)));
-                }
-                else if (resource.Copy != null)
-                {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new ResourceOrchestrationInput()
-                    {
-                        Resource = resource,
-                        Context = input
-                    }));
                 }
                 else
                 {
@@ -187,7 +183,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                        new ResourceOrchestrationInput()
                                        {
                                            Resource = resource,
-                                           Context = input,
+                                           Input = input,
                                        }));
                 }
             }
@@ -241,7 +237,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                  InstanceId = context.OrchestrationInstance.InstanceId,
                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
                                  ProvisioningStage = ProvisioningStage.InjectAfterDeployment,
-                                 DeploymentContext = input,
+                                 Input = input,
                                  Resource = null
                              });
                 if (injectAfterDeploymenteResult.Code != 200)

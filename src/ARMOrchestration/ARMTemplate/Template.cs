@@ -15,6 +15,26 @@ namespace maskx.ARMOrchestration.ARMTemplate
         [JsonProperty]
         private string _RawString { get; set; }
 
+        private Dictionary<string, object> _FullContext;
+
+        internal Dictionary<string, object> FullContext
+        {
+            get
+            {
+                if (_FullContext == null)
+                {
+                    _FullContext = new Dictionary<string, object> {
+                        {ContextKeys.ARM_CONTEXT,this.Input} };
+                    foreach (var item in Input.Context)
+                    {
+                        if (item.Key == ContextKeys.ARM_CONTEXT) continue;
+                        _FullContext.Add(item.Key, item.Value);
+                    }
+                }
+                return _FullContext;
+            }
+        }
+
         public DeploymentOrchestrationInput Input { get; set; }
 
         private IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
@@ -110,16 +130,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private void ExpandResource(JsonElement element, Dictionary<string, object> context, string parentName = null, string parentType = null)
+        private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
-            DeploymentOrchestrationInput input = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+            DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
             foreach (var resource in element.EnumerateArray())
             {
-                var r = new Resource(resource, input, parentName, parentType);
+                var r = new Resource(resource, fullContext, parentName, parentType);
                 _Resources.Add(r);
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
+                // You can't use a copy loop for a child resource.
                 if (resource.TryGetProperty("resources", out JsonElement _resources))
                 {
-                    ExpandResource(_resources, context, r.FullName, r.FullType);
+                    ExpandResource(_resources, r.FullContext, r.FullName, r.FullType);
                 }
             }
         }
@@ -134,13 +156,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     if (!RootElement.TryGetProperty("resources", out JsonElement resources))
                         throw new Exception("not find resources in template");
-
                     _Resources = new ResourceCollection();
-                    ExpandResource(resources, new Dictionary<string, object> {
-                        { ContextKeys.ARM_CONTEXT, this.Input }
-                    });
+                    ExpandResource(resources, this.FullContext);
                 }
-
                 return _Resources;
             }
         }

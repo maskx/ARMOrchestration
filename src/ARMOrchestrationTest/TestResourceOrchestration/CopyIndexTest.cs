@@ -24,6 +24,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             TestHelper.OrchestrationTest(fixture,
                 "CopyIndex/ResourceIteration");
         }
+
         [Fact(DisplayName = "ResourceIteration_BatchSize")]
         public void ResourceIteration_BatchSize()
         {
@@ -103,6 +104,13 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             Assert.True(has0);
             Assert.True(has1);
             Assert.True(has2);
+        }
+
+        [Fact(DisplayName = "ResourceIteration_NestingDeployment")]
+        public void ResourceIteration_NestingDeployment()
+        {
+            TestHelper.OrchestrationTest(fixture,
+                "CopyIndex/ResourceIteration_NestingDeployment");
         }
     }
 }

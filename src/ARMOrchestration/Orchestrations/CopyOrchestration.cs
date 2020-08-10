@@ -1,11 +1,13 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -29,10 +31,41 @@ namespace maskx.ARMOrchestration.Orchestrations
             var copy = input.Resource.Copy;
             ConcurrentBag<string> msg = new ConcurrentBag<string>();
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
+            // todo: add waitDependsOn
+            // todo: add deployment service type support
 
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
+            // You can't use a copy loop for a child resource.
             for (int i = 0; i < copy.Count; i++)
             {
-                tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                var ParentContext = new Dictionary<string, object>();
+                foreach (var item in input.Resource.FullContext)
+                {
+                    if (item.Key == ContextKeys.ARM_CONTEXT) continue;
+                    ParentContext.Add(item.Key, item.Value);
+                }
+
+                if (input.Resource.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+                {
+                    var deploy = DeploymentOrchestrationInput.Parse(
+                        new Resource()
+                        {
+                            RawString = input.Resource.RawString,
+                            CopyIndex = i,
+                            ParentContext = ParentContext,
+                            Input = input.Input
+                        },
+                        input.Input,
+                        _ServiceProvider.GetService<ARMFunctions>(),
+                        infrastructure);
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                        DeploymentOrchestration.Name,
+                        "1.0",
+                        DataConverter.Serialize(deploy)));
+                }
+                else
+                {
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                                    ResourceOrchestration.Name,
                                    "1.0",
                                    new ResourceOrchestrationInput()
@@ -40,10 +73,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                                        Resource = new Resource()
                                        {
                                            RawString = input.Resource.RawString,
-                                           CopyIndex = i
+                                           CopyIndex = i,
+                                           ParentContext = ParentContext
                                        },
-                                       Context = input.Context,
+                                       Input = input.Input
                                    }));
+                }
+
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)
                 {
                     await Task.WhenAny(tasks);
@@ -70,7 +106,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             if (msg.Count > 0)
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, infrastructure, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -82,7 +118,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             else
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, infrastructure, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,

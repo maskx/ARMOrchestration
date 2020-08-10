@@ -51,6 +51,9 @@
     <None Update="Templates\CopyIndex\output.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Templates\CopyIndex\ResourceIteration_NestingDeployment.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Templates\CopyIndex\ResourceIteration_BatchSize.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

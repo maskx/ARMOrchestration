@@ -29,7 +29,7 @@ namespace maskx.ARMOrchestration.Activities
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, AsyncRequestActivityInput input)
         {
             input.ServiceProvider = _ServiceProvider;
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentContext, infrastructure, input.Resource)
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, infrastructure, input.Resource)
             {
                 InstanceId = input.InstanceId,
                 ExecutionId = input.ExecutionId,

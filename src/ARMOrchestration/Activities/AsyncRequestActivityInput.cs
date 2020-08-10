@@ -1,8 +1,7 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace maskx.ARMOrchestration.Activities
 {
@@ -10,22 +9,21 @@ namespace maskx.ARMOrchestration.Activities
     {
         public string InstanceId { get; set; }
         public string ExecutionId { get; set; }
-        public DeploymentOrchestrationInput DeploymentContext { get; set; }
         public Resource Resource { get; set; }
+        public DeploymentOrchestrationInput Input { get; set; }
         public ProvisioningStage ProvisioningStage { get; set; }
-        public Dictionary<string, object> Context { get; set; }
         private IServiceProvider _ServiceProvider;
 
         [JsonIgnore]
-        internal IServiceProvider ServiceProvider
+        public IServiceProvider ServiceProvider
         {
             get { return _ServiceProvider; }
             set
             {
                 // this should be set first after deserialize
                 _ServiceProvider = value;
-                DeploymentContext.ServiceProvider = value;
-                Resource.Input = DeploymentContext;
+                Input.ServiceProvider = value;
+                Resource.Input = Input;
             }
         }
     }

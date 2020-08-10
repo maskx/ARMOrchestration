@@ -33,7 +33,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             await context.ScheduleTask<TaskResult>(AsyncRequestActivity.Name, "1.0", input);
             await waitHandler.Task;
             var r = DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentContext, infrastructure, input.Resource)
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, infrastructure, input.Resource)
             {
                 InstanceId = input.InstanceId,
                 ExecutionId = input.ExecutionId,

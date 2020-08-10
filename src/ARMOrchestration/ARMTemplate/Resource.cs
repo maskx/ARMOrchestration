@@ -37,22 +37,47 @@ namespace maskx.ARMOrchestration.ARMTemplate
         [JsonProperty]
         public int? CopyIndex { get; set; }
 
-        private Dictionary<string, object> _Context;
+        /// <summary>
+        /// for nesting copy, this context should save all copy context from root to direct parent
+        /// for clear serialize, this context not include ContextKeys.ARM_CONTEXT
+        /// at runtime, should set ContextKeys.ARM_CONTEXT after deserialize
+        /// </summary>
+        [JsonProperty]
+        public Dictionary<string, object> ParentContext;
 
-        internal Dictionary<string, object> Context
+        private Dictionary<string, object> _FullContext;
+
+        internal Dictionary<string, object> FullContext
         {
             get
             {
-                if (_Context == null)
+                if (_FullContext == null)
                 {
-                    _Context = new Dictionary<string, object> { { ContextKeys.ARM_CONTEXT, Input } };
+                    _FullContext = new Dictionary<string, object> {
+                        {ContextKeys.ARM_CONTEXT,this.Input} };
+                    if (ParentContext != null)
+                    {
+                        foreach (var item in ParentContext)
+                        {
+                            _FullContext.Add(item.Key, item.Value);
+                        }
+                    }
                     if (Copy != null && CopyIndex.HasValue)
                     {
-                        _Context.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { Copy.Name, this.CopyIndex.Value } });
-                        _Context.Add(ContextKeys.CURRENT_LOOP_NAME, Copy.Name);
+                        Dictionary<string, int> indexDic = new Dictionary<string, int>();
+                        if (_FullContext.TryGetValue(ContextKeys.COPY_INDEX, out object indexOjb))
+                        {
+                            foreach (var item in indexOjb as Dictionary<string, int>)
+                            {
+                                indexDic[item.Key] = item.Value;
+                            }
+                        }
+                        indexDic[Copy.Name] = this.CopyIndex.Value;
+                        _FullContext[ContextKeys.COPY_INDEX] = indexDic;
+                        _FullContext[ContextKeys.CURRENT_LOOP_NAME] = Copy.Name;
                     }
                 }
-                return _Context;
+                return _FullContext;
             }
         }
 
@@ -82,12 +107,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
         }
 
-        public Resource(JsonElement element, DeploymentOrchestrationInput input, string parentName = null, string parentType = null)
+        public Resource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
-            this.Input = input;
+            DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
             this._Element = element;
             this._ParentName = parentName;
             this._ParentType = parentType;
+            this.Input = input;
+            this.ParentContext = new Dictionary<string, object>();
+            foreach (var item in fullContext)
+            {
+                if (item.Key == ContextKeys.ARM_CONTEXT) continue;
+                ParentContext.Add(item.Key, item.Value);
+            }
         }
 
         public bool Condition
@@ -101,7 +133,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     if (condition.ValueKind == JsonValueKind.True)
                         return true;
                     if (condition.ValueKind == JsonValueKind.String)
-                        return (bool)this._Functions.Evaluate(condition.GetString(), Context);
+                        return (bool)this._Functions.Evaluate(condition.GetString(), FullContext);
                     return true;
                 }
                 return true;
@@ -155,7 +187,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (Copy != null && !CopyIndex.HasValue)
                     return Copy.Name;
                 if (RootElement.TryGetProperty("name", out JsonElement name))
-                    return this._Functions.Evaluate(name.GetString(), Context).ToString();
+                    return this._Functions.Evaluate(name.GetString(), FullContext).ToString();
                 throw new Exception("not find name in resource node");
             }
         }
@@ -181,7 +213,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("location", out JsonElement location))
-                    return this._Functions.Evaluate(location.GetString(), Context).ToString();
+                    return this._Functions.Evaluate(location.GetString(), FullContext).ToString();
                 return string.Empty;
             }
         }
@@ -240,7 +272,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 using var dd = JsonDocument.Parse(dependsOn.GetRawText());
                 foreach (var item in dd.RootElement.EnumerateArray())
                 {
-                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), Context).ToString(), Input.Template.Resources);
+                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input.Template.Resources);
                 }
             }
             if (RootElement.TryGetProperty("properties", out JsonElement properties))
@@ -250,14 +282,14 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     _Properties = properties.GetRawText();
                 else
                 {
-                    _Properties = properties.ExpandObject(Context, _Functions, infrastructure);
+                    _Properties = properties.ExpandObject(FullContext, _Functions, infrastructure);
                     // if there has Implicit dependency by reference function in properties
                     // the reference function should be evaluate at provisioning time
                     // so keep the original text
-                    if (_Context.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
+                    if (FullContext.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
                     {
                         _DependsOn.AddRange(conditionDep as List<string>, Input.Template.Resources);
-                        _Context.Remove(ContextKeys.DEPENDSON);
+                        FullContext.Remove(ContextKeys.DEPENDSON);
                     }
                 }
             }
@@ -268,7 +300,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("sku", out JsonElement sku))
-                    return SKU.Parse(sku, _Functions, Context);
+                    return SKU.Parse(sku, _Functions, FullContext);
                 return new SKU() { Name = SKU.Default };
             }
         }
@@ -308,12 +340,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         {
                             foreach (var z in zones.EnumerateArray())
                             {
-                                _Zones.Add(_Functions.Evaluate(z.GetString(), Context).ToString());
+                                _Zones.Add(_Functions.Evaluate(z.GetString(), FullContext).ToString());
                             }
                         }
                         else if (zones.ValueKind == JsonValueKind.String)
                         {
-                            var arr = _Functions.Evaluate(zones.GetString(), Context) as JsonValue;
+                            var arr = _Functions.Evaluate(zones.GetString(), FullContext) as JsonValue;
                             if (arr == null || arr.ValueKind != JsonValueKind.Array)
                                 throw new Exception("wrong value of zones");
                             for (int i = 0; i < arr.Length; i++)
@@ -333,9 +365,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
-                    return _Functions.Evaluate(resourceGroup.GetString(), Context).ToString();
+                    return _Functions.Evaluate(resourceGroup.GetString(), FullContext).ToString();
                 else
-                    return (Context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ResourceGroup;
+                    return (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ResourceGroup;
             }
         }
 
@@ -344,9 +376,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
-                    return _Functions.Evaluate(subscriptionId.GetString(), Context).ToString();
+                    return _Functions.Evaluate(subscriptionId.GetString(), FullContext).ToString();
                 else
-                    return (Context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).SubscriptionId;
+                    return (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).SubscriptionId;
             }
         }
 
@@ -355,9 +387,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
-                    return _Functions.Evaluate(managementGroupId.GetString(), Context).ToString();
+                    return _Functions.Evaluate(managementGroupId.GetString(), FullContext).ToString();
                 else
-                    return (Context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ManagementGroupId;
+                    return (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ManagementGroupId;
             }
         }
 
@@ -369,29 +401,20 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     return Copy.Id;
                 if (Input.Template.DeployLevel == DeployLevel.ResourceGroup)
                 {
-                    List<object> pars = new List<object>                {
-                    SubscriptionId,
-                    ResourceGroup,
-                    FullType
-                };
+                    List<object> pars = new List<object>{
+                        SubscriptionId,
+                        ResourceGroup,
+                        FullType};
                     pars.AddRange(FullName.Split('/'));
                     return _Functions.ResourceId(Input, pars.ToArray());
                 }
                 if (Input.Template.DeployLevel == DeployLevel.Subscription)
                 {
-                    List<object> pars = new List<object>
-                {
-                    SubscriptionId,
-                    FullType
-                };
+                    List<object> pars = new List<object> { SubscriptionId, FullType };
                     pars.AddRange(FullName.Split('/'));
                     return _Functions.SubscriptionResourceId(Input, pars.ToArray());
                 }
-
-                List<object> pars1 = new List<object>
-                {
-                    FullType
-                };
+                List<object> pars1 = new List<object> { FullType };
                 pars1.AddRange(FullName.Split('/'));
                 return _Functions.TenantResourceId(pars1.ToArray());
             }
@@ -407,7 +430,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (!RootElement.TryGetProperty("copy", out JsonElement copy))
                     return null;
-                return Copy.Parse(copy, Context, _Functions, ServiceProvider.GetService<IInfrastructure>());
+                var cxt = new Dictionary<string, object> {
+                        {ContextKeys.ARM_CONTEXT,this.Input} };
+                if (ParentContext != null)
+                {
+                    foreach (var item in ParentContext)
+                    {
+                        cxt.Add(item.Key, item.Value);
+                    }
+                }
+                return Copy.Parse(copy, cxt, _Functions, ServiceProvider.GetService<IInfrastructure>());
             }
         }
 

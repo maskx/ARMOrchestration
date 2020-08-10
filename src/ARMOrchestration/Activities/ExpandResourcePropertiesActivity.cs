@@ -22,21 +22,21 @@ namespace maskx.ARMOrchestration.Activities
 
         protected override TaskResult Execute(TaskContext context, ResourceOrchestrationInput input)
         {
-            try
-            {
-                //  input.Resource.Properties = input.Resource.ExpandProperties(input.Context, functions, infrastructure);
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
-                {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.ExpandResourceProperties,
-                    Input = this.DataConverter.Serialize(input)
-                });
-            }
-            catch (Exception ex)
-            {
-                return new TaskResult() { Code = 500, Content = ex.Message };
-            }
+            //try
+            //{
+            //    //  input.Resource.Properties = input.Resource.ExpandProperties(input.Context, functions, infrastructure);
+            //    helper.SaveDeploymentOperation(new DeploymentOperation(input.Context, infrastructure, input.Resource)
+            //    {
+            //        InstanceId = context.OrchestrationInstance.InstanceId,
+            //        ExecutionId = context.OrchestrationInstance.ExecutionId,
+            //        Stage = ProvisioningStage.ExpandResourceProperties,
+            //        Input = this.DataConverter.Serialize(input)
+            //    });
+            //}
+            //catch (Exception ex)
+            //{
+            //    return new TaskResult() { Code = 500, Content = ex.Message };
+            //}
             return new TaskResult() { Code = 200, Content = this.DataConverter.Serialize(input.Resource) };
         }
     }

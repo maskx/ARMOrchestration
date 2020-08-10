@@ -1,14 +1,8 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
-using maskx.ARMOrchestration.WhatIf;
+﻿using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.SQL;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace maskx.ARMOrchestration
 {
@@ -58,111 +52,6 @@ WHEN MATCHED THEN
             using var db = new DbAccess(this.options.Database.ConnectionString);
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             db.ExecuteNonQueryAsync().Wait();
-        }
-
-        public WhatIfOperationResult WhatIf(PredictTemplateOrchestrationInput input)
-        {
-            var result = new WhatIfOperationResult();
-            //var (Result, Message, Deployment) = ParseDeployment(new DeploymentOrchestrationInput()
-            //{
-            //    CorrelationId = input.CorrelationId,
-            //    Parameters = input.Parameters,
-            //    ResourceGroup = input.ResourceGroupName,
-            //    SubscriptionId = input.SubscriptionId,
-            //    TemplateContent = input.Template,
-            //    TenantId = input.TenantId
-            //});
-            //if (!Result)
-            //{
-            //    result.Status = "failed";
-            //    result.Error = new ErrorResponse() { Code = "400", Message = Message };
-            //}
-            //DeploymentContext deploymentContext = new DeploymentContext()
-            //{
-            //    CorrelationId = input.CorrelationId,
-            //    Mode = input.Mode,
-            //    ResourceGroup = input.ResourceGroupName,
-            //    SubscriptionId = input.SubscriptionId,
-            //    TenantId = input.TenantId,
-            //    Parameters = input.Parameters
-            //};
-            //string queryScope = $"/{infrastructure.BuiltinPathSegment.Subscription}/{input.SubscriptionId}";
-            //if (input.ScopeType == ScopeType.ResourceGroup)
-            //    queryScope += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{input.ResourceGroupName}";
-            //var str = this.infrastructure.List(deploymentContext, queryScope, Deployment.Template.ApiProfile, string.Empty, "resources");
-            ////https://docs.microsoft.com/en-us/rest/api/resources/resources/listbyresourcegroup#resourcelistresult
-            //using var doc = JsonDocument.Parse(str.Content);
-            //Dictionary<string, JsonElement> asset = new Dictionary<string, JsonElement>();
-            //doc.RootElement.TryGetProperty("values", out JsonElement values);
-            //foreach (var r in values.EnumerateArray())
-            //{
-            //    if (!r.TryGetProperty("id", out JsonElement id))
-            //        break;
-            //    asset.Add(id.GetString(), r);
-            //}
-
-            //foreach (var r in Deployment.Template.Resources.Values)
-            //{
-            //    CheckResourceWhatIf(input, result, asset, r);
-            //}
-
-            //if (input.Mode == DeploymentMode.Complete)
-            //{
-            //    foreach (var item in asset)
-            //    {
-            //        result.Changes.Add(new WhatIfChange()
-            //        {
-            //            ChangeType = ChangeType.Delete,
-            //            ResourceId = item.Key
-            //        });
-            //    }
-            //}
-            //else
-            //{
-            //    foreach (var item in asset)
-            //    {
-            //        result.Changes.Add(new WhatIfChange()
-            //        {
-            //            ChangeType = ChangeType.Ignore,
-            //            ResourceId = item.Key
-            //        });
-            //    }
-            //}
-
-            //result.Status = "succeeded";
-            return result;
-        }
-
-        private void CheckResourceWhatIf(PredictTemplateOrchestrationInput input, WhatIfOperationResult result, Dictionary<string, JsonElement> asset, Resource resource)
-        {
-            if (asset.TryGetValue(resource.Name, out JsonElement r))
-            {
-                if (input.ResultFormat == WhatIfResultFormat.ResourceIdOnly)
-                {
-                    result.Changes.Add(new WhatIfChange()
-                    {
-                        ChangeType = ChangeType.Deploy
-                    });
-                }
-                else
-                {
-                    // TODO: support WhatIfResultFormat.FullResourcePayloads
-                    result.Changes.Add(new WhatIfChange()
-                    {
-                        ChangeType = ChangeType.Modify
-                    });
-                }
-
-                asset.Remove(resource.Name);
-            }
-            else
-            {
-                result.Changes.Add(new WhatIfChange()
-                {
-                    ChangeType = ChangeType.Create,
-                    ResourceId = resource.ResourceId
-                });
-            }
         }
     }
 }

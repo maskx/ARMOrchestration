@@ -2,10 +2,11 @@
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using System;
+using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class ValidateTemplateActivity : TaskActivity<DeploymentOrchestrationInput, TaskResult>
+    public class ValidateTemplateActivity : TaskActivity<Dictionary<string, object>, TaskResult>
     {
         public const string Name = "ValidateTemplateActivity";
         private readonly ARMTemplateHelper templateHelper;
@@ -17,27 +18,27 @@ namespace maskx.ARMOrchestration.Activities
             this.infrastructure = infrastructure;
         }
 
-        protected override TaskResult Execute(TaskContext context, DeploymentOrchestrationInput input)
+        protected override TaskResult Execute(TaskContext context, Dictionary<string, object> input)
         {
-            TaskResult tr;
-            try
-            {
-                var Deployment = DeploymentOrchestrationInput.Validate(input, templateHelper.ARMfunctions, infrastructure);
-                tr = new TaskResult(200, DataConverter.Serialize(Deployment));
-            }
-            catch (Exception ex)
-            {
-                tr = new TaskResult() { Code = 400, Content = ex.Message };
-            }
-            DeploymentOperation deploymentOperation = new DeploymentOperation(input, this.infrastructure)
-            {
-                InstanceId = context.OrchestrationInstance.InstanceId,
-                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = tr.Code == 200 ? ProvisioningStage.ValidateTemplate : ProvisioningStage.ValidateTemplateFailed,
-                Input = DataConverter.Serialize(input),
-                Result = DataConverter.Serialize(tr)
-            };
-            templateHelper.SaveDeploymentOperation(deploymentOperation);
+            TaskResult tr = new TaskResult();
+            //try
+            //{
+            //    var Deployment = DeploymentOrchestrationInput.Validate(input, templateHelper.ARMfunctions, infrastructure);
+            //    tr = new TaskResult(200, DataConverter.Serialize(Deployment));
+            //}
+            //catch (Exception ex)
+            //{
+            //    tr = new TaskResult() { Code = 400, Content = ex.Message };
+            //}
+            //DeploymentOperation deploymentOperation = new DeploymentOperation(input, this.infrastructure)
+            //{
+            //    InstanceId = context.OrchestrationInstance.InstanceId,
+            //    ExecutionId = context.OrchestrationInstance.ExecutionId,
+            //    Stage = tr.Code == 200 ? ProvisioningStage.ValidateTemplate : ProvisioningStage.ValidateTemplateFailed,
+            //    Input = DataConverter.Serialize(input),
+            //    Result = DataConverter.Serialize(tr)
+            //};
+            //templateHelper.SaveDeploymentOperation(deploymentOperation);
             return tr;
         }
     }

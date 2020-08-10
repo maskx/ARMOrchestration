@@ -1,5 +1,4 @@
-﻿using ARMOrchestrationTest;
-using maskx.ARMOrchestration;
+﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
@@ -33,6 +32,7 @@ namespace ARMOrchestrationTest.Mock
         public AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input)
         {
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
+            input.ServiceProvider = serviceProvider;
             if (input.Resource != null)
             {
                 ruleField.Add("ApiVersion", input.Resource.ApiVersion);
@@ -53,7 +53,7 @@ namespace ARMOrchestrationTest.Mock
                 ruleField.Add("Kind", DBNull.Value);
                 ruleField.Add("Plan", DBNull.Value);
             }
-            var deploymentContext = input.DeploymentContext;
+            var deploymentContext = input.Input;
             ruleField.Add("SubscriptionId", deploymentContext.SubscriptionId);
             ruleField.Add("TenantId", deploymentContext.TenantId);
             ruleField.Add("ResourceGroup", deploymentContext.ResourceGroup);

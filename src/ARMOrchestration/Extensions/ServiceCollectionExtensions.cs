@@ -53,7 +53,7 @@ namespace maskx.ARMOrchestration.Extensions
                         activityTypes = new List<(string, string, Type)>();
                     else
                         activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                    activityTypes.Add((DeploymentOperationActivity.Name, "1.0", typeof(DeploymentOperationActivity)));
+                    // todo:  activityTypes.Add((DeploymentOperationActivity.Name, "1.0", typeof(DeploymentOperationActivity)));
                     activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
                     activityTypes.Add((ValidateTemplateActivity.Name, "1.0", typeof(ValidateTemplateActivity)));
                     activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
@@ -78,6 +78,7 @@ namespace maskx.ARMOrchestration.Extensions
             });
             return services;
         }
+
         public static IServiceCollection UsingARMOrchestration(this IServiceCollection services, ARMOrchestrationSqlServerConfig config)
         {
             SqlServerConfiguration sqlServerConfiguration = new SqlServerConfiguration()
@@ -111,7 +112,7 @@ namespace maskx.ARMOrchestration.Extensions
                     activityTypes = new List<(string, string, Type)>();
                 else
                     activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                activityTypes.Add((DeploymentOperationActivity.Name, "1.0", typeof(DeploymentOperationActivity)));
+                // todo:   activityTypes.Add((DeploymentOperationActivity.Name, "1.0", typeof(DeploymentOperationActivity)));
                 activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
                 activityTypes.Add((ValidateTemplateActivity.Name, "1.0", typeof(ValidateTemplateActivity)));
                 activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));

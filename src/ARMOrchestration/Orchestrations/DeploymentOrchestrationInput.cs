@@ -42,10 +42,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                   ARMFunctions functions,
                   IInfrastructure infrastructure)
         {
-            var armContext = new Dictionary<string, object>() {
-                { ContextKeys.ARM_CONTEXT, deploymentContext },
-                {ContextKeys.IS_PREPARE,true }
-            };
+            Dictionary<string, object> context = new Dictionary<string, object>();
+            foreach (var item in resource.FullContext)
+            {
+                context.Add(item.Key, item.Value);
+            }
+
             using var doc = JsonDocument.Parse(resource.Properties);
             var rootElement = doc.RootElement;
 
@@ -68,7 +70,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 templateLink = new TemplateLink()
                 {
                     ContentVersion = _templateLink.GetProperty("contentVersion").GetString(),
-                    Uri = functions.Evaluate(_templateLink.GetProperty("uri").GetString(), armContext).ToString()
+                    Uri = functions.Evaluate(_templateLink.GetProperty("uri").GetString(), context).ToString()
                 };
             }
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
@@ -86,7 +88,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     parametersLink = new ParametersLink()
                     {
                         ContentVersion = _parametersLink.GetProperty("contentVersion").GetString(),
-                        Uri = functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), armContext).ToString()
+                        Uri = functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), context).ToString()
                     };
                 }
             }
@@ -126,6 +128,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 template = Encoding.UTF8.GetString(ms.ToArray());
             }
             var (groupId, groupType, hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
+            context.Remove(ContextKeys.ARM_CONTEXT);
             var deployInput = new DeploymentOrchestrationInput()
             {
                 RootId = deploymentContext.RootId,
@@ -149,14 +152,26 @@ namespace maskx.ARMOrchestration.Orchestrations
                 LastRunUserId = deploymentContext.LastRunUserId,
                 DependsOn = resource.DependsOn,
                 Extensions = deploymentContext.Extensions,
-                TenantId = deploymentContext.TenantId
+                TenantId = deploymentContext.TenantId,
+                Context = context
             };
 
             return deployInput;
         }
 
+        private IServiceProvider _ServiceProvider;
+
         [JsonIgnore]
-        public IServiceProvider ServiceProvider { get; set; }
+        public IServiceProvider ServiceProvider
+        {
+            get { return _ServiceProvider; }
+            set
+            {
+                _ServiceProvider = value;
+                if (Template != null)
+                    Template.Input = this;
+            }
+        }
 
         public bool IsRuntime { get; set; } = false;
 
@@ -296,5 +311,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{this.DeploymentName}";
             return resourceId;
         }
+
+        public Dictionary<string, object> Context = new Dictionary<string, object>();
     }
 }

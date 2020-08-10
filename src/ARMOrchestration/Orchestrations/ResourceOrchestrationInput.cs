@@ -1,6 +1,8 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -8,20 +10,21 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public bool IsRedeployment { get; set; } = false;
         public Resource Resource { get; set; }
-        public DeploymentOrchestrationInput Context { get; set; }
-
+        public DeploymentOrchestrationInput Input { get; set; }
         private IServiceProvider _ServiceProvider;
 
+        /// <summary>
+        /// // this should be set first after deserialize
+        /// </summary>
         [JsonIgnore]
         public IServiceProvider ServiceProvider
         {
             get { return _ServiceProvider; }
             set
             {
-                // this should be set first after deserialize
                 _ServiceProvider = value;
-                Context.ServiceProvider = value;
-                Resource.Input = Context;
+                Input.ServiceProvider = value;
+                Resource.Input = Input;
             }
         }
     }
