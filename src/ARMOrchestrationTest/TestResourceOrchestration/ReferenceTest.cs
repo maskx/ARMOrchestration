@@ -1,6 +1,7 @@
 ﻿using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
@@ -83,16 +84,28 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "IncluedServiceTypeNotExist")]
         public void IncluedServiceTypeNotExist()
         {
-            var (instance, taskResult) = TestHelper.FunctionTestNotCheckResult(this.fixture, "reference/IncluedServiceTypeNotExist");
-            Assert.NotEqual(200, taskResult.Code);
-            Assert.Equal("cannot find dependson resource named 'Microsoft.Storage/storageAccounts1/examplestorage'", taskResult.Content);
-            var resourceList = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
-            foreach (var r in resourceList)
+            var templateString = TestHelper.GetFunctionInputContent("reference/IncluedServiceTypeNotExist");
+            var input = new DeploymentOrchestrationInput()
             {
-                var tr = TestHelper.DataConverter.Deserialize<TaskResult>(r.Result);
-                Assert.NotEqual(200, tr.Code);
-                Assert.Equal("cannot find dependson resource named 'Microsoft.Storage/storageAccounts1/examplestorage'", tr.Content);
-            }
+                Template = templateString,
+                Parameters = string.Empty,
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                DeploymentName = "IncluedServiceTypeNotExist",
+                SubscriptionId = TestHelper.SubscriptionId,
+                ManagementGroupId = null,
+                ResourceGroup = TestHelper.ResourceGroup,
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005",
+                CreateByUserId = TestHelper.CreateByUserId,
+                ApiVersion = "1.0",
+                TenantId = TestHelper.TenantId,
+                DeploymentId = Guid.NewGuid().ToString("N"),
+                ServiceProvider = fixture.ServiceProvider
+            };
+            var (r, m) = input.Validate();
+            Assert.False(r);
+            Assert.Equal("cannot find dependson resource named 'Microsoft.Storage/storageAccounts1/examplestorage'", m);
         }
 
         [Fact(DisplayName = "2ReferenceDependsOn")]

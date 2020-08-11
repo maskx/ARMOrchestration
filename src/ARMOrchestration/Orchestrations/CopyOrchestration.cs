@@ -32,8 +32,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             ConcurrentBag<string> msg = new ConcurrentBag<string>();
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
 
-            // todo: add waitDependsOn
-
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
             // You can't use a copy loop for a child resource.
             for (int i = 0; i < copy.Count; i++)

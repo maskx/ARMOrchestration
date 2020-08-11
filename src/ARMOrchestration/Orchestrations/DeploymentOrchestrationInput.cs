@@ -255,6 +255,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         private Dictionary<string, DeploymentOrchestrationInput> _Deployments;
 
+        [JsonIgnore]
         public Dictionary<string, DeploymentOrchestrationInput> Deployments
         {
             get

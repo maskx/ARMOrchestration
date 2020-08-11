@@ -73,7 +73,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (!RootElement.TryGetProperty("$schema", out JsonElement schema))
                     throw new Exception("not find $schema in template");
-                return RootElement.GetString();
+                return schema.GetString();
             }
         }
 
