@@ -1,6 +1,4 @@
-﻿using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
-using System;
+﻿using maskx.ARMOrchestration.Functions;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
