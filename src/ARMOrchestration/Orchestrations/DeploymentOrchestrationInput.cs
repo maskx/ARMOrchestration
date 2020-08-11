@@ -6,35 +6,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
     [JsonObject(MemberSerialization.OptOut)]
     public class DeploymentOrchestrationInput
     {
-        public static DeploymentOrchestrationInput Validate(DeploymentOrchestrationInput input, ARMFunctions functions, IInfrastructure infrastructure)
+        public (bool, string) Validate(IServiceProvider service = null)
         {
-            if (input.Template != null)
-                return input;
-            //input.Template = Template.Parse(input.Template.ToString(), input, functions, infrastructure);
-            foreach (var res in input.Template.Resources)
-            {
-                #region Deployment
-
-                if (res.FullType == infrastructure.BuiltinServiceTypes.Deployments)
-                {
-                    var deploy = Parse(res, input, functions, infrastructure);
-                    input.Deployments.Add(deploy.DeploymentName, deploy);
-                    foreach (var item in deploy.Deployments.Values)
-                    {
-                        input.Deployments.Add(item.DeploymentName, item);
-                    }
-                    deploy.Deployments.Clear();
-                }
-
-                #endregion Deployment
-            }
-            return input;
+            if (service != null)
+                this.ServiceProvider = service;
+            if (this.ServiceProvider == null)
+                throw new Exception("validate template need ServiceProvider");
+            return this.Template.Validate();
         }
 
         public static DeploymentOrchestrationInput Parse(Resource resource,
@@ -153,7 +138,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 DependsOn = resource.DependsOn,
                 Extensions = deploymentContext.Extensions,
                 TenantId = deploymentContext.TenantId,
-                Context = context
+                Context = context,
+                ServiceProvider = resource.ServiceProvider
             };
 
             return deployInput;
@@ -273,11 +259,32 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             get
             {
-                if (template == null)
+                if (_Deployments == null)
                 {
+                    var infra = ServiceProvider.GetService<IInfrastructure>();
+                    var func = ServiceProvider.GetService<ARMFunctions>();
                     _Deployments = new Dictionary<string, DeploymentOrchestrationInput>();
+                    foreach (var r in this.Template.Resources)
+                    {
+                        if (r.Type == infra.BuiltinServiceTypes.Deployments)
+                        {
+                            _Deployments.Add(r.Name, Parse(r, this, func, infra));
+                        }
+                    }
                 }
                 return _Deployments;
+            }
+        }
+
+        public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
+        {
+            foreach (var d in this.Deployments.Values)
+            {
+                yield return d;
+                foreach (var nest in d.EnumerateDeployments())
+                {
+                    yield return nest;
+                }
             }
         }
 

@@ -1,11 +1,11 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -73,7 +73,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (!RootElement.TryGetProperty("$schema", out JsonElement schema))
                     throw new Exception("not find $schema in template");
-                return schema.GetString();
+                return RootElement.GetString();
             }
         }
 
@@ -92,7 +92,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("apiProfile", out JsonElement apiProfile))
-                    return apiProfile.GetString();
+                    return this.ServiceProvider.GetService<ARMFunctions>().Evaluate(
+                        apiProfile.GetString(),
+                        FullContext
+                        ).ToString();
                 return string.Empty;
             }
         }
@@ -168,7 +171,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("functions", out JsonElement funcs))
-
                     return Functions.Parse(funcs);
                 return null;
             }
@@ -205,6 +207,30 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public override string ToString()
         {
             return this._RawString;
+        }
+
+        internal (bool, string) Validate()
+        {
+            object _;
+            try
+            {
+                if (!RootElement.TryGetProperty("$schema", out JsonElement schema))
+                    return (false, "not find $schema in template");
+                if (!RootElement.TryGetProperty("contentVersion", out JsonElement contentVersion))
+                    return (false, "not find contentVersion in template");
+                _ = this.ApiProfile;
+                _ = this.Functions;
+                foreach (var res in this.Resources)
+                {
+                    var (r, m) = res.Validate();
+                    if (!r) return (r, m);
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+            return (true, "");
         }
     }
 }

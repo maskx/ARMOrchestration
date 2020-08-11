@@ -5,8 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -310,18 +308,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 if (RootElement.TryGetProperty("kind", out JsonElement kind))
-                    return kind.GetString();
+                    return _Functions.Evaluate(kind.GetString(), FullContext).ToString();
                 return string.Empty;
             }
         }
 
-        public string Plan
+        public Plan Plan
         {
             get
             {
-                if (RootElement.TryGetProperty("plan", out JsonElement plan))
-                    return plan.GetRawText();
-                return string.Empty;
+                if (RootElement.TryGetProperty("plan", out JsonElement planE))
+                    return new Plan(planE, FullContext);
+                return null;
             }
         }
 
@@ -420,10 +418,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public string CopyId { get; set; }
-
-        public string CopyName { get; set; }
-
         public Copy Copy
         {
             get
@@ -445,184 +439,56 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public override string ToString()
         {
-            using MemoryStream ms = new MemoryStream();
-            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-            writer.WriteStartObject();
-            writer.WriteBoolean("condition", this.Condition);
-            writer.WriteString("apiVersion", this.ApiVersion);
-            writer.WriteString("type", this.FullType);
-            writer.WriteString("name", this.FullName);
-            if (!string.IsNullOrEmpty(this.Location))
-                writer.WriteString("location", this.Location);
-            if (!string.IsNullOrEmpty(this.Comments))
-                writer.WriteString("comments", this.Comments);
-            if (this.DependsOn.Count > 0)
-            {
-                writer.WritePropertyName("dependsOn");
-                writer.WriteStartArray();
-                foreach (var depend in this.DependsOn)
-                {
-                    writer.WriteStringValue(depend);
-                }
-                writer.WriteEndArray();
-            }
-
-            if (!string.IsNullOrEmpty(this.Properties))
-                writer.WriteRawString("properties", this.Properties);
-            if (this.SKU != null)
-                writer.WriteRawString("sku", this.SKU.ToString());
-            if (!string.IsNullOrEmpty(this.Kind))
-                writer.WriteString("kind", this.Kind);
-            if (!string.IsNullOrEmpty(this.Plan))
-                writer.WriteRawString("plan", this.Plan);
-            if (!string.IsNullOrEmpty(this.ResourceGroup))
-                writer.WriteString("resourceGroup", this.ResourceGroup);
-            if (!string.IsNullOrEmpty(this.SubscriptionId))
-                writer.WriteString("subscriptionId", this.SubscriptionId);
-            writer.WriteEndObject();
-            writer.Flush();
-            return Encoding.UTF8.GetString(ms.ToArray());
-        }
-
-        public static List<Resource> Parse(
-            string rawString
-            , Dictionary<string, object> context
-            , ARMFunctions functions
-            , IInfrastructure infrastructure
-            , string parentName,
-            string parentType)
-        {
-            using var doc = JsonDocument.Parse(rawString);
-            return Parse(doc.RootElement, context, functions, infrastructure, parentName, parentType);
-        }
-
-        private static List<Resource> ParseInternal(
-            JsonElement resourceElement
-            , Dictionary<string, object> context
-            , ARMFunctions functions
-            , IInfrastructure infrastructure
-            , string parentName,
-            string parentType)
-        {
-            var deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
-            List<Resource> resources = new List<Resource>();
-            Resource r = null;
-            resources.Add(r);
-
-            if (context.ContainsKey(ContextKeys.DEPENDSON))
-            {
-                //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
-                throw new Exception("The reference function can only be used in the properties of a resource definition and the outputs section of a template or deployment.");
-            }
-
-            if (!r.Condition)
-                return resources;
-
-            if (resourceElement.TryGetProperty("resources", out JsonElement _resources))
-            {
-                foreach (var childres in _resources.EnumerateArray())
-                {
-                    //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/child-resource-name-type
-                    var childResult = Resource.Parse(childres.GetRawText(), context, functions, infrastructure, r.Name, r.Type);
-                    //  r.Resources.Add(childResult[0].Name);
-                    resources.AddRange(childResult);
-                }
-            }
-            return resources;
-        }
-
-        public static List<Resource> Parse(
-            JsonElement resourceElement
-            , Dictionary<string, object> context
-            , ARMFunctions functions
-            , IInfrastructure infrastructure
-            , string parentName,
-            string parentType)
-        {
-            if (resourceElement.TryGetProperty("copy", out JsonElement copy))
-                return ExpandCopyResource(resourceElement, copy, context, functions, infrastructure, parentName, parentType);
-            return ParseInternal(resourceElement, context, functions, infrastructure, parentName, parentType);
-        }
-
-        private static List<Resource> ExpandCopyResource(
-          JsonElement resource
-          , JsonElement copyElement
-          , Dictionary<string, object> context
-            , ARMFunctions functions
-            , IInfrastructure infrastructure
-            , string parentName
-            , string parentType)
-        {
-            Copy copy = Copy.Parse(copyElement, context, functions, infrastructure);
-
-            var deploymentContext = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
-
-            CopyResource CopyResource = null;
-            //new CopyResource()
-            //{
-            //    //Name = copy.Name,
-            //    //Type = Copy.ServiceType,
-            //    //FullName = $"{deploymentContext.DeploymentName}/{copy.Name}",
-            //    //FullType = $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
-            //    //ResourceId = copy.Id,
-            //    Mode = copy.Mode,
-            //    BatchSize = copy.BatchSize,
-            //};
-            List<Resource> resources = new List<Resource>
-            {
-                CopyResource
-            };
-
-            var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
-            Dictionary<string, object> copyContext = new Dictionary<string, object>
-            {
-                { ContextKeys.ARM_CONTEXT, deploymentContext },
-                { ContextKeys.COPY_INDEX, copyindex },
-                { ContextKeys.CURRENT_LOOP_NAME, copy.Name },
-                { ContextKeys.IS_PREPARE, true }
-            };
-
-            for (int i = 0; i < copy.Count; i++)
-            {
-                copyindex[copy.Name] = i;
-                var rs = ParseInternal(resource, copyContext, functions, infrastructure, parentName, parentType);
-
-                rs[0].CopyIndex = i;
-                rs[0].CopyId = copy.Id;
-                rs[0].CopyName = copy.Name;
-                //  CopyResource.Resources.Add(rs[0].Name);
-                resources.AddRange(rs);
-            }
-            //CopyResource.SubscriptionId = resources[1].SubscriptionId;
-            //CopyResource.ManagementGroupId = resources[1].ManagementGroupId;
-            //CopyResource.SKU = resources[1].SKU;
-            //CopyResource.Plan = resources[1].Plan;
-            //CopyResource.Kind = resources[1].Kind;
-            //CopyResource.Zones = resources[1].Zones;
-            //CopyResource.Location = resources[1].Location;
-            return resources;
-        }
-
-        public string ExpandProperties(DeploymentOrchestrationInput deploymentContext, ARMFunctions functions, IInfrastructure infrastructure)
-        {
-            if (string.IsNullOrEmpty(this.Properties))
-                return string.Empty;
-            {
-                var doc = JsonDocument.Parse(this.Properties);
-                Dictionary<string, object> cxt = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, deploymentContext } };
-                if (!string.IsNullOrEmpty(this.CopyName))
-                {
-                    cxt.Add(ContextKeys.CURRENT_LOOP_NAME, this.CopyName);
-                    cxt.Add(ContextKeys.COPY_INDEX, new Dictionary<string, int>() { { this.CopyName, this.CopyIndex.Value } });
-                }
-                return doc.RootElement.ExpandObject(cxt, functions, infrastructure);
-            }
+            return this.RootElement.GetRawText();
         }
 
         public void Dispose()
         {
             if (json != null)
                 json.Dispose();
+        }
+
+        internal (bool, string) Validate()
+        {
+            try
+            {
+                if (!RootElement.TryGetProperty("type", out JsonElement type))
+                    return (false, "not find type in resource node");
+                if (this.Copy != null && !this.CopyIndex.HasValue)
+                {
+                    // using first resource validate copy resource content
+                    var r = new Resource()
+                    {
+                        RawString = this.RawString,
+                        CopyIndex = 0,
+                        ParentContext = ParentContext,
+                        Input = Input
+                    };
+                    return r.Validate();
+                }
+                else
+                {
+                    object _;
+                    _ = this.Name;
+                    _ = this.ApiVersion;
+                    _ = this.Condition;
+                    _ = this.Location;
+                    _ = this.SKU;
+                    _ = this.Kind;
+                    if (this.Plan != null)
+                    {
+                        var (pv, pm) = this.Plan.Validate();
+                        if (!pv) return (pv, pm);
+                    }
+                    // validate properties and dependson and parameter and variables
+                    LazyLoadDependsOnAnProperties();
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+            return (true, string.Empty);
         }
     }
 }
