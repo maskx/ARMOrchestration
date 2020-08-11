@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -446,15 +447,13 @@ namespace maskx.ARMOrchestration.Functions
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
-
             Functions.Add("deployment", (args, cxt) =>
             {
                 var input = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
                 int stage = 0;
-                DeploymentOrchestrationInput deploymentOrchestrationInput = null;
                 using (var db = new DbAccess(options.Database.ConnectionString))
                 {
-                    db.AddStatement($"select TOP 1 Stage,Input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
+                    db.AddStatement($"select TOP 1 Stage from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
                               new
                               {
                                   input.DeploymentId,
@@ -463,27 +462,31 @@ namespace maskx.ARMOrchestration.Functions
                     db.ExecuteReaderAsync((r, resultSet) =>
                     {
                         stage = (int)r["Stage"];
-                        deploymentOrchestrationInput = _DataConverter.Deserialize<DeploymentOrchestrationInput>(r["Input"].ToString());
                     }).Wait();
                 }
-                if (deploymentOrchestrationInput == null)
-                    throw new Exception("cannot find deployment recorder in database in deployment function");
-                JObject obj = new JObject
+                using MemoryStream ms = new MemoryStream();
+                using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+                writer.WriteStartObject();
+                writer.WriteString("name", input.DeploymentName);
+                writer.WritePropertyName("properties");
+                writer.WriteStartObject();
+                if (!string.IsNullOrEmpty(input.Parameters))
+                    writer.WriteRawString("parameters", input.Parameters);
+                if (input.TemplateLink != null)
                 {
-                    { "name", input.DeploymentName }
-                };
-                JObject properties = new JObject
-                {
-                    { "template", JObject.Parse(deploymentOrchestrationInput.Template.ToString()) }
-                };
-                if (string.IsNullOrEmpty(input.Parameters))
-                    properties.Add("parameters", new JObject());
-                else
-                    properties.Add("parameters", JObject.Parse(input.Parameters));
-                properties.Add("mode", input.Mode.ToString().ToLower());
-                properties.Add("provisioningState", stage);
-                obj.Add("properties", properties);
-                args.Result = new JsonValue(obj.ToString(Newtonsoft.Json.Formatting.None));
+                    writer.WritePropertyName("templateLink");
+                    writer.WriteStartObject();
+                    writer.WriteString("uri", input.TemplateLink.Uri);
+                    writer.WriteString("contentVersion", input.TemplateLink.ContentVersion);
+                    writer.WriteEndObject();
+                }
+                writer.WriteRawString("template", input.Template.ToString());
+                writer.WriteString("mode", input.Mode.ToString().ToLower());
+                writer.WriteString("provisioningState", stage.ToString());
+                writer.WriteEndObject();
+                writer.WriteEndObject();
+                writer.Flush();
+                args.Result = new JsonValue(Encoding.UTF8.GetString(ms.ToArray()));
             });
 
             #endregion Deployment
