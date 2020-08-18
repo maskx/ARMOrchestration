@@ -18,14 +18,16 @@ namespace maskx.ARMOrchestration
         private readonly string _GetResourceListCommandString;
         private readonly string _GetAllResourceListCommandString;
         private readonly ARMOrchestrationOptions _Options;
-
+        private readonly IServiceProvider _ServiceProvider;
         private readonly IInfrastructure _Infrastructure;
 
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            IServiceProvider serviceProvider)
         {
+            this._ServiceProvider = serviceProvider;
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
             this._Options = options?.Value;
 
@@ -60,7 +62,8 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentException("SubscriptionId and ManagementGroupId only one can be set value");
             if (string.IsNullOrEmpty(args.CreateByUserId))
                 throw new ArgumentNullException("CreateByUserId");
-
+            if (args.ServiceProvider == null)
+                args.ServiceProvider = _ServiceProvider;
             var operation = new DeploymentOperation(args, this._Infrastructure)
             {
                 RootId = args.DeploymentId,

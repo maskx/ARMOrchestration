@@ -28,9 +28,14 @@ namespace ARMOrchestrationTest.PluginTests
                 (typeof(BeforeResourceProvisioningOrchestation).FullName,"",typeof(BeforeResourceProvisioningOrchestation)),
                 (typeof(AfterResourceProvisioningOrchestation).FullName,"",typeof(AfterResourceProvisioningOrchestation))
             };
-            var host = TestHelper.CreateHostBuilder(null, orchestrations, null, null, null, new PluginInfrastructure(null)).Build();
+            var host = TestHelper.CreateHostBuilder(null, orchestrations, null, null, null).Build();
             host.RunAsync();
             this.serviceProvider = host.Services;
+            var infra = this.serviceProvider.GetService<IInfrastructure>();
+            infra.BeforeDeploymentOrchestration.Add((typeof(BeforeDeploymentOrchestration).FullName, ""));
+            infra.AfterDeploymentOrhcestration.Add((typeof(AfterDeploymentOrhcestration).FullName, ""));
+            infra.BeforeResourceProvisioningOrchestation.Add((typeof(BeforeResourceProvisioningOrchestation).FullName, ""));
+            infra.AfterResourceProvisioningOrchestation.Add((typeof(AfterResourceProvisioningOrchestation).FullName, ""));
         }
 
         [Fact(DisplayName = "Test")]

@@ -149,7 +149,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.True(r);
             Assert.Single(Deployment.Template.Resources);
             var resource = Deployment.Template.Resources.First();
-            using var doc = JsonDocument.Parse(resource.Properties);
+            using var doc = JsonDocument.Parse(resource.Properties.RawString);
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("storageProfile", out JsonElement storageProfile));
             Assert.True(storageProfile.TryGetProperty("dataDisks", out JsonElement dataDisks));

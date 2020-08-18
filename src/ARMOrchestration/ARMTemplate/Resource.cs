@@ -2,9 +2,11 @@
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -14,15 +16,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// https://docs.microsoft.com/en-us/rest/api/resources/
     /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
-    public class Resource : IDisposable
+    public class Resource : ChangeTracking
     {
-        [JsonProperty]
-        public string RawString
-        {
-            get { return RootElement.GetRawText(); }
-            set { json = JsonDocument.Parse(value); }
-        }
-
         [JsonProperty]
         protected readonly string _ParentName;
 
@@ -80,26 +75,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
 
         public DeploymentOrchestrationInput Input { get; set; }
-        protected readonly JsonElement? _Element;
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
         internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
-
-        private JsonDocument json = null;
-
-        internal JsonElement RootElement
-        {
-            get
-            {
-                if (!_Element.HasValue)
-                {
-                    if (json == null)
-                        json = JsonDocument.Parse(RawString);
-                    return json.RootElement;
-                }
-                return _Element.Value;
-            }
-        }
 
         public Resource()
         {
@@ -108,7 +86,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public Resource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
             DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
-            this._Element = element;
+            this.RootElement = element;
             this._ParentName = parentName;
             this._ParentType = parentType;
             this.Input = input;
@@ -120,44 +98,78 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        private bool? _Condition;
+
+        [DisplayName("condition")]
         public bool Condition
         {
             get
             {
-                if (RootElement.TryGetProperty("condition", out JsonElement condition))
+                if (!_Condition.HasValue)
                 {
-                    if (condition.ValueKind == JsonValueKind.False)
-                        return false;
-                    if (condition.ValueKind == JsonValueKind.True)
-                        return true;
-                    if (condition.ValueKind == JsonValueKind.String)
-                        return (bool)this._Functions.Evaluate(condition.GetString(), FullContext);
-                    return true;
+                    _Condition = true;
+                    if (RootElement.TryGetProperty("condition", out JsonElement condition))
+                    {
+                        if (condition.ValueKind == JsonValueKind.False)
+                            _Condition = false;
+                        else if (condition.ValueKind == JsonValueKind.True)
+                            _Condition = true;
+                        else if (condition.ValueKind == JsonValueKind.String)
+                            _Condition = (bool)this._Functions.Evaluate(condition.GetString(), FullContext);
+                        else
+                            _Condition = true;
+                    }
                 }
-                return true;
+                return _Condition.Value;
+            }
+            set
+            {
+                _Condition = value;
+                Change(value, "condition");
             }
         }
 
+        private string _ApiVersion = null;
+
+        [DisplayName("apiVersion")]
         public string ApiVersion
         {
             get
             {
-                if (RootElement.TryGetProperty("apiVersion", out JsonElement apiVersion))
-                    return apiVersion.GetString();
-                throw new Exception("not find apiVersion in resource node");
+                if (_ApiVersion == null)
+                {
+                    if (RootElement.TryGetProperty("apiVersion", out JsonElement apiVersion))
+                        _ApiVersion = apiVersion.GetString();
+                    else
+                        throw new Exception("not find apiVersion in resource node");
+                }
+                return _ApiVersion;
+            }
+            set
+            {
+                _ApiVersion = value;
+                Change(value, "apiVersion");
             }
         }
+
+        private string _Type = null;
 
         /// <summary>
         /// the type set in template
         /// </summary>
+        [DisplayName("type")]
         public string Type
         {
             get
             {
-                if (RootElement.TryGetProperty("type", out JsonElement type))
-                    return type.GetString();
-                throw new Exception("not find type in resource node");
+                if (_Type == null)
+                {
+                    if (RootElement.TryGetProperty("type", out JsonElement type))
+                        _Type = type.GetString();
+                    else
+                        throw new Exception("not find type in resource node");
+                }
+                return _Type;
             }
         }
 
@@ -175,18 +187,31 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        private string _Name = null;
+
         /// <summary>
         /// the name set in template
         /// </summary>
+        [DisplayName("name")]
         public string Name
         {
             get
             {
-                if (Copy != null && !CopyIndex.HasValue)
-                    return Copy.Name;
-                if (RootElement.TryGetProperty("name", out JsonElement name))
-                    return this._Functions.Evaluate(name.GetString(), FullContext).ToString();
-                throw new Exception("not find name in resource node");
+                if (_Name == null)
+                {
+                    if (Copy != null && !CopyIndex.HasValue)
+                        _Name = Copy.Name;
+                    else if (RootElement.TryGetProperty("name", out JsonElement name))
+                        _Name = this._Functions.Evaluate(name.GetString(), FullContext).ToString();
+                    else
+                        throw new Exception("not find name in resource node");
+                }
+                return _Name;
+            }
+            set
+            {
+                _Name = value;
+                Change(value, "name");
             }
         }
 
@@ -206,23 +231,49 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        private string _Location = null;
+
+        [DisplayName("location")]
         public string Location
         {
             get
             {
-                if (RootElement.TryGetProperty("location", out JsonElement location))
-                    return this._Functions.Evaluate(location.GetString(), FullContext).ToString();
-                return string.Empty;
+                if (_Location == null)
+                {
+                    if (RootElement.TryGetProperty("location", out JsonElement location))
+                        _Location = this._Functions.Evaluate(location.GetString(), FullContext).ToString();
+                    else
+                        _Location = string.Empty;
+                }
+                return _Location;
+            }
+            set
+            {
+                _Location = value;
+                Change(value, "location");
             }
         }
 
+        private string _Comments = null;
+
+        [DisplayName("comments")]
         public string Comments
         {
             get
             {
-                if (RootElement.TryGetProperty("comments", out JsonElement comments))
-                    return comments.GetString();
-                return string.Empty;
+                if (_Comments == null)
+                {
+                    if (RootElement.TryGetProperty("comments", out JsonElement comments))
+                        _Comments = comments.GetString();
+                    else
+                        _Comments = string.Empty;
+                }
+                return _Comments;
+            }
+            set
+            {
+                _Comments = value;
+                Change(value, "comments");
             }
         }
 
@@ -240,6 +291,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
         ///
         /// </summary>
+        [DisplayName("dependsOn")]
         public DependsOnCollection DependsOn
         {
             get
@@ -249,14 +301,20 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private string _Properties;
+        private ChangeTracking _Properties;
 
-        public string Properties
+        [DisplayName("properties")]
+        public ChangeTracking Properties
         {
             get
             {
                 LazyLoadDependsOnAnProperties();
                 return _Properties;
+            }
+            set
+            {
+                _Properties = value;
+                Change(value, "properties");
             }
         }
 
@@ -293,38 +351,71 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        private SKU _SKU;
+
+        [DisplayName("sku")]
         public SKU SKU
         {
             get
             {
-                if (RootElement.TryGetProperty("sku", out JsonElement sku))
-                    return SKU.Parse(sku, _Functions, FullContext);
-                return new SKU() { Name = SKU.Default };
+                if (_SKU == null)
+                {
+                    if (RootElement.TryGetProperty("sku", out JsonElement sku))
+                        _SKU = SKU.Parse(sku, _Functions, FullContext);
+                    else
+                        _SKU = new SKU() { Name = SKU.Default };
+                }
+                return _SKU;
             }
         }
 
+        private string _Kind;
+
+        [DisplayName("kind")]
         public string Kind
         {
             get
             {
-                if (RootElement.TryGetProperty("kind", out JsonElement kind))
-                    return _Functions.Evaluate(kind.GetString(), FullContext).ToString();
-                return string.Empty;
+                if (_Kind == null)
+                {
+                    if (RootElement.TryGetProperty("kind", out JsonElement kind))
+                        _Kind = _Functions.Evaluate(kind.GetString(), FullContext).ToString();
+                    _Kind = string.Empty;
+                }
+                return _Kind;
+            }
+            set
+            {
+                _Kind = value;
+                Change(value, "kind");
             }
         }
 
+        private Plan _Plan = null;
+
+        [DisplayName("plan")]
         public Plan Plan
         {
             get
             {
-                if (RootElement.TryGetProperty("plan", out JsonElement planE))
-                    return new Plan(planE, FullContext);
-                return null;
+                if (_Plan == null)
+                {
+                    if (RootElement.TryGetProperty("plan", out JsonElement planE))
+                        _Plan = new Plan(planE, FullContext);
+                }
+                return _Plan;
+            }
+            set
+            {
+                _Plan = value;
+                Change(value, "plan");
             }
         }
 
         private List<string> _Zones;
 
+        // todo: support modify
+        [DisplayName("zones")]
         public List<string> Zones
         {
             get
@@ -358,36 +449,72 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        private string _resourceGroup = null;
+
+        [DisplayName("resourceGroup")]
         public string ResourceGroup
         {
             get
             {
-                if (RootElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
-                    return _Functions.Evaluate(resourceGroup.GetString(), FullContext).ToString();
-                else
-                    return (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ResourceGroup;
+                if (_resourceGroup == null)
+                {
+                    if (RootElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
+                        _resourceGroup = _Functions.Evaluate(resourceGroup.GetString(), FullContext).ToString();
+                    else
+                        _resourceGroup = (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ResourceGroup;
+                }
+                return _resourceGroup;
+            }
+            set
+            {
+                _resourceGroup = value;
+                Change(value, "resourceGroup");
             }
         }
 
+        private string _SubscriptionId = null;
+
+        [DisplayName("subscriptionId")]
         public string SubscriptionId
         {
             get
             {
-                if (RootElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
-                    return _Functions.Evaluate(subscriptionId.GetString(), FullContext).ToString();
-                else
-                    return (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).SubscriptionId;
+                if (_SubscriptionId == null)
+                {
+                    if (RootElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
+                        _SubscriptionId = _Functions.Evaluate(subscriptionId.GetString(), FullContext).ToString();
+                    else
+                        _SubscriptionId = (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).SubscriptionId;
+                }
+                return _SubscriptionId;
+            }
+            set
+            {
+                _SubscriptionId = value;
+                Change(value, "subscriptionId");
             }
         }
 
+        public string _ManagementGroupId = null;
+
+        [DisplayName("managementGroupId")]
         public string ManagementGroupId
         {
             get
             {
-                if (RootElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
-                    return _Functions.Evaluate(managementGroupId.GetString(), FullContext).ToString();
-                else
-                    return (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ManagementGroupId;
+                if (_ManagementGroupId == null)
+                {
+                    if (RootElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
+                        _ManagementGroupId = _Functions.Evaluate(managementGroupId.GetString(), FullContext).ToString();
+                    else
+                        _ManagementGroupId = (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ManagementGroupId;
+                }
+                return _ManagementGroupId;
+            }
+            set
+            {
+                _ManagementGroupId = value;
+                Change(value, "managementGroupId");
             }
         }
 
@@ -440,12 +567,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public override string ToString()
         {
             return this.RootElement.GetRawText();
-        }
-
-        public void Dispose()
-        {
-            if (json != null)
-                json.Dispose();
         }
 
         internal (bool, string) Validate()

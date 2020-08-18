@@ -49,7 +49,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    var p = JsonDocument.Parse(input.Resource.Properties);
+                    var p = JsonDocument.Parse(input.Resource.Properties.RawString);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
                 }
@@ -73,7 +73,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    var p = JsonDocument.Parse(input.Resource.Properties);
+                    var p = JsonDocument.Parse(input.Resource.Properties.RawString);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
                 }
@@ -124,7 +124,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    var p = JsonDocument.Parse(input.Resource.Properties);
+                    var p = JsonDocument.Parse(input.Resource.Properties.RawString);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
                     var c2 = p.RootElement.GetProperty("comment2");
@@ -161,7 +161,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     Assert.True(int.TryParse(r.Name, out int i));
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    using var p = JsonDocument.Parse(input.Resource.Properties);
+                    using var p = JsonDocument.Parse(input.Resource.Properties.RawString);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded" + i, c.GetString());
                 }
@@ -189,7 +189,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     hasexamplevm = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
-                    var p = JsonDocument.Parse(input.Resource.Properties);
+                    var p = JsonDocument.Parse(input.Resource.Properties.RawString);
                     Assert.True(p.RootElement.TryGetProperty("storageProfile", out JsonElement storageProfile));
                     Assert.True(storageProfile.TryGetProperty("dataDisks", out JsonElement dataDisks));
                     foreach (var d in dataDisks.EnumerateArray())

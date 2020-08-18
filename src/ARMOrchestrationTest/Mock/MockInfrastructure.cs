@@ -107,10 +107,10 @@ namespace ARMOrchestrationTest.Mock
         public BuiltinServiceTypes BuiltinServiceTypes { get; set; } = new BuiltinServiceTypes();
         public List<string> ExtensionResources { get; set; } = new List<string>() { "tags" };
         public BuiltinPathSegment BuiltinPathSegment { get; set; } = new BuiltinPathSegment();
-        public List<(string Name, string Version)> BeforeDeploymentOrchestration { get; set; }
-        public List<(string Name, string Version)> AfterDeploymentOrhcestration { get; set; }
-        public List<(string Name, string Version)> BeforeResourceProvisioningOrchestation { get; set; }
-        public List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; }
+        public List<(string Name, string Version)> BeforeDeploymentOrchestration { get; set; } = new List<(string Name, string Version)>();
+        public List<(string Name, string Version)> AfterDeploymentOrhcestration { get; set; } = new List<(string Name, string Version)>();
+        public List<(string Name, string Version)> BeforeResourceProvisioningOrchestation { get; set; } = new List<(string Name, string Version)>();
+        public List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; } = new List<(string Name, string Version)>();
         public bool InjectBeforeDeployment { get; set; } = false;
         public bool InjectAfterDeployment { get; set; } = false;
         public bool InjectBefroeProvisioning { get; set; } = false;

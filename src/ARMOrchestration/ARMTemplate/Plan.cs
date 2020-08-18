@@ -3,15 +3,15 @@ using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Net.Http.Headers;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class Plan
+    public class Plan : ChangeTracking
     {
-        private JsonElement RootElement;
         private Dictionary<string, object> FullContext;
+
         private ARMFunctions _Functions;
 
         public Plan(JsonElement element, Dictionary<string, object> fullContext)
@@ -23,6 +23,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private string _Name = null;
 
+        [DisplayName("name")]
         public string Name
         {
             get
@@ -35,10 +36,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
                 return _Name;
             }
+            set
+            {
+                _Name = value;
+                Change(value, "name");
+            }
         }
 
         private string _PromotionCode = null;
 
+        [DisplayName("promotionCode")]
         public string PromotionCode
         {
             get
@@ -52,10 +59,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
                 return _PromotionCode;
             }
+            set
+            {
+                _PromotionCode = value;
+                Change(value, "promotionCode");
+            }
         }
 
         private string _Publisher = null;
 
+        [DisplayName("publisher")]
         public string Publisher
         {
             get
@@ -69,10 +82,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
                 return _Publisher;
             }
+            set
+            {
+                _Publisher = value;
+                Change(value, "publisher");
+            }
         }
 
         private string _Product = null;
 
+        [DisplayName("product")]
         public string Product
         {
             get
@@ -86,10 +105,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
                 return _Product;
             }
+            set
+            {
+                _Product = value;
+                Change(value, "product");
+            }
         }
 
         private string _Version = null;
 
+        [DisplayName("version")]
         public string Version
         {
             get
@@ -102,6 +127,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _Version = string.Empty;
                 }
                 return _Version;
+            }
+            set
+            {
+                _Version = value;
+                Change(value, "version");
             }
         }
 

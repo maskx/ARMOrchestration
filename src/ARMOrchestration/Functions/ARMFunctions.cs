@@ -385,10 +385,6 @@ namespace maskx.ARMOrchestration.Functions
                         using var jsonDoc = JsonDocument.Parse(context.Parameters);
                         if (!jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
                         {
-                            throw new Exception($"parameters does not define:{par1}");
-                        }
-                        else
-                        {
                             if (ele.TryGetProperty("value", out JsonElement v))
                             {
                                 args.Result = JsonValue.GetElementValue(v);
@@ -413,6 +409,9 @@ namespace maskx.ARMOrchestration.Functions
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
+            // todo: 需要确保 newguid 一类的函数，在同一个调用点，每次调用都返回相同的值
+            // 因此，variables 可能需要提前展开
+            // 因此  variables 中不可以使用 reference 函数
             Functions.Add("variables", (args, cxt) =>
             {
                 if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
@@ -430,18 +429,6 @@ namespace maskx.ARMOrchestration.Functions
                     //else
                     args.Result = JsonValue.GetElementValue(parEleDef);
                 }
-                //else if (defineDoc.RootElement.TryGetProperty("copy", out JsonElement copyE))
-                //{
-                //    var s1 = copyE.ExpadCopy(cxt, this, infrastructure);
-                //    using var copyDoc = JsonDocument.Parse(s1);
-
-                //    if (copyDoc.RootElement.TryGetProperty(par1, out JsonElement copyVarE))
-                //    {
-                //        args.Result = JsonValue.GetElementValue(copyVarE);
-                //    }
-                //    else
-                //        throw new Exception($"ARM Template does not define the variables:{par1}");
-                //}
                 else
                     throw new Exception($"ARM Template does not define the variables:{par1}");
                 if (args.Result is string s)
@@ -842,7 +829,9 @@ namespace maskx.ARMOrchestration.Functions
                 else
                 {
                     string id = resourceName;
-                    if (resourceName.IndexOf('/') < 0)
+                    if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
+                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
+                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
                     {
                         id = context.Template.Resources[resourceName].ResourceId;
                     }
@@ -851,6 +840,7 @@ namespace maskx.ARMOrchestration.Functions
                         args.Result = new JsonValue(taskResult.Content);
                 }
             });
+
             Functions.Add("resourcegroup", (args, cxt) =>
             {
                 var context = cxt[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;

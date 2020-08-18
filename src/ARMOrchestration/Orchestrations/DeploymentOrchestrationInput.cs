@@ -13,6 +13,8 @@ namespace maskx.ARMOrchestration.Orchestrations
     [JsonObject(MemberSerialization.OptOut)]
     public class DeploymentOrchestrationInput
     {
+        public bool IsRetry;
+
         public (bool, string) Validate(IServiceProvider service = null)
         {
             if (service != null)
@@ -33,7 +35,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 context.Add(item.Key, item.Value);
             }
 
-            using var doc = JsonDocument.Parse(resource.Properties);
+            using var doc = JsonDocument.Parse(resource.Properties.RawString);
             var rootElement = doc.RootElement;
 
             var mode = DeploymentMode.Incremental;

@@ -106,6 +106,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
 
                     input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
+                    input.ServiceProvider = _ServiceProvider;
                 }
             }
 
@@ -152,6 +153,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
 
                     input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content);
+                    input.ServiceProvider = _ServiceProvider;
                 }
             }
 

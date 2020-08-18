@@ -105,6 +105,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
 
                     input = DataConverter.Deserialize<DeploymentOrchestrationInput>(r.Content);
+                    input.ServiceProvider = _ServiceProvider;
                 }
             }
 
@@ -156,7 +157,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (!resource.Condition)
                     continue;
-
                 // copy should be executed before BuiltinServiceTypes.Deployments
                 // because BuiltinServiceTypes.Deployments can be a copy resource
                 if (resource.Copy != null)
@@ -222,6 +222,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         return r;
                     }
                     input = DataConverter.Deserialize<DeploymentOrchestrationInput>(r.Content);
+                    input.ServiceProvider = _ServiceProvider;
                 }
             }
 
@@ -248,7 +249,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region get template outputs
 
-            if (!string.IsNullOrEmpty(input.Template.Outputs))
+            if (input.Template.Outputs != null)
             {
                 try
                 {
@@ -285,8 +286,9 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         private string GetOutputs(DeploymentOrchestrationInput deploymentContext)
         {
+            // todo: 优化， outputs 已经是一个 JsonElement了
             // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
-            string outputs = deploymentContext.Template.Outputs;
+            string outputs = deploymentContext.Template.Outputs.RawString;
             Dictionary<string, object> context = new Dictionary<string, object>() {
                 {"armcontext",deploymentContext }
             };

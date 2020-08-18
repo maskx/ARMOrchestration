@@ -2,15 +2,24 @@
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Threading.Tasks;
 
 namespace ARMOrchestrationTest.PluginTests
 {
     public class BeforeDeploymentOrchestration : TaskOrchestration<TaskResult, DeploymentOrchestrationInput>
     {
+        private readonly IServiceProvider _ServiceProvider;
+
+        public BeforeDeploymentOrchestration(IServiceProvider serviceProvider)
+        {
+            this._ServiceProvider = serviceProvider;
+        }
+
         public override Task<TaskResult> RunTask(OrchestrationContext context, DeploymentOrchestrationInput input)
         {
-            string s = input.Template.Outputs;
+            input.ServiceProvider = _ServiceProvider;
+            string s = input.Template.Outputs.RawString;
             if (string.IsNullOrEmpty(s))
                 s = "{}";
             var j = JObject.Parse(s);
@@ -20,8 +29,7 @@ namespace ARMOrchestrationTest.PluginTests
                 { "value", "BeforeDeploymentOrchestration" }
             };
             j.Add("BeforeDeploy", p);
-            // TODO: need find a new way to do this test
-            //input.Template.Outputs = j.ToString(Newtonsoft.Json.Formatting.None);
+            input.Template.Outputs = j.ToString(Newtonsoft.Json.Formatting.None);
             return Task.FromResult(new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) });
         }
     }

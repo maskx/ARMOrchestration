@@ -5,16 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class Template
+    public class Template : ChangeTracking
     {
-        [JsonProperty]
-        private string _RawString { get; set; }
-
         private Dictionary<string, object> _FullContext;
 
         internal Dictionary<string, object> FullContext
@@ -39,34 +37,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
 
-        private JsonDocument json = null;
-
-        internal JsonElement RootElement
-        {
-            get
-            {
-                if (json == null)
-                    json = JsonDocument.Parse(_RawString);
-                return json.RootElement;
-            }
-        }
-
-        public Template()
-        {
-            _RawString = "{}";
-        }
-
-        public void Dispose()
-        {
-            if (json != null)
-                json.Dispose();
-        }
-
         public static implicit operator Template(string rawString)
         {
-            return new Template() { _RawString = rawString };
+            return new Template() { RawString = rawString };
         }
 
+        [DisplayName("$schema")]
         public string Schema
         {
             get
@@ -77,6 +53,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        [DisplayName("contentVersion")]
         public string ContentVersion
         {
             get
@@ -87,6 +64,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        [DisplayName("apiProfile")]
         public string ApiProfile
         {
             get
@@ -100,6 +78,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        [DisplayName("parameters")]
         public string Parameters
         {
             get
@@ -112,6 +91,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string _Variables = null;
 
+        [DisplayName("variables")]
         public string Variables
         {
             get
@@ -133,24 +113,25 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
-        {
-            DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
-            foreach (var resource in element.EnumerateArray())
-            {
-                var r = new Resource(resource, fullContext, parentName, parentType);
-                _Resources.Add(r);
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
-                // You can't use a copy loop for a child resource.
-                if (resource.TryGetProperty("resources", out JsonElement _resources))
-                {
-                    ExpandResource(_resources, r.FullContext, r.FullName, r.FullType);
-                }
-            }
-        }
+        //private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
+        //{
+        //    DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+        //    foreach (var resource in element.EnumerateArray())
+        //    {
+        //        var r = new Resource(resource, fullContext, parentName, parentType);
+        //        _Resources.Add(r);
+        //        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
+        //        // You can't use a copy loop for a child resource.
+        //        if (resource.TryGetProperty("resources", out JsonElement _resources))
+        //        {
+        //            ExpandResource(_resources, r.FullContext, r.FullName, r.FullType);
+        //        }
+        //    }
+        //}
 
         private ResourceCollection _Resources;
 
+        [DisplayName("resources")]
         public ResourceCollection Resources
         {
             get
@@ -159,13 +140,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     if (!RootElement.TryGetProperty("resources", out JsonElement resources))
                         throw new Exception("not find resources in template");
-                    _Resources = new ResourceCollection();
-                    ExpandResource(resources, this.FullContext);
+                    _Resources = new ResourceCollection(resources, this.FullContext);
                 }
                 return _Resources;
             }
         }
 
+        [DisplayName("functions")]
         public Functions Functions
         {
             get
@@ -176,13 +157,26 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public string Outputs
+        private ChangeTracking _Outputs;
+
+        [DisplayName("outputs")]
+        public ChangeTracking Outputs
         {
             get
             {
-                if (RootElement.TryGetProperty("outputs", out JsonElement outputs))
-                    return outputs.GetRawText();
-                return string.Empty;
+                if (_Outputs == null)
+                {
+                    if (RootElement.TryGetProperty("outputs", out JsonElement outputs))
+                        _Outputs = new ChangeTracking() { RawString = outputs.GetRawText() };
+                    else
+                        _Outputs = new ChangeTracking();
+                }
+                return _Outputs;
+            }
+            set
+            {
+                _Outputs = value;
+                Change(value, "outputs");
             }
         }
 
@@ -202,11 +196,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     return DeployLevel.ManagemnetGroup;
                 throw new Exception("wrong $shema setting");
             }
-        }
-
-        public override string ToString()
-        {
-            return this._RawString;
         }
 
         internal (bool, string) Validate()
