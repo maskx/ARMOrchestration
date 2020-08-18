@@ -64,7 +64,15 @@ namespace maskx.ARMOrchestration.Extensions
             });
             services.AddSingleton<ARMOrchestrationClient>();
             services.AddSingleton<ARMTemplateHelper>();
-            services.AddSingleton<ARMFunctions>();
+            services.AddSingleton<ARMFunctions>((sp) =>
+            {
+                var options = sp.GetService<IOptions<ARMOrchestrationOptions>>();
+                var infra = sp.GetService<IInfrastructure>();
+                var config = sp.GetService<ARMOrchestrationSqlServerConfig>();
+                var func = new ARMFunctions(options, sp, infra);
+                config.ConfigARMFunctions?.Invoke(func);
+                return func;
+            });
             services.AddSingleton<WaitDependsOnWorker>();
             services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker>());
             services.AddSingleton((sp) =>
@@ -78,6 +86,7 @@ namespace maskx.ARMOrchestration.Extensions
             });
             return services;
         }
+
         public static IServiceCollection UsingARMOrchestration(this IServiceCollection services, ARMOrchestrationSqlServerConfig config)
         {
             SqlServerConfiguration sqlServerConfiguration = new SqlServerConfiguration()
