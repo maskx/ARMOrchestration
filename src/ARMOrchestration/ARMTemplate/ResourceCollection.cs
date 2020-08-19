@@ -15,6 +15,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class ResourceCollection : ICollection<Resource>, IChangeTracking
     {
+        private DeploymentOrchestrationInput _Input;
         private long _OldVersion;
         private long _NewVersion;
 
@@ -79,7 +80,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
-            DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+            _Input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
             foreach (var resource in element.EnumerateArray())
             {
                 var r = new Resource(resource, fullContext, parentName, parentType)
@@ -191,6 +192,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (r.ResourceId.Equals(item.ResourceId, StringComparison.OrdinalIgnoreCase))
                     return;
             }
+            item.Input = _Input;
             rs.Add(item);
             Change(null);
         }

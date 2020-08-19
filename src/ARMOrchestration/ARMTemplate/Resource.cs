@@ -2,6 +2,7 @@
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using System;
@@ -75,6 +76,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
 
         public DeploymentOrchestrationInput Input { get; set; }
+
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
         internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
@@ -170,6 +172,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         throw new Exception("not find type in resource node");
                 }
                 return _Type;
+            }
+            set
+            {
+                _Type = value;
+                Change(value, "type");
             }
         }
 
@@ -296,32 +303,53 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                LazyLoadDependsOnAnProperties();
+                if (_DependsOn == null || _PropertiesNeedReload)
+                    LazyLoadDependsOnAnProperties();
                 return _DependsOn;
             }
         }
 
-        private ChangeTracking _Properties;
+        private string _Properties;
 
-        [DisplayName("properties")]
-        public ChangeTracking Properties
+        public string Properties
         {
             get
             {
-                LazyLoadDependsOnAnProperties();
+                if (_Properties == null || _PropertiesNeedReload)
+                    LazyLoadDependsOnAnProperties();
                 return _Properties;
+            }
+        }
+
+        private bool _PropertiesNeedReload = false;
+        public ChangeTracking _RawProperties;
+
+        [DisplayName("properties")]
+        public ChangeTracking RawProperties
+        {
+            get
+            {
+                if (_RawProperties == null)
+                {
+                    if (RootElement.TryGetProperty("properties", out JsonElement properties))
+                    {
+                        _RawProperties = properties.GetRawText();
+                    }
+                    else _RawProperties = new ChangeTracking();
+                }
+                return _RawProperties;
             }
             set
             {
-                _Properties = value;
+                _RawProperties = value;
                 Change(value, "properties");
+                _PropertiesNeedReload = true;
             }
         }
 
         private void LazyLoadDependsOnAnProperties()
         {
-            if (_DependsOn != null)
-                return;
+            _PropertiesNeedReload = false;
             _DependsOn = new DependsOnCollection();
             if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
             {
@@ -331,22 +359,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input.Template.Resources);
                 }
             }
-            if (RootElement.TryGetProperty("properties", out JsonElement properties))
+            var infrastructure = ServiceProvider.GetService<IInfrastructure>();
+            if (this.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+                _Properties = RawProperties.RawString;
+            else
             {
-                var infrastructure = ServiceProvider.GetService<IInfrastructure>();
-                if (this.FullType == infrastructure.BuiltinServiceTypes.Deployments)
-                    _Properties = properties.GetRawText();
-                else
+                _Properties = RawProperties.RootElement.ExpandObject(FullContext, _Functions, infrastructure);
+                // if there has Implicit dependency by reference function in properties
+                // the reference function should be evaluate at provisioning time
+                // so keep the original text
+                if (FullContext.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
                 {
-                    _Properties = properties.ExpandObject(FullContext, _Functions, infrastructure);
-                    // if there has Implicit dependency by reference function in properties
-                    // the reference function should be evaluate at provisioning time
-                    // so keep the original text
-                    if (FullContext.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
-                    {
-                        _DependsOn.AddRange(conditionDep as List<string>, Input.Template.Resources);
-                        FullContext.Remove(ContextKeys.DEPENDSON);
-                    }
+                    _DependsOn.AddRange(conditionDep as List<string>, Input.Template.Resources);
+                    FullContext.Remove(ContextKeys.DEPENDSON);
                 }
             }
         }

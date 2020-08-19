@@ -35,7 +35,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 context.Add(item.Key, item.Value);
             }
 
-            using var doc = JsonDocument.Parse(resource.Properties.RawString);
+            using var doc = JsonDocument.Parse(resource.RawProperties.RawString);
             var rootElement = doc.RootElement;
 
             var mode = DeploymentMode.Incremental;

@@ -34,8 +34,9 @@ namespace ARMOrchestrationTest
             // add new resource
             input.Template.Resources.Add(new Resource()
             {
+                Type = "rp/st",
                 Name = "Name1",
-                Properties = "{}"
+                RawProperties = "{}"
             });
 
             Assert.Single(input.Template.Resources);
@@ -54,13 +55,14 @@ namespace ARMOrchestrationTest
             Assert.Equal("Name1-Changed", nameE.GetString());
 
             // change resource's properties property
-            r.Properties = "{\"p1\":123'}";
+            r.RawProperties = "{\"p1\":123}";
+            Assert.Equal("{\"p1\":123}", r.Properties);
             using var doc2 = JsonDocument.Parse(input.Template.RawString);
             resourcesE = doc2.RootElement.GetProperty("resources");
             Assert.Single(resourcesE.EnumerateArray());
             var res2 = resourcesE.EnumerateArray().First();
             Assert.True(res2.TryGetProperty("properties", out JsonElement properties));
-            Assert.Equal("{\"p1\":123'}", properties.GetString());
+            Assert.Equal("{\"p1\":123}", properties.GetRawText());
         }
     }
 }
