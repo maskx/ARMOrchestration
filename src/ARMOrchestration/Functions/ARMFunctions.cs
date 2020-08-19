@@ -838,6 +838,8 @@ namespace maskx.ARMOrchestration.Functions
                     var taskResult = this.infrastructure.Reference(context, id, apiVersion, full);
                     if (taskResult.Code == 200)
                         args.Result = new JsonValue(taskResult.Content);
+                    else
+                        args.Result = null;
                 }
             });
 

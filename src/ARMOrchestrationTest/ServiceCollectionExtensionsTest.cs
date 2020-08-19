@@ -100,6 +100,13 @@ namespace ARMOrchestrationTest
                             {
                                 ConnectionString = TestHelper.ConnectionString,
                                 AutoCreate = true
+                            },
+                            ConfigARMFunctions = (func) =>
+                            {
+                                func.SetFunction("customeFunctions", (args, cxt) =>
+                                {
+                                    args.Result = 123;
+                                });
                             }
                         };
                     });
