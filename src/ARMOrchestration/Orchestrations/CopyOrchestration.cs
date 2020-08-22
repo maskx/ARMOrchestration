@@ -43,7 +43,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     ParentContext.Add(item.Key, item.Value);
                 }
 
-                if (input.Resource.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+                if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     var deploy = DeploymentOrchestrationInput.Parse(
                         new Resource()

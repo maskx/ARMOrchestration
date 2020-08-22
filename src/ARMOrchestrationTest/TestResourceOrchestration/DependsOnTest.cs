@@ -1,6 +1,7 @@
 ﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using Xunit;
 
 namespace ARMOrchestrationTest.TestResourceOrchestration
@@ -104,7 +105,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(1, input.Resource.DependsOn.Count);
-                    Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
+                    Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
                 }
             }
         }
@@ -112,6 +113,28 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "DuplicatedServiceTypeName")]
         public void DuplicatedServiceTypeName()
         {
+            string filename = "dependsOn/DuplicatedServiceTypeName";
+            var id = Guid.NewGuid().ToString("N");
+            var deployment = new DeploymentOrchestrationInput()
+            {
+                Template = TestHelper.GetTemplateContent(filename),
+                Parameters = string.Empty,
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                DeploymentName = filename.Replace('/', '-'),
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                DeploymentId = id,
+                GroupId = Guid.NewGuid().ToString("N"),
+                GroupType = "ResourceGroup",
+                HierarchyId = "001002003004005",
+                CreateByUserId = TestHelper.CreateByUserId,
+                ApiVersion = "1.0",
+                TenantId = TestHelper.TenantId
+            };
+            var (rtv, m) = deployment.Validate(fixture.ServiceProvider);
+            Assert.True(rtv);
+            Assert.Equal(1, deployment.Template.Resources["resource2"].DependsOn.Count);
+
             var instance = TestHelper.OrchestrationTest(fixture,
                  "dependsOn/DuplicatedServiceTypeName");
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
@@ -123,7 +146,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(1, input.Resource.DependsOn.Count);
-                    Assert.Equal("rp/st/resource1", input.Resource.DependsOn[0]);
+                    Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
                 }
             }
         }
@@ -142,8 +165,8 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(2, input.Resource.DependsOn.Count);
-                    Assert.Contains("rp/st/resource1", input.Resource.DependsOn);
-                    Assert.Contains("rp/st1/resource1", input.Resource.DependsOn);
+                    Assert.Contains("ns.rp/st/resource1", input.Resource.DependsOn);
+                    Assert.Contains("ns.rp/st1/resource1", input.Resource.DependsOn);
                 }
             }
         }

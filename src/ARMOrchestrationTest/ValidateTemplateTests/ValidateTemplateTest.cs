@@ -99,7 +99,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             };
             var (r, m) = input.Validate();
             Assert.True(r);
-            using var doc = JsonDocument.Parse(input.Template.Variables);
+            using var doc = JsonDocument.Parse(input.Template.Variables.ToString());
             var root = doc.RootElement;
             Assert.True(root.TryGetProperty("disk-array-on-object", out JsonElement ele1));
             Assert.True(ele1.TryGetProperty("disks", out JsonElement disks));
@@ -179,8 +179,8 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal(2, Deployment.Template.Resources.Count);
             Assert.True(Deployment.Template.Resources.TryGetValue("VNet1", out Resource v));
             Assert.True(Deployment.Template.Resources.TryGetValue("Subnet1", out Resource s));
-            Assert.Equal("Microsoft.Network/virtualNetworks", v.FullType);
-            Assert.Equal("Microsoft.Network/virtualNetworks/subnets", s.FullType);
+            Assert.Equal("Microsoft.Network/virtualNetworks", v.Type);
+            Assert.Equal("Microsoft.Network/virtualNetworks/subnets", s.Type);
         }
 
         [Fact(DisplayName = "NestTemplate")]
@@ -211,8 +211,8 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var t = d.Template;
             Assert.Single(t.Resources);
             var res = t.Resources.First();
-            Assert.Equal("storageAccount1", res.FullName);
-            Assert.Equal("Microsoft.Storage/storageAccounts", res.FullType);
+            Assert.Equal("storageAccount1", res.Name);
+            Assert.Equal("Microsoft.Storage/storageAccounts", res.Type);
         }
 
         [Fact(DisplayName = "DoubleNestTemplate")]
@@ -246,8 +246,8 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var t = d1.Template;
             Assert.Single(t.Resources);
             var res = t.Resources.First();
-            Assert.Equal("nestedTemplate2", res.FullName);
-            Assert.Equal("Microsoft.Resources/deployments", res.FullType);
+            Assert.Equal("nestedTemplate2", res.Name);
+            Assert.Equal("Microsoft.Resources/deployments", res.Type);
 
             Assert.Single(d1.Deployments);
             var d2 = d1.Deployments["nestedTemplate2"];
@@ -260,8 +260,8 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var t2 = d2.Template;
             Assert.Single(t2.Resources);
             var res2 = t2.Resources.First();
-            Assert.Equal("storageAccount1", res2.FullName);
-            Assert.Equal("Microsoft.Storage/storageAccounts", res2.FullType);
+            Assert.Equal("storageAccount1", res2.Name);
+            Assert.Equal("Microsoft.Storage/storageAccounts", res2.Type);
         }
 
         [Fact(DisplayName = "ExpressionEvaluationScopeInner")]
@@ -285,7 +285,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var t = d.Template;
             Assert.Single(t.Resources);
             var res = t.Resources.First();
-            Assert.Equal("from nested template", res.FullName);
+            Assert.Equal("from nested template", res.Name);
             var s = Deployment.Template.ToString();
             using var doc1 = JsonDocument.Parse(s);
             var root1 = doc1.RootElement;
@@ -312,7 +312,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             var t = d.Template;
             Assert.Single(t.Resources);
             var res = t.Resources.First();
-            Assert.Equal("from parent template", res.FullName);
+            Assert.Equal("from parent template", res.Name);
             var s = Deployment.Template.ToString();
             using var doc1 = JsonDocument.Parse(s);
             var root1 = doc1.RootElement;

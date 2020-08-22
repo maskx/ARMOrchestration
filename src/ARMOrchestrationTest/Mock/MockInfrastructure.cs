@@ -60,7 +60,7 @@ namespace ARMOrchestrationTest.Mock
             var r = new AsyncRequestInput()
             {
                 EventName = input.ProvisioningStage.ToString(),
-                RequestTo = input.Resource.FullType,
+                RequestTo = input.Resource.Type,
                 RequestOperation = "PUT",
                 RequestContent = input.Resource?.ToString(),
                 RuleField = ruleField,

@@ -369,7 +369,8 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"exampleOutput1","myVariable"},
                 {"exampleOutput2","[1,2,3,4]" },
                 {"exampleOutput3","myVariable"},
-                {"exampleOutput4","{\"property1\":\"value1\",\"property2\":\"value2\"}"}
+                {"exampleOutput4","{\"property1\":\"value1\",\"property2\":\"value2\"}"},
+                { "newGuid","true"}
             };
             TestHelper.FunctionTest(this.fixture, "variables", result);
         }

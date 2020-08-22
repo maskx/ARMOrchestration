@@ -103,9 +103,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                     writer.WritePropertyName("parameters");
                     p.RootElement.WriteTo(writer);
                 }
-                if (!string.IsNullOrWhiteSpace(deploymentContext.Template.Variables))
+                if (deploymentContext.Template.Variables != null)
                 {
-                    using var v = JsonDocument.Parse(deploymentContext.Template.Variables);
+                    using var v = JsonDocument.Parse(deploymentContext.Template.Variables.ToString());
                     writer.WritePropertyName("variables");
                     v.RootElement.WriteTo(writer);
                 }

@@ -167,7 +167,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Input = input
                     }));
                 }
-                else if (resource.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+                else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     var deploy = DeploymentOrchestrationInput.Parse(resource, input, _ARMFunctions, infrastructure);
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
@@ -288,12 +288,11 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             // todo: 优化， outputs 已经是一个 JsonElement了
             // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
-            string outputs = deploymentContext.Template.Outputs.RawString;
+
             Dictionary<string, object> context = new Dictionary<string, object>() {
                 {"armcontext",deploymentContext }
             };
-            using JsonDocument outDoc = JsonDocument.Parse(outputs);
-            var outputDefineElement = outDoc.RootElement;
+            var outputDefineElement = deploymentContext.Template.Outputs.RootElement;
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms, new JsonWriterOptions() { Indented = false });
             writer.WriteStartObject();

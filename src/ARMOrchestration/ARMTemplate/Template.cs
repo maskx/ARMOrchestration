@@ -89,45 +89,33 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public string _Variables = null;
+        public JsonValue _Variables = null;
 
         [DisplayName("variables")]
-        public string Variables
+        public JsonValue Variables
         {
             get
             {
                 if (_Variables == null)
                 {
-                    _Variables = string.Empty;
                     if (RootElement.TryGetProperty("variables", out JsonElement variables))
                     {
                         // variable can refernce variable, so must set variables value before expand
-                        _Variables = variables.GetRawText();
-                        _Variables = variables.ExpandObject(new Dictionary<string, object>() {
+                        _Variables = new JsonValue(variables.GetRawText());
+                        using var doc = JsonDocument.Parse(_Variables.ToString());
+                        _Variables = new JsonValue(doc.RootElement.ExpandObject(new Dictionary<string, object>() {
                             { ContextKeys.ARM_CONTEXT,Input} },
                             ServiceProvider.GetService<ARMFunctions>(),
-                            ServiceProvider.GetService<IInfrastructure>());
+                            ServiceProvider.GetService<IInfrastructure>()));
+                        // 需要确保 newguid 一类的函数，每次获取变量都返回相同的值
+                        // 因此，variables 需要提前展开
+                        // 因此  variables 中不可以使用 reference 函数
+                        Change(_Variables, "variables");
                     }
                 }
                 return _Variables;
             }
         }
-
-        //private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
-        //{
-        //    DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
-        //    foreach (var resource in element.EnumerateArray())
-        //    {
-        //        var r = new Resource(resource, fullContext, parentName, parentType);
-        //        _Resources.Add(r);
-        //        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
-        //        // You can't use a copy loop for a child resource.
-        //        if (resource.TryGetProperty("resources", out JsonElement _resources))
-        //        {
-        //            ExpandResource(_resources, r.FullContext, r.FullName, r.FullType);
-        //        }
-        //    }
-        //}
 
         private ResourceCollection _Resources;
 
@@ -140,7 +128,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     if (!RootElement.TryGetProperty("resources", out JsonElement resources))
                         throw new Exception("not find resources in template");
-                    _Resources = new ResourceCollection(resources, this.FullContext);
+                    _Resources = new ResourceCollection(resources.GetRawText(), this.FullContext);
                 }
                 return _Resources;
             }

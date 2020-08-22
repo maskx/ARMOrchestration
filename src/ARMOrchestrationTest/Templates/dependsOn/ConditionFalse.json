@@ -6,12 +6,12 @@
     {
       "condition": "[bool('false')]",
       "apiVersion": "2019-12-25",
-      "type": "rp/st",
+      "type": "ns.rp/st",
       "name": "resource1"
     },
     {
       "apiVersion": "2019-12-25",
-      "type": "rp/st",
+      "type": "ns.rp/st",
       "name": "resource2",
       "dependsOn": [
         "resource1"

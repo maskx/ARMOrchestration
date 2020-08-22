@@ -9,7 +9,8 @@
     "var4": {
       "property1": "value1",
       "property2": "value2"
-    }
+    },
+    "var5": "[newGuid()]"
   },
   "resources": [],
   "outputs": {
@@ -28,6 +29,10 @@
     "exampleOutput4": {
       "value": "[variables('var4')]",
       "type": "object"
+    },
+    "newGuid": {
+      "type": "bool",
+      "value": "[if(equals(variables('var5'),variables('var5')),true,false)]"
     }
   }
 }

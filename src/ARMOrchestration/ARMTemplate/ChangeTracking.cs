@@ -1,4 +1,5 @@
 ﻿using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Functions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
 
         [JsonProperty]
-        public string RawString
+        public virtual string RawString
         {
             get
             {
@@ -147,6 +148,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 c.Accepet(newVersion);
                 writer.WriteRawString(name, c.ToString());
+            }
+            else if (value is JsonValue j)
+            {
+                writer.WriteRawString(name, j.ToString());
             }
             else if (value != null)
                 throw new NotSupportedException($"{value.GetType().FullName} is not supported in ChangeJsonValue method");

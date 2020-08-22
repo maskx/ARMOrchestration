@@ -22,9 +22,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// </summary>
         public string Name { get; set; }
 
-        public string FullName { get { return $"{this.FullType}/{this.Name}"; } }
         public string Type { get; set; }
-        public string FullType { get { return Type; } }
 
         /// <summary>
         /// number-of-iterations

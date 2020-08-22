@@ -85,10 +85,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
         }
 
-        public Resource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
+        public Resource(string rawString, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
             DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
-            this.RootElement = element;
+            this.RawString = rawString;
             this._ParentName = parentName;
             this._ParentType = parentType;
             this.Input = input;
@@ -170,6 +170,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _Type = type.GetString();
                     else
                         throw new Exception("not find type in resource node");
+                    // all child resource will be promote to same level of parent
+                    // so the type should change to full type
+                    if (!string.IsNullOrEmpty(_ParentType))
+                        _Type = $"{this._ParentType}/{this._Type}";
                 }
                 return _Type;
             }
@@ -177,20 +181,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 _Type = value;
                 Change(value, "type");
-            }
-        }
-
-        /// <summary>
-        /// the type of resource
-        /// the child resource is parentType/childType
-        /// </summary>
-        public string FullType
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(this._ParentType))
-                    return this.Type;
-                return $"{this._ParentType}/{this.Type}";
             }
         }
 
@@ -208,10 +198,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     if (Copy != null && !CopyIndex.HasValue)
                         _Name = Copy.Name;
-                    else if (RootElement.TryGetProperty("name", out JsonElement name))
-                        _Name = this._Functions.Evaluate(name.GetString(), FullContext).ToString();
                     else
-                        throw new Exception("not find name in resource node");
+                    {
+                        if (RootElement.TryGetProperty("name", out JsonElement name))
+                            _Name = this._Functions.Evaluate(name.GetString(), FullContext).ToString();
+                        else
+                            throw new Exception("not find name in resource node");
+                        // all child resource will be promote to same level of parent
+                        // so the type should change to full type
+                        if (!string.IsNullOrEmpty(_ParentName))
+                            _Name = $"{this._ParentName}/{this._Name}";
+                    }
                 }
                 return _Name;
             }
@@ -222,19 +219,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        /// <summary>
-        /// the name of resource
-        /// the child resource is parentName/childName
-        /// </summary>
-        public string FullName
+        public string NameWithServiceType
         {
             get
             {
-                if (Copy != null && !CopyIndex.HasValue)
-                    return Copy.FullName;
-                if (string.IsNullOrEmpty(_ParentName))
-                    return this.Name;
-                return $"{_ParentName}/{this.Name}";
+                var ns = Name.Split('/');
+                var ts = Type.Split('/');
+                var s = $"ts[0]/ts[1]/ns[0]";
+                string nestr = string.Empty;
+                for (int i = 1; i < ns.Length; i++)
+                {
+                    nestr += $"/{ts[i + 1]}/{ns[i]}";
+                }
+                return $"{ts[0]}/{ts[1]}/{ns[0]}{nestr}";
             }
         }
 
@@ -360,7 +357,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
             }
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
-            if (this.FullType == infrastructure.BuiltinServiceTypes.Deployments)
+            if (this.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 _Properties = RawProperties.RawString;
             else
             {
@@ -554,18 +551,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     List<object> pars = new List<object>{
                         SubscriptionId,
                         ResourceGroup,
-                        FullType};
-                    pars.AddRange(FullName.Split('/'));
+                        Type};
+                    pars.AddRange(Name.Split('/'));
                     return _Functions.ResourceId(Input, pars.ToArray());
                 }
                 if (Input.Template.DeployLevel == DeployLevel.Subscription)
                 {
-                    List<object> pars = new List<object> { SubscriptionId, FullType };
-                    pars.AddRange(FullName.Split('/'));
+                    List<object> pars = new List<object> { SubscriptionId, Type };
+                    pars.AddRange(Name.Split('/'));
                     return _Functions.SubscriptionResourceId(Input, pars.ToArray());
                 }
-                List<object> pars1 = new List<object> { FullType };
-                pars1.AddRange(FullName.Split('/'));
+                List<object> pars1 = new List<object> { Type };
+                pars1.AddRange(Name.Split('/'));
                 return _Functions.TenantResourceId(pars1.ToArray());
             }
         }

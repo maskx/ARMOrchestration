@@ -5,21 +5,21 @@
   "resources": [
     {
       "apiVersion": "2019-12-25",
-      "type": "rp/st1",
+      "type": "ns.rp/st1",
       "name": "resource1"
     },
     {
       "apiVersion": "2019-12-25",
-      "type": "rp/st",
+      "type": "ns.rp/st",
       "name": "resource1"
     },
     {
       "apiVersion": "2019-12-25",
-      "type": "rp/st",
+      "type": "ns.rp/st",
       "name": "resource2",
       "dependsOn": [
-        "rp/st1/resource1",
-        "rp/st/resource1"
+        "ns.rp/st1/resource1",
+        "ns.rp/st/resource1"
       ]
     }
   ],

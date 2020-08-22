@@ -48,8 +48,8 @@ namespace maskx.ARMOrchestration
             else
             {
                 this.ResourceId = resource.ResourceId;
-                this.Name = resource.FullName;
-                this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullType : resource.FullType;
+                this.Name = resource.Name;
+                this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.Type : resource.Type;
                 this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : deploymentContext.GetResourceId(infrastructure);
                 this.SubscriptionId = resource.SubscriptionId;
                 this.ManagementGroupId = resource.ManagementGroupId;

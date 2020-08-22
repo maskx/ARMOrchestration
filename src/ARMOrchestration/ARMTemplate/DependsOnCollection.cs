@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Dynamitey.DynamicObjects;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -63,33 +64,53 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public int IndexOf(string item)
         {
-            var n1 = string.Empty;
-            var n2 = item;
-            var n_index = n2.LastIndexOf('/');
-            if (n_index > 0)
+            string n_name = string.Empty;
+            string n_fullName = string.Empty;
+            string n_nameWithServiceType = string.Empty;
+
+            var n_s = item.Split('/');
+            n_name = n_s[^1];
+            if (n_s[0].IndexOf('.') > 0)
             {
-                n1 = n2.Substring(0, n_index);
-                n2 = n2.Substring(n_index + 1, n2.Length - n_index - 1);
+                n_nameWithServiceType = item;
+                n_fullName = n_s[2];
+                for (int i = 4; i < n_s.Length;)
+                {
+                    n_fullName += "/" + n_s[i];
+                    i += 2;
+                }
             }
+            else
+                n_fullName = item;
+
             return _List.FindIndex((str) =>
             {
-                var c1 = string.Empty;
-                var c2 = str;
-                var c_index = str.LastIndexOf('/');
-                if (c_index > 0)
+                string c_name = string.Empty;
+                string c_fullName = string.Empty;
+                string c_nameWithServiceType = string.Empty;
+
+                var c_s = str.Split('/');
+                c_name = c_s[^1];
+                if (c_name != n_name)
+                    return false;
+                if (c_s[0].IndexOf('.') > 0)
                 {
-                    c1 = c2.Substring(0, c_index);
-                    c2 = c2.Substring(c_index + 1, c2.Length - c_index - 1);
+                    c_nameWithServiceType = str;
+                    c_fullName = c_s[2];
+                    for (int i = 4; i < c_s.Length;)
+                    {
+                        c_fullName += "/" + c_s[i];
+                        i += 2;
+                    }
                 }
-                if (c2 == n2)
-                {
-                    if (string.IsNullOrEmpty(c1))
-                        return true;
-                    if (string.IsNullOrEmpty(n1))
-                        return true;
-                    if (c1 == n1)
-                        return true;
-                }
+                else
+                    c_fullName = str;
+                if (c_fullName != n_fullName)
+                    return false;
+                if (string.IsNullOrEmpty(c_nameWithServiceType) || string.IsNullOrEmpty(n_nameWithServiceType))
+                    return true;
+                if (c_nameWithServiceType == n_nameWithServiceType)
+                    return true;
                 return false;
             });
         }

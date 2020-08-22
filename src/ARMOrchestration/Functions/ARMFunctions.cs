@@ -324,11 +324,10 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("if", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
-                if ((bool)pars[0])
-                    args.Result = pars[1];
+                if ((bool)args.Parameters[0].Evaluate(cxt))
+                    args.Result = args.Parameters[1].Evaluate(cxt);
                 else
-                    args.Result = pars[2];
+                    args.Result = args.Parameters[2].Evaluate(cxt);
             });
             Functions.Add("not", (args, cxt) =>
             {
@@ -409,24 +408,16 @@ namespace maskx.ARMOrchestration.Functions
                 if (args.Result is string s)
                     args.Result = Evaluate(s, cxt);
             });
-            // todo: 需要确保 newguid 一类的函数，在同一个调用点，每次调用都返回相同的值
-            // 因此，variables 可能需要提前展开
-            // 因此  variables 中不可以使用 reference 函数
             Functions.Add("variables", (args, cxt) =>
             {
                 if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                     return;
-                string vars = (armcxt as DeploymentOrchestrationInput).Template.Variables;
+                string vars = (armcxt as DeploymentOrchestrationInput).Template.Variables.ToString();
 
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
                 using var defineDoc = JsonDocument.Parse(vars);
                 if (defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
                 {
-                    //if (parEleDef.TryGetProperty("copy", out JsonElement copyVarE))
-                    //{
-                    //    args.Result = new JsonValue(parEleDef.ExpandObject(cxt, this, infrastructure));
-                    //}
-                    //else
                     args.Result = JsonValue.GetElementValue(parEleDef);
                 }
                 else
