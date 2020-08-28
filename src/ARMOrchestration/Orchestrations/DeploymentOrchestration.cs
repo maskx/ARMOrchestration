@@ -169,7 +169,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    var deploy = DeploymentOrchestrationInput.Parse(resource, input, _ARMFunctions, infrastructure);
+                    var deploy = DeploymentOrchestrationInput.Parse(resource);
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         DeploymentOrchestration.Name,
                         "1.0",
@@ -284,22 +284,21 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
         }
 
-        private string GetOutputs(DeploymentOrchestrationInput deploymentContext)
+        private string GetOutputs(DeploymentOrchestrationInput input)
         {
-            // todo: 优化， outputs 已经是一个 JsonElement了
             // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
 
             Dictionary<string, object> context = new Dictionary<string, object>() {
-                {"armcontext",deploymentContext }
+                {"armcontext",input }
             };
-            var outputDefineElement = deploymentContext.Template.Outputs.RootElement;
+            var outputDefineElement = input.Template.Outputs.RootElement;
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms, new JsonWriterOptions() { Indented = false });
             writer.WriteStartObject();
-            writer.WriteString("id", deploymentContext.DeploymentId);
+            writer.WriteString("id", input.DeploymentId);
             // TODO: set location
-            writer.WriteString("location", deploymentContext.ResourceGroup);
-            writer.WriteString("name", deploymentContext.DeploymentName);
+            writer.WriteString("location", input.ResourceGroup);
+            writer.WriteString("name", input.DeploymentName);
             writer.WriteString("type", infrastructure.BuiltinServiceTypes.Deployments);
 
             #region properties

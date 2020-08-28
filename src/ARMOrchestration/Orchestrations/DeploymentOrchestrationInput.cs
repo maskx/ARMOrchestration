@@ -24,11 +24,11 @@ namespace maskx.ARMOrchestration.Orchestrations
             return this.Template.Validate();
         }
 
-        public static DeploymentOrchestrationInput Parse(Resource resource,
-                  DeploymentOrchestrationInput deploymentContext,
-                  ARMFunctions functions,
-                  IInfrastructure infrastructure)
+        public static DeploymentOrchestrationInput Parse(Resource resource)
         {
+            DeploymentOrchestrationInput deploymentContext = resource.Input;
+            ARMFunctions functions = resource.ServiceProvider.GetService<ARMFunctions>();
+            IInfrastructure infrastructure = resource.ServiceProvider.GetService<IInfrastructure>();
             Dictionary<string, object> context = new Dictionary<string, object>();
             foreach (var item in resource.FullContext)
             {
@@ -228,6 +228,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public string Parameters { get; set; }
         public string ApiVersion { get; set; }
 
+        // todo: support OnErrorDeployment
         /// <summary>
         /// When a deployment fails, you can automatically redeploy an earlier, successful deployment from your deployment history. This functionality is useful if you've got a known good state for your infrastructure deployment and want to revert to this state.
         /// </summary>
@@ -255,40 +256,11 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public DependsOnCollection DependsOn { get; set; } = new DependsOnCollection();
 
-        private Dictionary<string, DeploymentOrchestrationInput> _Deployments;
-
-        [JsonIgnore]
-        public Dictionary<string, DeploymentOrchestrationInput> Deployments
-        {
-            get
-            {
-                if (_Deployments == null)
-                {
-                    var infra = ServiceProvider.GetService<IInfrastructure>();
-                    var func = ServiceProvider.GetService<ARMFunctions>();
-                    _Deployments = new Dictionary<string, DeploymentOrchestrationInput>();
-                    foreach (var r in this.Template.Resources)
-                    {
-                        if (r.Type == infra.BuiltinServiceTypes.Deployments)
-                        {
-                            _Deployments.Add(r.Name, Parse(r, this, func, infra));
-                        }
-                    }
-                }
-                return _Deployments;
-            }
-        }
+        
 
         public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
         {
-            foreach (var d in this.Deployments.Values)
-            {
-                yield return d;
-                foreach (var nest in d.EnumerateDeployments())
-                {
-                    yield return nest;
-                }
-            }
+            return template.Resources.EnumerateDeployments();
         }
 
         /// <summary>
@@ -300,7 +272,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 yield return r;
             }
-            foreach (var d in this.Deployments.Values)
+            foreach (var d in this.template.Resources.EnumerateDeployments())
             {
                 foreach (var r in d.EnumerateResource())
                 {

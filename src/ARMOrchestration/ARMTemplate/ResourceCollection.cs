@@ -7,15 +7,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class ResourceCollection : ICollection<Resource>, IChangeTracking, IDisposable
     {
         private DeploymentOrchestrationInput _Input;
+        private IServiceProvider _ServiceProvider => _Input.ServiceProvider;
+
         private long _OldVersion;
         private long _NewVersion;
 
@@ -81,6 +83,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
             _Input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+
             foreach (var resource in element.EnumerateArray())
             {
                 var r = new Resource(resource.GetRawText(), fullContext, parentName, parentType)
@@ -124,6 +127,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private JsonDocument json;
         private readonly ConcurrentDictionary<string, List<Resource>> _Resources = new ConcurrentDictionary<string, List<Resource>>();
+        private List<DeploymentOrchestrationInput> _Deployments = null;
 
         public Resource this[string name]
         {
@@ -232,6 +236,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public void Clear()
         {
             this._Resources.Clear();
+            this._Deployments.Clear();
             Change(null, null);
         }
 
@@ -347,6 +352,36 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             if (json != null)
                 json.Dispose();
+        }
+
+        public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
+        {
+            bool needInit = false;
+            if(this._Deployments==null)
+            {
+                needInit = true;
+                this._Deployments = new List<DeploymentOrchestrationInput>();
+            }
+            if(this.HasChanged || needInit)
+            {
+                var infra = _ServiceProvider.GetService<IInfrastructure>();
+                this._Deployments.Clear();
+                foreach (var item in this)
+                {                   
+                    if (item.Type == infra.BuiltinServiceTypes.Deployments)
+                    {
+                        this._Deployments.Add(DeploymentOrchestrationInput.Parse(item));
+                    }
+                }
+            }
+            foreach (var item in this._Deployments)
+            {
+                yield return item;
+                foreach (var n in item.EnumerateDeployments())
+                {
+                    yield return n;
+                }
+            }
         }
     }
 }

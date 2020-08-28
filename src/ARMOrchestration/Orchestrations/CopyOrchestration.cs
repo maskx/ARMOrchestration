@@ -7,7 +7,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -45,17 +44,13 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    var deploy = DeploymentOrchestrationInput.Parse(
-                        new Resource()
-                        {
-                            RawString = input.Resource.RawString,
-                            CopyIndex = i,
-                            ParentContext = ParentContext,
-                            Input = input.Input
-                        },
-                        input.Input,
-                        _ServiceProvider.GetService<ARMFunctions>(),
-                        infrastructure);
+                    var deploy = DeploymentOrchestrationInput.Parse(new Resource()
+                    {
+                        RawString = input.Resource.RawString,
+                        CopyIndex = i,
+                        ParentContext = ParentContext,
+                        Input = input.Input
+                    });
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         DeploymentOrchestration.Name,
                         "1.0",

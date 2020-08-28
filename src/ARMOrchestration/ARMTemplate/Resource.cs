@@ -2,8 +2,6 @@
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
