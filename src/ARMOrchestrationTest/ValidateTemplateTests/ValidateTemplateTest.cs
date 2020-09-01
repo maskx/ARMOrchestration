@@ -176,11 +176,18 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             };
             var (r, m) = Deployment.Validate();
             Assert.True(r);
-            Assert.Equal(2, Deployment.Template.Resources.Count);
+            Assert.Single(Deployment.Template.Resources);
             Assert.True(Deployment.Template.Resources.TryGetValue("VNet1", out Resource v));
-            Assert.True(Deployment.Template.Resources.TryGetValue("Subnet1", out Resource s));
+            Assert.Single(v.Resources);
+            Assert.True(v.Resources.TryGetValue("Subnet1", out Resource s));
             Assert.Equal("Microsoft.Network/virtualNetworks", v.Type);
-            Assert.Equal("Microsoft.Network/virtualNetworks/subnets", s.Type);
+            Assert.Equal("subnets", s.Type);
+            Assert.Equal("Microsoft.Network/virtualNetworks/subnets", s.FullType);
+            Assert.Equal("Subnet1", s.Name);
+            Assert.Equal("VNet1/Subnet1", s.FullName);
+            Assert.Equal("Microsoft.Network/virtualNetworks/VNet1/subnets/Subnet1", s.NameWithServiceType);
+            Assert.Equal($"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Network/virtualNetworks/VNet1/subnets/Subnet1", s.ResourceId, true);
+            Assert.Equal(2, Deployment.EnumerateResource(true).Count());
         }
 
         [Fact(DisplayName = "NestTemplate")]
@@ -236,7 +243,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
 
             Assert.Equal(2, Deployment.EnumerateDeployments().Count());
 
-            var d1 = Deployment.EnumerateDeployments().First((input)=>input.DeploymentName=="nestedTemplate1");
+            var d1 = Deployment.EnumerateDeployments().First((input) => input.DeploymentName == "nestedTemplate1");
             Assert.Equal("2017-05-10", d1.ApiVersion);
             Assert.Equal(Deployment.RootId, d1.RootId);
             Assert.NotNull(d1.DeploymentId);
@@ -249,7 +256,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("Microsoft.Resources/deployments", res.Type);
 
             Assert.Single(d1.EnumerateDeployments());
-            var d2 = d1.EnumerateDeployments().First((input)=>input.DeploymentName=="nestedTemplate2");
+            var d2 = d1.EnumerateDeployments().First((input) => input.DeploymentName == "nestedTemplate2");
             Assert.Equal("2017-05-10", d2.ApiVersion);
             Assert.Equal(Deployment.RootId, d2.RootId);
             Assert.NotNull(d2.DeploymentId);

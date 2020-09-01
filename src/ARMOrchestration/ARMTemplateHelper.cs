@@ -1,12 +1,18 @@
-﻿using maskx.ARMOrchestration.Functions;
+﻿using DurableTask.Core;
+using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Functions;
+using maskx.ARMOrchestration.Orchestrations;
+using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.SQL;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
 {
@@ -56,6 +62,28 @@ WHEN MATCHED THEN
             using var db = new DbAccess(this.options.Database.ConnectionString);
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             db.ExecuteNonQueryAsync().Wait();
+        }
+        public void ProvisioningResource(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, DeploymentOrchestrationInput input)
+        {
+            tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
+                                      ResourceOrchestration.Name,
+                                      "1.0",
+                                      new ResourceOrchestrationInput()
+                                      {
+                                          Resource = resource,
+                                          Input = input,
+                                      }));
+            foreach (var child in resource.FlatEnumerateChild())
+            {
+                tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
+                                                     ResourceOrchestration.Name,
+                                                     "1.0",
+                                                     new ResourceOrchestrationInput()
+                                                     {
+                                                         Resource = child,
+                                                         Input = input,
+                                                     }));
+            }
         }
     }
 }

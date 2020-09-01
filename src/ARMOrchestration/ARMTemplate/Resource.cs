@@ -168,10 +168,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _Type = type.GetString();
                     else
                         throw new Exception("not find type in resource node");
-                    // all child resource will be promote to same level of parent
-                    // so the type should change to full type
-                    if (!string.IsNullOrEmpty(_ParentType))
-                        _Type = $"{this._ParentType}/{this._Type}";
                 }
                 return _Type;
             }
@@ -181,6 +177,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Change(value, "type");
             }
         }
+        public string FullType { get { return string.IsNullOrEmpty(this._ParentType) ? this.Type : $"{this._ParentType}/{this.Type}"; } }
 
         private string _Name = null;
 
@@ -194,19 +191,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_Name == null)
                 {
+                    if (!RootElement.TryGetProperty("name", out JsonElement name))
+                        throw new Exception("not find name in resource node");
                     if (Copy != null && !CopyIndex.HasValue)
-                        _Name = Copy.Name;
+                        _Name = name.GetString();
                     else
-                    {
-                        if (RootElement.TryGetProperty("name", out JsonElement name))
-                            _Name = this._Functions.Evaluate(name.GetString(), FullContext).ToString();
-                        else
-                            throw new Exception("not find name in resource node");
-                        // all child resource will be promote to same level of parent
-                        // so the type should change to full type
-                        if (!string.IsNullOrEmpty(_ParentName))
-                            _Name = $"{this._ParentName}/{this._Name}";
-                    }
+                        _Name = this._Functions.Evaluate(name.GetString(), FullContext).ToString();
                 }
                 return _Name;
             }
@@ -216,14 +206,20 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Change(value, "name");
             }
         }
+        public string FullName
+        {
+            get
+            {
 
+                return string.IsNullOrEmpty(this._ParentName) ? this.Name : $"{this._ParentName}/{this.Name}";
+            }
+        }
         public string NameWithServiceType
         {
             get
             {
-                var ns = Name.Split('/');
-                var ts = Type.Split('/');
-                var s = $"ts[0]/ts[1]/ns[0]";
+                var ns = FullName.Split('/');
+                var ts = FullType.Split('/');
                 string nestr = string.Empty;
                 for (int i = 1; i < ns.Length; i++)
                 {
@@ -351,7 +347,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 using var dd = JsonDocument.Parse(dependsOn.GetRawText());
                 foreach (var item in dd.RootElement.EnumerateArray())
                 {
-                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input.Template.Resources);
+                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);
                 }
             }
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
@@ -365,7 +361,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 // so keep the original text
                 if (FullContext.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
                 {
-                    _DependsOn.AddRange(conditionDep as List<string>, Input.Template.Resources);
+                    _DependsOn.AddRange(conditionDep as List<string>, Input);
                     FullContext.Remove(ContextKeys.DEPENDSON);
                 }
             }
@@ -549,41 +545,53 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     List<object> pars = new List<object>{
                         SubscriptionId,
                         ResourceGroup,
-                        Type};
-                    pars.AddRange(Name.Split('/'));
+                        FullType};
+                    pars.AddRange(FullName.Split('/'));
                     return _Functions.ResourceId(Input, pars.ToArray());
                 }
                 if (Input.Template.DeployLevel == DeployLevel.Subscription)
                 {
-                    List<object> pars = new List<object> { SubscriptionId, Type };
-                    pars.AddRange(Name.Split('/'));
+                    List<object> pars = new List<object> { SubscriptionId, FullType };
+                    pars.AddRange(FullName.Split('/'));
                     return _Functions.SubscriptionResourceId(Input, pars.ToArray());
                 }
-                List<object> pars1 = new List<object> { Type };
-                pars1.AddRange(Name.Split('/'));
+                List<object> pars1 = new List<object> { FullType };
+                pars1.AddRange(FullName.Split('/'));
                 return _Functions.TenantResourceId(pars1.ToArray());
             }
         }
 
+        private Copy _Copy = null;
         public Copy Copy
         {
             get
             {
-                if (!RootElement.TryGetProperty("copy", out JsonElement copy))
-                    return null;
-                var cxt = new Dictionary<string, object> {
-                        {ContextKeys.ARM_CONTEXT,this.Input} };
-                if (ParentContext != null)
+                if (_Copy == null)
                 {
-                    foreach (var item in ParentContext)
-                    {
-                        cxt.Add(item.Key, item.Value);
-                    }
+                    if (RootElement.TryGetProperty("copy", out JsonElement copy))
+                        _Copy = new Copy(copy.GetRawText(), FullContext, this);
                 }
-                return Copy.Parse(copy, cxt, _Functions, ServiceProvider.GetService<IInfrastructure>());
+                return _Copy;
+
             }
         }
 
+        private ResourceCollection _Resources;
+        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
+        // You can't use a copy loop for a child resource.
+        [DisplayName("resources")]
+        public ResourceCollection Resources
+        {
+            get
+            {
+                if (_Resources == null)
+                {
+                    if (this.RootElement.TryGetProperty("resources", out JsonElement resourcesE))
+                        _Resources = new ResourceCollection(resourcesE.GetRawText(), this.FullContext, this.Name, this.Type);
+                }
+                return _Resources;
+            }
+        }
         public override string ToString()
         {
             return this.RootElement.GetRawText();
@@ -630,6 +638,20 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return (false, ex.Message);
             }
             return (true, string.Empty);
+        }
+
+        public IEnumerable<Resource> FlatEnumerateChild()
+        {
+            if (this.Resources == null)
+                yield break;
+            foreach (var child in this.Resources)
+            {
+                yield return child;
+                foreach (var nest in child.FlatEnumerateChild())
+                {
+                    yield return nest;
+                }
+            }
         }
     }
 }

@@ -256,29 +256,122 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public DependsOnCollection DependsOn { get; set; } = new DependsOnCollection();
 
-        
 
         public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
         {
             return template.Resources.EnumerateDeployments();
         }
-
-        /// <summary>
-        ///  all resource in this Deployment
-        /// </summary>
-        public IEnumerable<Resource> EnumerateResource()
+        public List<Resource> GetResources(string name, bool includeNestDeployment = false)
         {
-            foreach (var r in this.Template.Resources)
+            List<Resource> resources = new List<Resource>();
+            bool withServiceType = name.Contains('.');
+            foreach (var r in template.Resources)
             {
-                yield return r;
-            }
-            foreach (var d in this.template.Resources.EnumerateDeployments())
-            {
-                foreach (var r in d.EnumerateResource())
+                if (r.Copy != null)
                 {
-                    yield return r;
+                    if (withServiceType && r.Copy.Id.EndsWith(name)) resources.Add(r);
+                    else if (r.Copy.Name.EndsWith(name)) resources.Add(r);
+
+                    foreach (var item in r.Copy.EnumerateResource())
+                    {
+                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) resources.Add(r); }
+                        else if (item.FullName.EndsWith(name)) resources.Add(r);
+                    }
+                }
+                else
+                {
+                    if (withServiceType) { if (r.ResourceId.EndsWith(name)) resources.Add(r); }
+                    else if (r.FullName.EndsWith(name)) resources.Add(r);
+                }
+                foreach (var child in r.FlatEnumerateChild())
+                {
+                    if (withServiceType) { if (child.ResourceId.EndsWith(name)) resources.Add(child); }
+                    else if (r.FullName.EndsWith(name)) resources.Add(child);
                 }
             }
+            if (includeNestDeployment)
+            {
+                foreach (var deploy in this.EnumerateDeployments())
+                {
+                    resources.AddRange(deploy.GetResources(name, true));
+                }
+            }
+            return resources;
+        }
+        /// <summary>
+        /// all resource in this Deployment
+        /// </summary>
+        /// <param name="flatChild">
+        /// true: the result will include the child resource
+        /// false: the result will only include the parent resource
+        /// </param>
+        /// <param name="expandCopy">
+        /// true: the result will include all copied resources except the copy 
+        /// false: the result will only include the copy resource
+        /// </param>
+        /// <param name="flatDeployment">
+        /// true: the result will include all nest deployment‘resources  except the deployment 
+        /// false: the result will only include the deployment
+        /// </param>
+        /// <returns></returns>
+        public IEnumerable<Resource> EnumerateResource(bool flatChild = false, bool expandCopy = false, bool flatDeployment = false)
+        {
+            var infra = ServiceProvider.GetService<IInfrastructure>();
+            foreach (var r in this.Template.Resources)
+            {
+                if (flatDeployment && r.Type == infra.BuiltinServiceTypes.Deployments)
+                    continue;
+                if (expandCopy && r.Copy != null)
+                {
+                    if (flatDeployment && r.Type == infra.BuiltinServiceTypes.Deployments)
+                    {
+                        foreach (var c in r.Copy.EnumerateResource(true))
+                        {
+                            var deploy = DeploymentOrchestrationInput.Parse(c);
+                            foreach (var rInDeploy in deploy.EnumerateResource(flatChild, expandCopy, flatDeployment))
+                            {
+                                yield return rInDeploy;
+                            }
+                        }
+
+                    }
+                    else
+                    {
+                        foreach (var c in r.Copy.EnumerateResource(true))
+                        {
+                            yield return c;
+                        }
+                    }
+
+                    continue;
+                }
+                yield return r;
+                if (flatChild)
+                {
+                    foreach (var child in r.FlatEnumerateChild())
+                    {
+                        yield return child;
+                    }
+                }
+            }
+            if (flatDeployment)
+            {
+                foreach (var d in this.template.Resources.EnumerateDeployments())
+                {
+                    foreach (var r in d.EnumerateResource())
+                    {
+                        yield return r;
+                        if (flatChild)
+                        {
+                            foreach (var child in r.FlatEnumerateChild())
+                            {
+                                yield return child;
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
         public string GetResourceId(IInfrastructure infrastructure)

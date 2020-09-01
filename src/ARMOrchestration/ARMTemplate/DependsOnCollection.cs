@@ -1,4 +1,4 @@
-﻿using Dynamitey.DynamicObjects;
+﻿using maskx.ARMOrchestration.Orchestrations;
 using Newtonsoft.Json;
 using System;
 using System.Collections;
@@ -21,24 +21,27 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public bool IsReadOnly => true;
 
-        public void Add(string item, ResourceCollection resources)
+        public void Add(string item, DeploymentOrchestrationInput deployment)
         {
             if (!Contains(item))
             {
-                if (!resources.TryGetValue(item, out Resource r))
+                var resources = deployment.GetResources(item);
+                if (resources.Count == 0)
                     throw new Exception($"cannot find dependson resource named '{item}'");
+                if (resources.Count > 1)
+                    throw new Exception($"with the name of '{item}' find more than one resourc in the template");
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
                 // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
-                if (r.Condition)
+                if (resources[0].Condition)
                     _List.Add(item);
             }
         }
 
-        public void AddRange(IEnumerable<string> collection, ResourceCollection resources)
+        public void AddRange(IEnumerable<string> collection, DeploymentOrchestrationInput deployment)
         {
             foreach (var item in collection)
             {
-                Add(item, resources);
+                Add(item, deployment);
             }
         }
 

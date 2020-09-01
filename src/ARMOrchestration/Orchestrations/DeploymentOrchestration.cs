@@ -4,7 +4,6 @@ using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -151,7 +150,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region Provisioning resources
 
-            ConcurrentBag<Task<TaskResult>> tasks = new ConcurrentBag<Task<TaskResult>>();
+            List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
 
             foreach (var resource in input.Template.Resources)
             {
@@ -169,22 +168,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    var deploy = DeploymentOrchestrationInput.Parse(resource);
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         DeploymentOrchestration.Name,
                         "1.0",
-                        DataConverter.Serialize(deploy)));
+                        DataConverter.Serialize(DeploymentOrchestrationInput.Parse(resource))));
                 }
                 else
                 {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                                       ResourceOrchestration.Name,
-                                       "1.0",
-                                       new ResourceOrchestrationInput()
-                                       {
-                                           Resource = resource,
-                                           Input = input,
-                                       }));
+                    helper.ProvisioningResource(resource, tasks, context, input);
                 }
             }
 
@@ -273,7 +264,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             });
             return new TaskResult() { Code = hasFailResource ? 500 : 200, Content = rtv };
         }
-
+       
         private TaskCompletionSource<string> waitHandler = null;
 
         public override void OnEvent(OrchestrationContext context, string name, string input)

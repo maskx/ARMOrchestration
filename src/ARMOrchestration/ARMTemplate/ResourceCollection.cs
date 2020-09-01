@@ -90,23 +90,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     TrackingVersion = this.TrackingVersion
                 };
-
                 Add(r);
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
-                // You can't use a copy loop for a child resource.
-                if (resource.TryGetProperty("resources", out JsonElement _resources))
-                {
-                    ExpandResource(_resources, r.FullContext, r.Name, r.Type);
-                }
             }
         }
 
         internal JsonElement RootElement;
 
-        public ResourceCollection(string rawString, Dictionary<string, object> fullContext)
+        public ResourceCollection(string rawString, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
             this.RawString = rawString;
-            ExpandResource(this.RootElement, fullContext);
+            ExpandResource(this.RootElement, fullContext, parentName, parentType);
         }
 
         public virtual string RawString
@@ -195,12 +188,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (!this._Resources.TryGetValue(name, out List<Resource> rs))
                     return false;
                 if (rs.Count > 1)
-                    throw new Exception($"more than one resource have named '{name}',try to get resource by fullname or inclued Servcie Types)");
+                    return false;
+                //throw new Exception($"more than one resource have named '{name}',try to get resource by fullname or inclued Servcie Types)");
                 resource = rs[0];
                 return true;
             }
         }
-
+       
         public int Count
         {
             get
@@ -214,6 +208,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public void Add(Resource item)
         {
             string name = item.Name;
+            if (item.Copy != null)
+                name = item.Copy.Name;
             int index = name.IndexOf('/');
             if (index > 0)
                 name = name.Substring(index + 1);
@@ -357,17 +353,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
         {
             bool needInit = false;
-            if(this._Deployments==null)
+            if (this._Deployments == null)
             {
                 needInit = true;
                 this._Deployments = new List<DeploymentOrchestrationInput>();
             }
-            if(this.HasChanged || needInit)
+            if (this.HasChanged || needInit)
             {
                 var infra = _ServiceProvider.GetService<IInfrastructure>();
                 this._Deployments.Clear();
                 foreach (var item in this)
-                {                   
+                {
                     if (item.Type == infra.BuiltinServiceTypes.Deployments)
                     {
                         this._Deployments.Add(DeploymentOrchestrationInput.Parse(item));

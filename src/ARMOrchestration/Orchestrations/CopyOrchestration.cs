@@ -58,19 +58,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                                   ResourceOrchestration.Name,
-                                   "1.0",
-                                   new ResourceOrchestrationInput()
-                                   {
-                                       Resource = new Resource()
-                                       {
-                                           RawString = input.Resource.RawString,
-                                           CopyIndex = i,
-                                           ParentContext = ParentContext
-                                       },
-                                       Input = input.Input
-                                   }));
+                    helper.ProvisioningResource(new Resource()
+                    {
+                        RawString = input.Resource.RawString,
+                        CopyIndex = i,
+                        ParentContext = ParentContext
+                    }, tasks, context, input.Input);
                 }
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)

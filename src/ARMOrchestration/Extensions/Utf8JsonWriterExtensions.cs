@@ -78,7 +78,7 @@ namespace maskx.ARMOrchestration.Extensions
             {
                 foreach (var item in copyProperty.EnumerateArray())
                 {
-                    Copy copy = copy = Copy.Parse(item, context, functions, infrastructure);
+                    Copy copy = copy =new Copy(item.GetRawText(), context);
 
                     using JsonDocument doc = JsonDocument.Parse(copy.Input);
                     var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
