@@ -1,10 +1,8 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Xunit;
 
@@ -32,7 +30,7 @@ namespace ARMOrchestrationTest
             };
             Assert.Empty(input.Template.Resources);
 
-            // add new resource
+            #region add new resource
             input.Template.Resources.Add(new Resource()
             {
                 Type = "rp/st",
@@ -44,8 +42,9 @@ namespace ARMOrchestrationTest
 
             var r = input.Template.Resources.First();
             Assert.Equal("Name1", r.Name);
+            #endregion
 
-            // change resource's name property
+            #region change resource's name property
             r.Name = "Name1-Changed";
 
             using var doc1 = JsonDocument.Parse(input.Template.RawString);
@@ -54,8 +53,9 @@ namespace ARMOrchestrationTest
             var resE = resourcesE.EnumerateArray().First();
             Assert.True(resE.TryGetProperty("name", out JsonElement nameE));
             Assert.Equal("Name1-Changed", nameE.GetString());
+            #endregion
 
-            // change resource's properties property
+            #region change resource's properties property
             r.RawProperties = "{\"p1\":123}";
             Assert.Equal("{\"p1\":123}", r.Properties);
             using var doc2 = JsonDocument.Parse(input.Template.RawString);
@@ -64,8 +64,9 @@ namespace ARMOrchestrationTest
             var res2 = resourcesE.EnumerateArray().First();
             Assert.True(res2.TryGetProperty("properties", out JsonElement properties));
             Assert.Equal("{\"p1\":123}", properties.GetRawText());
+            #endregion
 
-            // modify DependsOn
+            #region modify DependsOn
 
             Assert.Empty(r.DependsOn);
             input.Template.Resources.Add(new Resource()
@@ -93,6 +94,25 @@ namespace ARMOrchestrationTest
             Assert.Equal(JsonValueKind.Array, dependsOnE.ValueKind);
             Assert.Single(dependsOnE.EnumerateArray());
             Assert.Equal("Name1-Changed", dependsOnE.EnumerateArray().First().GetString());
+
+            #endregion
+
+            #region Zones
+            Assert.Empty(r.Zones);
+            r.Zones.Add("zone1");
+            Assert.Single(r.Zones);
+            using var docZone = JsonDocument.Parse(r.RawString);
+            Assert.True(docZone.RootElement.TryGetProperty("zones",out JsonElement zonesE));
+            Assert.Equal(JsonValueKind.Array, zonesE.ValueKind);
+            Assert.Single(zonesE.EnumerateArray());
+            Assert.Equal("zone1", zonesE.EnumerateArray().First().GetString());
+            r.Zones.Remove("zone1");
+            Assert.Empty(r.Zones);
+            using var doczoneEmpty = JsonDocument.Parse(r.RawString);
+            Assert.True(doczoneEmpty.RootElement.TryGetProperty("zones", out JsonElement zonesEmpty));
+            Assert.Equal(JsonValueKind.Array, zonesEmpty.ValueKind);
+            Assert.Empty(zonesEmpty.EnumerateArray());
+            #endregion
         }
     }
 }

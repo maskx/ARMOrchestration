@@ -341,7 +341,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         private void LazyLoadDependsOnAnProperties()
         {
             _PropertiesNeedReload = false;
-            if(_DependsOn==null)
+            if (_DependsOn == null)
             {
                 _DependsOn = new DependsOnCollection();
                 if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
@@ -352,7 +352,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);
                     }
                 }
-            }            
+            }
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
             if (this.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 _Properties = RawProperties.RawString;
@@ -385,6 +385,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _SKU = new SKU() { Name = SKU.Default };
                 }
                 return _SKU;
+            }
+            set
+            {
+                _SKU = value;
+                Change(value, "sku");
             }
         }
 
@@ -431,17 +436,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private List<string> _Zones;
+        private ZoneCollection _Zones;
 
         // todo: support modify
         [DisplayName("zones")]
-        public List<string> Zones
+        public ZoneCollection Zones
         {
             get
             {
                 if (_Zones == null)
                 {
-                    _Zones = new List<string>();
+                    _Zones = new ZoneCollection();
                     if (RootElement.TryGetProperty("zones", out JsonElement zones))
                     {
                         if (zones.ValueKind == JsonValueKind.Array)
