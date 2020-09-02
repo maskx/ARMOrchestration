@@ -611,21 +611,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         internal (bool, string) Validate()
         {
+            bool rtv = true;
+            string msg = string.Empty;
             try
             {
                 if (!RootElement.TryGetProperty("type", out JsonElement type))
                     return (false, "not find type in resource node");
                 if (this.Copy != null && !this.CopyIndex.HasValue)
                 {
-                    // using first resource validate copy resource content
-                    var r = new Resource()
+                    foreach (var r in this.Copy.EnumerateResource())
                     {
-                        RawString = this.RawString,
-                        CopyIndex = 0,
-                        ParentContext = ParentContext,
-                        Input = Input
-                    };
-                    return r.Validate();
+                        (rtv, msg) = r.Validate();
+                        if (!rtv) return (rtv, msg);
+                    }
                 }
                 else
                 {
@@ -638,11 +636,21 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     _ = this.Kind;
                     if (this.Plan != null)
                     {
-                        var (pv, pm) = this.Plan.Validate();
-                        if (!pv) return (pv, pm);
+                        (rtv, msg) = this.Plan.Validate();
+                        if (!rtv) return (rtv, msg);
                     }
                     // validate properties and dependson and parameter and variables
                     LazyLoadDependsOnAnProperties();
+                    // validate child
+                    if (this.Resources != null)
+                    {
+                        foreach (var child in this.Resources)
+                        {
+                            (rtv, msg) = child.Validate();
+                            if (!rtv)
+                                return (rtv, msg);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
