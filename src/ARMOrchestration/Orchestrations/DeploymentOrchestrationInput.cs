@@ -261,6 +261,44 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             return template.Resources.EnumerateDeployments();
         }
+        public Resource GetFirstResource(string name, bool includeNestDeployment = false)
+        {
+            bool withServiceType = name.Contains('.');
+            foreach (var r in template.Resources)
+            {
+                if (r.Copy != null)
+                {
+                    if (withServiceType) { if (r.Copy.Id.EndsWith(name)) return r; }
+                    else if (r.Copy.Name.EndsWith(name)) return r;
+
+                    foreach (var item in r.Copy.EnumerateResource())
+                    {
+                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) return r; }
+                        else if (item.FullName.EndsWith(name)) return r;
+                    }
+                }
+                else
+                {
+                    if (withServiceType) { if (r.ResourceId.EndsWith(name)) return r; }
+                    else if (r.FullName.EndsWith(name)) return r;
+                }
+                foreach (var child in r.FlatEnumerateChild())
+                {
+                    if (withServiceType) { if (child.ResourceId.EndsWith(name)) return r; }
+                    else if (r.FullName.EndsWith(name)) return r;
+                }
+            }
+            if (includeNestDeployment)
+            {
+                foreach (var deploy in this.EnumerateDeployments())
+                {
+                    var dr = deploy.GetFirstResource(name, includeNestDeployment);
+                    if (dr != null)
+                        return dr;
+                }
+            }
+            return null;
+        }
         public List<Resource> GetResources(string name, bool includeNestDeployment = false)
         {
             List<Resource> resources = new List<Resource>();
@@ -269,7 +307,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (r.Copy != null)
                 {
-                    if (withServiceType && r.Copy.Id.EndsWith(name)) resources.Add(r);
+                    if (withServiceType) { if (r.Copy.Id.EndsWith(name)) resources.Add(r); }
                     else if (r.Copy.Name.EndsWith(name)) resources.Add(r);
 
                     foreach (var item in r.Copy.EnumerateResource())
