@@ -44,7 +44,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region validate template
 
-            helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure)
+            helper.SaveDeploymentOperation(new DeploymentOperation(input)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -71,7 +71,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              });
                 if (injectBeforeDeploymenteResult.Code != 200)
                 {
-                    helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                    helper.SaveDeploymentOperation(new DeploymentOperation(input)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -93,7 +93,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
                     {
-                        helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                        helper.SaveDeploymentOperation(new DeploymentOperation(input)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -123,7 +123,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         RootId = input.RootId,
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        DeploymentOperation = new DeploymentOperation(input, infrastructure)
+                        DeploymentOperation = new DeploymentOperation(input)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId
@@ -133,7 +133,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var r = DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
                 if (r.Code != 200)
                 {
-                    helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                    helper.SaveDeploymentOperation(new DeploymentOperation(input)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -203,7 +203,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
                     {
-                        helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+                        helper.SaveDeploymentOperation(new DeploymentOperation(input)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -255,7 +255,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion get template outputs
 
-            helper.SaveDeploymentOperation(new DeploymentOperation(input, infrastructure, null)
+            helper.SaveDeploymentOperation(new DeploymentOperation(input)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,

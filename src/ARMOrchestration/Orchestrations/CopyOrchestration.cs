@@ -92,7 +92,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             if (msg.Count > 0)
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, infrastructure, input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -104,7 +104,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             else
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, infrastructure, input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,

@@ -120,7 +120,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 RootId = deploymentContext.RootId,
                 DeploymentId = Guid.NewGuid().ToString("N"),
-                ParentId = deploymentContext.GetResourceId(infrastructure),
+                ParentId = deploymentContext.ResourceId,
                 GroupId = groupId,
                 GroupType = groupType,
                 HierarchyId = hierarchyId,
@@ -411,20 +411,22 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
         }
-
-        public string GetResourceId(IInfrastructure infrastructure)
+        public string ResourceId
         {
-            string resourceId = string.Empty;
-            if (!string.IsNullOrEmpty(this.SubscriptionId))
-                resourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{this.SubscriptionId}";
-            if (!string.IsNullOrEmpty(this.ManagementGroupId))
-                resourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{this.ManagementGroupId}";
-            if (!string.IsNullOrEmpty(this.ResourceGroup))
-                resourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{this.ResourceGroup}";
-            resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{this.DeploymentName}";
-            return resourceId;
+            get
+            {
+                var infrastructure = ServiceProvider.GetService<IInfrastructure>();
+                string resourceId = string.Empty;
+                if (!string.IsNullOrEmpty(this.SubscriptionId))
+                    resourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{this.SubscriptionId}";
+                if (!string.IsNullOrEmpty(this.ManagementGroupId))
+                    resourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{this.ManagementGroupId}";
+                if (!string.IsNullOrEmpty(this.ResourceGroup))
+                    resourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{this.ResourceGroup}";
+                resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{this.DeploymentName}";
+                return resourceId;
+            }
         }
-
         public Dictionary<string, object> Context = new Dictionary<string, object>();
     }
 }

@@ -64,7 +64,7 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentNullException("CreateByUserId");
             if (args.ServiceProvider == null)
                 args.ServiceProvider = _ServiceProvider;
-            var operation = new DeploymentOperation(args, this._Infrastructure)
+            var operation = new DeploymentOperation(args)
             {
                 RootId = args.DeploymentId,
                 InstanceId = args.DeploymentId,

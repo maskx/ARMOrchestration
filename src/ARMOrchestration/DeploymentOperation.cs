@@ -1,6 +1,7 @@
 ﻿using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration
 {
@@ -10,47 +11,35 @@ namespace maskx.ARMOrchestration
         {
         }
 
-        public DeploymentOperation(DeploymentOrchestrationInput deploymentContext, IInfrastructure infrastructure, Resource resource = null)
+        public DeploymentOperation(DeploymentOrchestrationInput deploymentInput, Resource resource = null)
         {
-            this.GroupType = deploymentContext.GroupType;
-            this.GroupId = deploymentContext.GroupId;
-            this.HierarchyId = deploymentContext.HierarchyId;
-            this.RootId = deploymentContext.RootId;
-            this.DeploymentId = deploymentContext.DeploymentId;
-            this.CorrelationId = deploymentContext.CorrelationId;
-            this.CreateByUserId = deploymentContext.CreateByUserId;
-            if (string.IsNullOrEmpty(deploymentContext.LastRunUserId))
+            this.GroupType = deploymentInput.GroupType;
+            this.GroupId = deploymentInput.GroupId;
+            this.HierarchyId = deploymentInput.HierarchyId;
+            this.RootId = deploymentInput.RootId;
+            this.DeploymentId = deploymentInput.DeploymentId;
+            this.CorrelationId = deploymentInput.CorrelationId;
+            this.CreateByUserId = deploymentInput.CreateByUserId;
+            if (string.IsNullOrEmpty(deploymentInput.LastRunUserId))
                 this.LastRunUserId = this.CreateByUserId;
             else
-                this.LastRunUserId = deploymentContext.LastRunUserId;
+                this.LastRunUserId = deploymentInput.LastRunUserId;
             if (resource == null)
             {
-                if (!string.IsNullOrEmpty(deploymentContext.SubscriptionId))
-                {
-                    this.SubscriptionId = deploymentContext.SubscriptionId;
-                    this.ResourceId = $"/{infrastructure.BuiltinPathSegment.Subscription}/{deploymentContext.SubscriptionId}";
-                }
-                if (!string.IsNullOrEmpty(deploymentContext.ManagementGroupId))
-                {
-                    this.ManagementGroupId = deploymentContext.ManagementGroupId;
-                    this.ResourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{deploymentContext.ManagementGroupId}";
-                }
-                if (!string.IsNullOrEmpty(deploymentContext.ResourceGroup))
-                    this.ResourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{deploymentContext.ResourceGroup}";
-                this.ResourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{deploymentContext.DeploymentName}";
-
+                IInfrastructure infrastructure = deploymentInput.ServiceProvider.GetService<IInfrastructure>();
+                this.ResourceId = deploymentInput.ResourceId;
                 this.Type = infrastructure.BuiltinServiceTypes.Deployments;
-                this.Name = deploymentContext.DeploymentName;
-                this.ParentResourceId = deploymentContext.ParentId;
-                this.SubscriptionId = deploymentContext.SubscriptionId;
-                this.ManagementGroupId = deploymentContext.ManagementGroupId;
+                this.Name = deploymentInput.DeploymentName;
+                this.ParentResourceId = deploymentInput.ParentId;
+                this.SubscriptionId = deploymentInput.SubscriptionId;
+                this.ManagementGroupId = deploymentInput.ManagementGroupId;
             }
             else
             {
                 this.ResourceId = resource.ResourceId;
                 this.Name = resource.Name;
                 this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.Type : resource.Type;
-                this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : deploymentContext.GetResourceId(infrastructure);
+                this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : deploymentInput.ResourceId;
                 this.SubscriptionId = resource.SubscriptionId;
                 this.ManagementGroupId = resource.ManagementGroupId;
             }
