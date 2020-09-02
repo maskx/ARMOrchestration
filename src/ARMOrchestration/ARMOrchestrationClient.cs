@@ -61,14 +61,6 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentNullException("CreateByUserId");
             if (args.ServiceProvider == null)
                 args.ServiceProvider = _ServiceProvider;
-            var operation = new DeploymentOperation(args)
-            {
-                RootId = args.DeploymentId,
-                InstanceId = args.DeploymentId,
-                ExecutionId = "PLACEHOLDER",
-                Stage = ProvisioningStage.Pending,
-                Input = _DataConverter.Serialize(args)
-            };
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
@@ -79,9 +71,14 @@ namespace maskx.ARMOrchestration
                 },
                 Input = _DataConverter.Serialize(args)
             });
-
-            operation.ExecutionId = instance.ExecutionId;
-            return operation;
+            return new DeploymentOperation(args)
+            {
+                RootId = args.DeploymentId,
+                InstanceId = args.DeploymentId,
+                ExecutionId = instance.ExecutionId,
+                Stage = ProvisioningStage.Pending,
+                Input = _DataConverter.Serialize(args)
+            };
         }
 
         /// <summary>

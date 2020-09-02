@@ -1,14 +1,9 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
@@ -18,17 +13,14 @@ namespace maskx.ARMOrchestration.Orchestrations
         public const string Name = "DeploymentOrchestration";
         private readonly ARMTemplateHelper helper;
         private readonly IInfrastructure infrastructure;
-        private readonly ARMFunctions _ARMFunctions;
         private readonly IServiceProvider _ServiceProvider;
 
         public DeploymentOrchestration(
             ARMTemplateHelper helper,
             IInfrastructure infrastructure,
-            ARMFunctions aRMFunctions,
             IServiceProvider serviceProvider)
         {
             this._ServiceProvider = serviceProvider;
-            this._ARMFunctions = aRMFunctions;
             this.helper = helper;
             this.infrastructure = infrastructure;
         }
@@ -41,18 +33,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 input.RootId = input.DeploymentId;
             }
-
-            #region validate template
-
-            helper.SaveDeploymentOperation(new DeploymentOperation(input)
-            {
-                InstanceId = context.OrchestrationInstance.InstanceId,
-                ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Input = arg,
-                Stage = ProvisioningStage.ValidateTemplate
-            });
-
-            #endregion validate template
 
             #region InjectBeforeDeployment
 

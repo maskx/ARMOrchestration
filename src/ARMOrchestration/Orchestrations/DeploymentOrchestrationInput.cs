@@ -412,6 +412,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
         }
+        [JsonIgnore]
         public string ResourceId
         {
             get

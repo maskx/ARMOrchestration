@@ -1,17 +1,12 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.SQL;
 using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
@@ -19,19 +14,12 @@ namespace maskx.ARMOrchestration
     public class ARMTemplateHelper
     {
         private readonly ARMOrchestrationOptions options;
-        public readonly ARMFunctions ARMfunctions;
-        public readonly IInfrastructure infrastructure;
-
         private readonly string _saveDeploymentOperationCommandString;
 
         public ARMTemplateHelper(
-            IOptions<ARMOrchestrationOptions> options,
-            ARMFunctions functions,
-            IInfrastructure infrastructure)
+            IOptions<ARMOrchestrationOptions> options)
         {
             this.options = options?.Value;
-            this.ARMfunctions = functions;
-            this.infrastructure = infrastructure;
 
             this._saveDeploymentOperationCommandString = string.Format(@"
 MERGE {0} with (serializable) [Target]
