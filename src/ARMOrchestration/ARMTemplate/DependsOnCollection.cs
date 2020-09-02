@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class DependsOnCollection : IEnumerable<string>
+    public class DependsOnCollection : IEnumerable<string>, IChangeTracking
     {
         [JsonProperty]
         private List<string> _List = new List<string>();
@@ -20,6 +20,29 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public int Count => _List.Count;
 
         public bool IsReadOnly => true;
+        private long _OldVersion;
+        private long _NewVersion;
+
+        public long TrackingVersion
+        {
+            get { return _NewVersion; }
+            set { _OldVersion = _NewVersion = value; }
+        }
+
+        public bool HasChanged
+        {
+            get
+            {
+                return _NewVersion == _OldVersion;
+            }
+        }
+      
+
+        public bool Accepet(long newVersion = 0)
+        {
+            this.TrackingVersion = newVersion;
+            return true;
+        }
 
         public void Add(string item, DeploymentOrchestrationInput deployment)
         {
@@ -33,7 +56,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
                 // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
                 if (resources[0].Condition)
+                {
+                    Change(null, null);
                     _List.Add(item);
+                }
+                    
             }
         }
 
@@ -45,9 +72,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
+        public void Change(object value, string name = "")
+        {
+            this._NewVersion = DateTime.Now.Ticks;
+        }
+
         public void Clear()
         {
             _List.Clear();
+            Change(null, null);
         }
 
         public bool Contains(string item)
@@ -124,12 +157,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
             if (index == -1)
                 return false;
             _List.RemoveAt(index);
+            Change(null, null);
             return true;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return _List.GetEnumerator();
+        }
+        public override string ToString()
+        {
+            if (_List.Count == 0)
+                return "[]";
+            return $"[\"{string.Join("\",\"", _List)}\"]";
         }
     }
 }

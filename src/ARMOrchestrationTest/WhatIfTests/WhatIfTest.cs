@@ -19,12 +19,7 @@ namespace ARMOrchestrationTest.WhatIfTests
                     ConnectionString = TestHelper.ConnectionString,
                     AutoCreate = true
                 }
-            }),
-            new ARMFunctions(
-                Options.Create(new ARMOrchestrationOptions()),
-                null,
-                new Mock.MockInfrastructure(null)),
-            new Mock.MockInfrastructure(null));
+            }));
 
         [Fact(DisplayName = "WhatIfIncremental")]
         public void WhatIfIncremental()

@@ -341,15 +341,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
         private void LazyLoadDependsOnAnProperties()
         {
             _PropertiesNeedReload = false;
-            _DependsOn = new DependsOnCollection();
-            if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
+            if(_DependsOn==null)
             {
-                using var dd = JsonDocument.Parse(dependsOn.GetRawText());
-                foreach (var item in dd.RootElement.EnumerateArray())
+                _DependsOn = new DependsOnCollection();
+                if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
                 {
-                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);
+                    using var dd = JsonDocument.Parse(dependsOn.GetRawText());
+                    foreach (var item in dd.RootElement.EnumerateArray())
+                    {
+                        _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);
+                    }
                 }
-            }
+            }            
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
             if (this.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 _Properties = RawProperties.RawString;

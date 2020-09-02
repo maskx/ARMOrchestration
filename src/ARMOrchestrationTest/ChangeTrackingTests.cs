@@ -3,6 +3,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -63,6 +64,35 @@ namespace ARMOrchestrationTest
             var res2 = resourcesE.EnumerateArray().First();
             Assert.True(res2.TryGetProperty("properties", out JsonElement properties));
             Assert.Equal("{\"p1\":123}", properties.GetRawText());
+
+            // modify DependsOn
+
+            Assert.Empty(r.DependsOn);
+            input.Template.Resources.Add(new Resource()
+            {
+                Type = "rp/st",
+                Name = "Name2",
+                RawProperties = "{}",
+            });
+            var r2 = input.Template.Resources["Name2"];
+            Assert.Empty(r2.DependsOn);
+            Assert.Throws<Exception>(() =>
+           {
+               r2.DependsOn.Add("Name1", input);
+           });
+            r2.DependsOn.Add("Name1-Changed", input);
+            Assert.Single(r2.DependsOn);
+            r2.DependsOn.Remove("Name1-Changed");
+            Assert.Empty(r2.DependsOn);
+
+            r2.RawProperties = "{\"property1\":\"[reference('Name1-Changed',true).name]\"}";
+            Assert.Single(r2.DependsOn);
+
+            using var docr2 = JsonDocument.Parse(r2.RawString);
+            Assert.True(docr2.RootElement.TryGetProperty("dependsOn", out JsonElement dependsOnE));
+            Assert.Equal(JsonValueKind.Array, dependsOnE.ValueKind);
+            Assert.Single(dependsOnE.EnumerateArray());
+            Assert.Equal("Name1-Changed", dependsOnE.EnumerateArray().First().GetString());
         }
     }
 }
