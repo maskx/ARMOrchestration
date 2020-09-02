@@ -286,7 +286,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 foreach (var child in r.FlatEnumerateChild())
                 {
                     if (withServiceType) { if (child.ResourceId.EndsWith(name)) return r; }
-                    else if (r.FullName.EndsWith(name)) return r;
+                    else if (child.FullName.EndsWith(name)) return r;
                 }
             }
             if (includeNestDeployment)
@@ -325,7 +325,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 foreach (var child in r.FlatEnumerateChild())
                 {
                     if (withServiceType) { if (child.ResourceId.EndsWith(name)) resources.Add(child); }
-                    else if (r.FullName.EndsWith(name)) resources.Add(child);
+                    else if (child.FullName.EndsWith(name)) resources.Add(child);
                 }
             }
             if (includeNestDeployment)

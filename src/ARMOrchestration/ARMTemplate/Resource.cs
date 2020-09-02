@@ -356,6 +356,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
             if (this.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 _Properties = RawProperties.RawString;
+            else if (Copy != null && !CopyIndex.HasValue)
+            {
+                _Properties = RawProperties.RawString;
+            }
             else
             {
                 _Properties = RawProperties.RootElement.ExpandObject(FullContext, _Functions, infrastructure);

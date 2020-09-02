@@ -62,7 +62,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         RawString = input.Resource.RawString,
                         CopyIndex = i,
-                        ParentContext = ParentContext
+                        ParentContext = ParentContext,
+                        Input = input.Input
                     }, tasks, context, input.Input);
                 }
 
