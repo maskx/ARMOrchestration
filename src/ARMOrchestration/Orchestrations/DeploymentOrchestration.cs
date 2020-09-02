@@ -244,7 +244,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 try
                 {
-                    rtv = this.GetOutputs(input);
+                    rtv = input.GetOutputs();
                 }
                 catch (Exception ex)
                 {
@@ -275,56 +275,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
         }
 
-        private string GetOutputs(DeploymentOrchestrationInput input)
-        {
-            // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
-
-            Dictionary<string, object> context = new Dictionary<string, object>() {
-                {"armcontext",input }
-            };
-            var outputDefineElement = input.Template.Outputs.RootElement;
-            using MemoryStream ms = new MemoryStream();
-            using Utf8JsonWriter writer = new Utf8JsonWriter(ms, new JsonWriterOptions() { Indented = false });
-            writer.WriteStartObject();
-            writer.WriteString("id", input.DeploymentId);
-            // TODO: set location
-            writer.WriteString("location", input.ResourceGroup);
-            writer.WriteString("name", input.DeploymentName);
-            writer.WriteString("type", infrastructure.BuiltinServiceTypes.Deployments);
-
-            #region properties
-
-            writer.WritePropertyName("properties");
-            writer.WriteStartObject();
-
-            #region outputs
-
-            writer.WritePropertyName("outputs");
-            writer.WriteStartObject();
-            foreach (var item in outputDefineElement.EnumerateObject())
-            {
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-outputs?tabs=azure-powershell#conditional-output
-                if (item.Value.TryGetProperty("condition", out JsonElement condition))
-                {
-                    if (condition.ValueKind == JsonValueKind.False)
-                        continue;
-                    if (condition.ValueKind == JsonValueKind.String &&
-                        !(bool)this._ARMFunctions.Evaluate(condition.GetString(), context))
-                        continue;
-                }
-                writer.WriteProperty(item, context, helper.ARMfunctions, infrastructure);
-            }
-            writer.WriteEndObject();
-
-            #endregion outputs
-
-            writer.WriteEndObject();
-
-            #endregion properties
-
-            writer.WriteEndObject();
-            writer.Flush();
-            return Encoding.UTF8.GetString(ms.ToArray());
-        }
+      
     }
 }

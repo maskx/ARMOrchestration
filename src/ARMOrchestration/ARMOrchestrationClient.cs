@@ -19,19 +19,16 @@ namespace maskx.ARMOrchestration
         private readonly string _GetAllResourceListCommandString;
         private readonly ARMOrchestrationOptions _Options;
         private readonly IServiceProvider _ServiceProvider;
-        private readonly IInfrastructure _Infrastructure;
 
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
-            IInfrastructure infrastructure,
             IServiceProvider serviceProvider)
         {
             this._ServiceProvider = serviceProvider;
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
             this._Options = options?.Value;
 
-            this._Infrastructure = infrastructure;
             this._GetResourceListCommandString = string.Format("select * from {0} where deploymentId=@deploymentId",
                 this._Options.Database.DeploymentOperationsTableName);
             this._GetAllResourceListCommandString = string.Format("select * from {0} where RootId=@RootId",

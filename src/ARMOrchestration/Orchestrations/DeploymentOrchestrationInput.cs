@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using maskx.ARMOrchestration.Extensions;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -428,5 +429,56 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
         }
         public Dictionary<string, object> Context = new Dictionary<string, object>();
+
+        public string GetOutputs()
+        {
+            // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
+            var infrastructure = ServiceProvider.GetService<IInfrastructure>();
+            var aRMFunctions = ServiceProvider.GetService<ARMFunctions>();
+            Dictionary<string, object> context = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, this } };
+            var outputDefineElement = this.Template.Outputs.RootElement;
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms, new JsonWriterOptions() { Indented = false });
+            writer.WriteStartObject();
+            writer.WriteString("id", this.DeploymentId);
+            // TODO: set location
+            writer.WriteString("location", this.ResourceGroup);
+            writer.WriteString("name", this.DeploymentName);
+            writer.WriteString("type", infrastructure.BuiltinServiceTypes.Deployments);
+
+            #region properties
+
+            writer.WritePropertyName("properties");
+            writer.WriteStartObject();
+
+            #region outputs
+
+            writer.WritePropertyName("outputs");
+            writer.WriteStartObject();
+            foreach (var item in outputDefineElement.EnumerateObject())
+            {
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-outputs?tabs=azure-powershell#conditional-output
+                if (item.Value.TryGetProperty("condition", out JsonElement condition))
+                {
+                    if (condition.ValueKind == JsonValueKind.False)
+                        continue;
+                    if (condition.ValueKind == JsonValueKind.String &&
+                        !(bool)aRMFunctions.Evaluate(condition.GetString(), context))
+                        continue;
+                }
+                writer.WriteProperty(item, context, aRMFunctions, infrastructure);
+            }
+            writer.WriteEndObject();
+
+            #endregion outputs
+
+            writer.WriteEndObject();
+
+            #endregion properties
+
+            writer.WriteEndObject();
+            writer.Flush();
+            return Encoding.UTF8.GetString(ms.ToArray());
+        }
     }
 }
