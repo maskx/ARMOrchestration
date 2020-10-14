@@ -2,7 +2,6 @@
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
-using System;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
@@ -20,18 +19,11 @@ values
         private readonly string commandText;
         private readonly ARMOrchestrationOptions options;
         private readonly ARMTemplateHelper templateHelper;
-        private readonly IInfrastructure infrastructure;
-        private readonly IServiceProvider _ServiceProvider;
 
-        public WaitDependsOnActivity(IOptions<ARMOrchestrationOptions> options,
-            ARMTemplateHelper templateHelper,
-            IInfrastructure infrastructure,
-          IServiceProvider serviceProvider)
+        public WaitDependsOnActivity(IOptions<ARMOrchestrationOptions> options,ARMTemplateHelper templateHelper)
         {
-            this._ServiceProvider = serviceProvider;
             this.options = options?.Value;
             this.templateHelper = templateHelper;
-            this.infrastructure = infrastructure;
             this.commandText = string.Format(commandTemplate, this.options.Database.WaitDependsOnTableName);
         }
 

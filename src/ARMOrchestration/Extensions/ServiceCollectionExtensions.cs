@@ -121,7 +121,7 @@ namespace maskx.ARMOrchestration.Extensions
                 activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
                 return activityTypes;
             };
-            services.UsingOrchestration(sqlServerConfiguration);
+            services.UsingOrchestration((sp)=>sqlServerConfiguration);
 
             #region WaitDependsOnWorker
 

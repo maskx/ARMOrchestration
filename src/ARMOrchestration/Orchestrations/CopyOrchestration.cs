@@ -4,7 +4,6 @@ using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -28,9 +27,8 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             input.ServiceProvider = _ServiceProvider;
             var copy = input.Resource.Copy;
-            ConcurrentBag<string> msg = new ConcurrentBag<string>();
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
-
+            List<ErrorResponse> errorResponses = new List<ErrorResponse>();
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
             // You can't use a copy loop for a child resource.
             for (int i = 0; i < copy.Count; i++)
@@ -75,10 +73,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     foreach (var item in tasks)
                     {
                         if (item.IsCompleted)
-                        {
-                            if (item.Result.Code != 200)
-                                msg.Add(item.Result.Content);
-                        }
+                            helper.ParseTaskResult(Name,errorResponses, item);
                         else
                             temp.Add(item);
                     }
@@ -88,10 +83,9 @@ namespace maskx.ARMOrchestration.Orchestrations
             await Task.WhenAll(tasks);
             foreach (var item in tasks)
             {
-                if (item.Result.Code != 200)
-                    msg.Add(item.Result.Content);
+                helper.ParseTaskResult(Name,errorResponses, item);
             }
-            if (msg.Count > 0)
+            if (errorResponses.Count > 0)
             {
                 helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
                 {
@@ -99,9 +93,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.Failed,
                     Input = DataConverter.Serialize(input),
-                    Result = string.Join(Environment.NewLine, msg.ToArray())
+                    Result = DataConverter.Serialize(errorResponses)
                 });
-                return new TaskResult() { Code = 500, Content = string.Join(Environment.NewLine, msg.ToArray()) };
+                return new TaskResult(500, errorResponses);
             }
             else
             {

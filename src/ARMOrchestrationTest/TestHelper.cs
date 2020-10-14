@@ -100,7 +100,7 @@ namespace ARMOrchestrationTest
         {
             var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename, managementGroupId);
             Assert.Equal(200, taskResult.Code);
-            var outputString = taskResult.Content;
+            var outputString = taskResult.Content.ToString();
             var templateString = TestHelper.GetFunctionInputContent(filename);
             using var templateDoc = JsonDocument.Parse(templateString);
             using var outputDoc = JsonDocument.Parse(outputString);
@@ -172,7 +172,7 @@ namespace ARMOrchestrationTest
              {
                  config
                  .AddJsonFile("appsettings.json", optional: true)
-                 .AddUserSecrets("D2705D0C-A231-4B0D-84B4-FD2BFC6AD8F0");
+                 .AddUserSecrets("afab7740-fb18-44a0-9f16-b94c3327da7e");
              })
              .ConfigureServices((hostContext, services) =>
              {
@@ -184,7 +184,6 @@ namespace ARMOrchestrationTest
                  };
                  if (communicationWorkerOptions != null)
                  {
-                     options.GetFetchRules = communicationWorkerOptions.GetFetchRules;
                      options.HubName = communicationWorkerOptions.HubName;
                      options.MaxConcurrencyRequest = communicationWorkerOptions.MaxConcurrencyRequest;
                      options.RuleFields.AddRange(communicationWorkerOptions.RuleFields);

@@ -51,7 +51,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                     && instance.InstanceId == args.InstanceId;
                 }, (instance, cxt) =>
                 {
-                    var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content;
+                    var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content.ToString();
                     using var templateDoc = JsonDocument.Parse(TestHelper.GetTemplateContent("CopyIndex/VariableIteration"));
                     using var outputDoc = JsonDocument.Parse(outputString);
                     var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");

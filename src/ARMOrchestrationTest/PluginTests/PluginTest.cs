@@ -66,7 +66,7 @@ namespace ARMOrchestrationTest.PluginTests
                     Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
                     var r = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
                     Assert.Equal(200, r.Code);
-                    var r1 = JObject.Parse(r.Content);
+                    var r1 = JObject.Parse(r.Content.ToString());
                     var r2 = r1["properties"]["outputs"] as JObject;
                     Assert.True(r2.ContainsKey("BeforeDeploy"));
                     Assert.Equal("BeforeDeploymentOrchestration", r2["BeforeDeploy"]["value"].ToString());

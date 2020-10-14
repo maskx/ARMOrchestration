@@ -210,7 +210,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             string name = item.Name;
             if (item.Copy != null)
                 name = item.Copy.Name;
-            int index = name.IndexOf('/');
+            int index = name.LastIndexOf('/');
             if (index > 0)
                 name = name.Substring(index + 1);
             if (!_Resources.TryGetValue(name, out List<Resource> rs))

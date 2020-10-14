@@ -37,7 +37,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                   Assert.True(args.Status);
                   var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
                   Assert.Equal(200, r.Code);
-                  using var doc = JsonDocument.Parse(r.Content);
+                  using var doc = JsonDocument.Parse(r.Content.ToString());
                   var root = doc.RootElement;
                   Assert.True(root.GetProperty("properties").GetProperty("outputs").TryGetProperty("messageFromLinkedTemplate", out JsonElement messageFromLinkedTemplate));
 

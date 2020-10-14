@@ -49,8 +49,33 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return name.GetString();
             }
         }
+        public string Type
+        {
+            get { return Copy.ServiceType; }
+        }
+        public string FullType { get { return $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}"; } }
+        public string FullName
+        {
+            get
+            {
 
-        public string Type { get { return $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}"; } }
+                return $"{DeploymentOrchestrationInput.DeploymentName}/{this.Name}";
+            }
+        }
+        public string NameWithServiceType
+        {
+            get
+            {
+                var ns = FullName.Split('/');
+                var ts = FullType.Split('/');
+                string nestr = string.Empty;
+                for (int i = 1; i < ns.Length; i++)
+                {
+                    nestr += $"/{ts[i + 1]}/{ns[i]}";
+                }
+                return $"{ts[0]}/{ts[1]}/{ns[0]}{nestr}";
+            }
+        }
         private int? _Count;
         /// <summary>
         /// number-of-iterations

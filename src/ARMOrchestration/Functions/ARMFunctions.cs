@@ -828,7 +828,7 @@ namespace maskx.ARMOrchestration.Functions
                     }
                     var taskResult = this.infrastructure.Reference(context, id, apiVersion, full);
                     if (taskResult.Code == 200)
-                        args.Result = new JsonValue(taskResult.Content);
+                        args.Result = new JsonValue(taskResult.Content.ToString());
                     else
                         args.Result = null;
                 }
@@ -844,7 +844,7 @@ namespace maskx.ARMOrchestration.Functions
                     true);
                 if (taskResult.Code == 200)
                 {
-                    args.Result = new JsonValue(taskResult.Content);
+                    args.Result = new JsonValue(taskResult.Content.ToString());
                 }
                 else
                 {

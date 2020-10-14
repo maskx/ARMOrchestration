@@ -11,7 +11,7 @@ namespace maskx.ARMOrchestration.Activities
     {
         public const string Name = "AsyncRequestActivity";
         private readonly ARMTemplateHelper templateHelper;
-        private readonly maskx.OrchestrationService.Activity.AsyncRequestActivity asyncRequestActivity;
+        private readonly OrchestrationService.Activity.AsyncRequestActivity asyncRequestActivity;
         private readonly IInfrastructure infrastructure;
         private readonly IServiceProvider _ServiceProvider;
 
@@ -23,7 +23,7 @@ namespace maskx.ARMOrchestration.Activities
             this._ServiceProvider = serviceProvider;
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
-            asyncRequestActivity = new maskx.OrchestrationService.Activity.AsyncRequestActivity(options);
+            asyncRequestActivity = new OrchestrationService.Activity.AsyncRequestActivity(options);
         }
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, AsyncRequestActivityInput input)

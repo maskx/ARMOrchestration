@@ -59,17 +59,29 @@ namespace maskx.ARMOrchestration.Workers
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                List<Task> tasks = new List<Task>();
-                foreach (var (InstanceId, ExecutionId, EventName, FailCount) in await GetResolvedDependsOn())
+                try
                 {
-                    tasks.Add(ResolveDependsOn(InstanceId, ExecutionId, EventName, FailCount));
+                    List<Task> tasks = new List<Task>();
+                    foreach (var (InstanceId, ExecutionId, EventName, FailCount) in await GetResolvedDependsOn())
+                    {
+                        tasks.Add(ResolveDependsOn(InstanceId, ExecutionId, EventName, FailCount));
+                    }
+                    await Task.WhenAll(tasks.ToArray());
+                    if (tasks.Count == 0)
+                        await Task.Delay(this.options.DependsOnIdelMilliseconds);
                 }
-                await Task.WhenAll(tasks.ToArray());
-                if (tasks.Count == 0)
-                    await Task.Delay(this.options.DependsOnIdelMilliseconds);
+                catch (Exception ex)
+                {
+                    //todo: make sure loop does not stop by any exception 
+                    //logging
+                }
             }
         }
-
+        public override Task StopAsync(CancellationToken cancellationToken)
+        {
+            // todo:logging, this worker should not be stoped
+            return base.StopAsync(cancellationToken);
+        }
         private async Task ResolveDependsOn(string instanceId, string executionId, string eventName, int failCount)
         {
             await this.taskHubClient.RaiseEventAsync(

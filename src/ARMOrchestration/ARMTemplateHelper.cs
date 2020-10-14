@@ -1,4 +1,5 @@
 ﻿using DurableTask.Core;
+using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
@@ -47,9 +48,21 @@ WHEN MATCHED THEN
                 deploymentOperation.Input,
                 deploymentOperation.Stage.ToString());
 
-            using var db = new DbAccess(this.options.Database.ConnectionString);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             db.ExecuteNonQueryAsync().Wait();
+        }
+        public void SafeSaveDeploymentOperation(DeploymentOperation deploymentOperation)
+        {
+            try
+            {
+                SaveDeploymentOperation(deploymentOperation);
+            }
+            catch
+            {
+
+                // Eat up any exception
+            }
         }
         public void ProvisioningResource(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, DeploymentOrchestrationInput input)
         {
@@ -71,6 +84,33 @@ WHEN MATCHED THEN
                                                          Resource = child,
                                                          Input = input,
                                                      }));
+            }
+        }
+        public  void ParseTaskResult(string orchestrationName,List<ErrorResponse> errorResponses, Task<TaskResult> item)
+        {
+            if (item.IsFaulted)
+            {
+                errorResponses.Add(new ErrorResponse()
+                {
+                    Code = $"{orchestrationName}-{ProvisioningStage.ProvisioningResourceFailed}",
+                    Message = $"Provisioning resource failed in {orchestrationName}",
+                    AdditionalInfo = new ErrorAdditionalInfo[] { new ErrorAdditionalInfo() {
+                                        Type=item.Exception.GetType().FullName,
+                                        Info=item.Exception
+                                    } }
+                });
+            }
+            else if (item.IsCanceled)
+            {
+                errorResponses.Add(new ErrorResponse()
+                {
+                    Code = $"{orchestrationName}-{ProvisioningStage.ProvisioningResourceFailed}",
+                    Message = $"Provisioning resource be canceled in {orchestrationName}"
+                });
+            }
+            else if (item.Result.Code != 200)
+            {
+                errorResponses.Add(item.Result.Content as ErrorResponse);
             }
         }
     }

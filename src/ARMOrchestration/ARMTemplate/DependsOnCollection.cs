@@ -36,7 +36,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return _NewVersion == _OldVersion;
             }
         }
-      
+
 
         public bool Accepet(long newVersion = 0)
         {
@@ -55,12 +55,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     throw new Exception($"with the name of '{item}' find more than one resourc in the template");
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
                 // When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
-                if (resources[0].Condition)
+                var r = resources[0];
+                if (r.Condition)
                 {
                     Change(null, null);
-                    _List.Add(item);
+                    if (r.Copy != null && !r.CopyIndex.HasValue)
+                        _List.Add(r.Copy.NameWithServiceType);
+                    else
+                        _List.Add(r.NameWithServiceType);
                 }
-                    
+
             }
         }
 

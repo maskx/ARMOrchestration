@@ -89,7 +89,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new DbAccess(this._Options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
                 db.AddStatement(this._GetResourceListCommandString,
                     new Dictionary<string, object>() {
@@ -132,7 +132,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetAllResourceListAsync(string rootId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new DbAccess(this._Options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
                 db.AddStatement(this._GetAllResourceListCommandString,
                     new Dictionary<string, object>() {

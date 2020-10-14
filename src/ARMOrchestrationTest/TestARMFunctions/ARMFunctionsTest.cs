@@ -649,7 +649,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
                     t.SetResult(args.Result);
             });
-            var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(t.Task.Result).Content;
+            var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(t.Task.Result).Content.ToString();
 
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
