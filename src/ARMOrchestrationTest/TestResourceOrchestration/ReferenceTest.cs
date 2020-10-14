@@ -90,7 +90,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 Template = templateString,
                 Parameters = string.Empty,
                 CorrelationId = Guid.NewGuid().ToString("N"),
-                DeploymentName = "IncluedServiceTypeNotExist",
+                Name = "IncluedServiceTypeNotExist",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ManagementGroupId = null,
                 ResourceGroup = TestHelper.ResourceGroup,

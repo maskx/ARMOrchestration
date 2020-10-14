@@ -33,7 +33,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
                 return _ARMFunctions.ResourceId(_Resource.Input, new object[] {
                     $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
-                    _Resource.Input.DeploymentName,
+                    _Resource.Input.Name,
                     Name });
             }
         }
@@ -59,7 +59,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
 
-                return $"{DeploymentOrchestrationInput.DeploymentName}/{this.Name}";
+                return $"{DeploymentOrchestrationInput.Name}/{this.Name}";
             }
         }
         public string NameWithServiceType

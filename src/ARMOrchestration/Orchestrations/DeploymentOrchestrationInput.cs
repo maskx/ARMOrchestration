@@ -11,6 +11,9 @@ using maskx.ARMOrchestration.Extensions;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
+    /// <summary>
+    /// https://docs.microsoft.com/en-us/azure/templates/microsoft.resources/deployments#microsoftresourcesdeployments-object
+    /// </summary>
     [JsonObject(MemberSerialization.OptOut)]
     public class DeploymentOrchestrationInput
     {
@@ -129,7 +132,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 SubscriptionId = resource.SubscriptionId,
                 ManagementGroupId = resource.ManagementGroupId,
                 ResourceGroup = resource.ResourceGroup,
-                DeploymentName = resource.Name,
+                Name = resource.Name,
                 Mode = mode,
                 Template = template,
                 TemplateLink = templateLink,
@@ -195,7 +198,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// <summary>
         /// Deployment Name
         /// </summary>
-        public string DeploymentName { get; set; }
+        public string Name { get; set; }
 
         public string ResourceGroup { get; set; }
         public string TenantId { get; set; }
@@ -425,7 +428,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     resourceId = $"/{infrastructure.BuiltinPathSegment.ManagementGroup}/{this.ManagementGroupId}";
                 if (!string.IsNullOrEmpty(this.ResourceGroup))
                     resourceId += $"/{infrastructure.BuiltinPathSegment.ResourceGroup}/{this.ResourceGroup}";
-                resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{this.DeploymentName}";
+                resourceId += $"/{infrastructure.BuiltinPathSegment.Provider}/{infrastructure.BuiltinServiceTypes.Deployments}/{this.Name}";
                 return resourceId;
             }
         }
@@ -444,7 +447,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             writer.WriteString("id", this.DeploymentId);
             // TODO: set location
             writer.WriteString("location", this.ResourceGroup);
-            writer.WriteString("name", this.DeploymentName);
+            writer.WriteString("name", this.Name);
             writer.WriteString("type", infrastructure.BuiltinServiceTypes.Deployments);
 
             #region properties

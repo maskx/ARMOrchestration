@@ -46,7 +46,7 @@ namespace ARMOrchestrationTest.PluginTests
                 new DeploymentOrchestrationInput()
                 {
                     ApiVersion = "1.0",
-                    DeploymentName = "UsingARMOrchestrationTest",
+                    Name = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     Template = TestHelper.GetJsonFileContent("PluginTests/NestTemplate"),
                     SubscriptionId = TestHelper.SubscriptionId,

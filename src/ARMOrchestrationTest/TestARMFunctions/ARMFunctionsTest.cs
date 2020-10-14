@@ -632,7 +632,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                     Template = templateString,
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
-                    DeploymentName = filename.Replace('/', '-'),
+                    Name = filename.Replace('/', '-'),
                     SubscriptionId = TestHelper.SubscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     DeploymentId = Guid.NewGuid().ToString("N"),

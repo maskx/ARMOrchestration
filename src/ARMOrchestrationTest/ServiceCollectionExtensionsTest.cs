@@ -55,7 +55,7 @@ namespace ARMOrchestrationTest
                 new DeploymentOrchestrationInput()
                 {
                     ApiVersion = "1.0",
-                    DeploymentName = "UsingARMOrchestrationTest",
+                    Name = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
                     SubscriptionId = TestHelper.SubscriptionId,
@@ -127,7 +127,7 @@ namespace ARMOrchestrationTest
                 new DeploymentOrchestrationInput()
                 {
                     ApiVersion = "1.0",
-                    DeploymentName = "UsingARMOrchestrationTest",
+                    Name = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
                     SubscriptionId = TestHelper.SubscriptionId,

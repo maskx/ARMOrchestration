@@ -435,7 +435,7 @@ namespace maskx.ARMOrchestration.Functions
                               new
                               {
                                   input.DeploymentId,
-                                  Name = input.DeploymentName
+                                  Name = input.Name
                               });
                     db.ExecuteReaderAsync((r, resultSet) =>
                     {
@@ -445,7 +445,7 @@ namespace maskx.ARMOrchestration.Functions
                 using MemoryStream ms = new MemoryStream();
                 using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
                 writer.WriteStartObject();
-                writer.WriteString("name", input.DeploymentName);
+                writer.WriteString("name", input.Name);
                 writer.WritePropertyName("properties");
                 writer.WriteStartObject();
                 if (!string.IsNullOrEmpty(input.Parameters))

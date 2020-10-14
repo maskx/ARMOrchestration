@@ -120,7 +120,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
                 Template = TestHelper.GetTemplateContent(filename),
                 Parameters = string.Empty,
                 CorrelationId = Guid.NewGuid().ToString("N"),
-                DeploymentName = filename.Replace('/', '-'),
+                Name = filename.Replace('/', '-'),
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 DeploymentId = id,

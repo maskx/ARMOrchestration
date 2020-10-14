@@ -35,7 +35,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var r = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "EmptyTemplate",
+                Name = "EmptyTemplate",
                 Template = GetTemplate("Empty"),
                 ServiceProvider = fixture.ServiceProvider
             };
@@ -51,7 +51,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var input = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "NoSchema",
+                Name = "NoSchema",
                 Template = GetTemplate("NoSchema"),
                 ServiceProvider = fixture.ServiceProvider
             };
@@ -65,7 +65,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var input = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "NoContentVersion",
+                Name = "NoContentVersion",
                 Template = GetTemplate("NoContentVersion"),
                 ServiceProvider = fixture.ServiceProvider
             };
@@ -79,7 +79,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var input = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "NoResources",
+                Name = "NoResources",
                 Template = GetTemplate("NoResources"),
                 ServiceProvider = fixture.ServiceProvider
             };
@@ -93,7 +93,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var input = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "VariableIteration",
+                Name = "VariableIteration",
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration"),
                 ServiceProvider = fixture.ServiceProvider
             };
@@ -119,7 +119,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "ResourceIteration",
+                Name = "ResourceIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/ResourceIteration"),
@@ -139,7 +139,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "PropertyIteration",
+                Name = "PropertyIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/PropertyIteration"),
@@ -168,7 +168,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "ChildResource",
+                Name = "ChildResource",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = GetTemplate("ChildResource"),
@@ -195,7 +195,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "NestTemplate",
+                Name = "NestTemplate",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = GetTemplate("NestTemplate"),
@@ -209,7 +209,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.True(r);
             Assert.Single(Deployment.EnumerateDeployments());
             var d = Deployment.EnumerateDeployments().First();
-            Assert.Equal("nestedTemplate1", d.DeploymentName);
+            Assert.Equal("nestedTemplate1", d.Name);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.Equal(Deployment.RootId, d.RootId);
             Assert.NotNull(d.DeploymentId);
@@ -227,7 +227,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "DoubleNestTemplate",
+                Name = "DoubleNestTemplate",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = GetTemplate("DoubleNestTemplate"),
@@ -243,7 +243,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
 
             Assert.Equal(2, Deployment.EnumerateDeployments().Count());
 
-            var d1 = Deployment.EnumerateDeployments().First((input) => input.DeploymentName == "nestedTemplate1");
+            var d1 = Deployment.EnumerateDeployments().First((input) => input.Name == "nestedTemplate1");
             Assert.Equal("2017-05-10", d1.ApiVersion);
             Assert.Equal(Deployment.RootId, d1.RootId);
             Assert.NotNull(d1.DeploymentId);
@@ -256,7 +256,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("Microsoft.Resources/deployments", res.Type);
 
             Assert.Single(d1.EnumerateDeployments());
-            var d2 = d1.EnumerateDeployments().First((input) => input.DeploymentName == "nestedTemplate2");
+            var d2 = d1.EnumerateDeployments().First((input) => input.Name == "nestedTemplate2");
             Assert.Equal("2017-05-10", d2.ApiVersion);
             Assert.Equal(Deployment.RootId, d2.RootId);
             Assert.NotNull(d2.DeploymentId);
@@ -275,7 +275,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "ExpressionEvaluationScopeInner",
+                Name = "ExpressionEvaluationScopeInner",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = GetTemplate("ExpressionsInNestedTemplates-inner"),
@@ -285,7 +285,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.True(r);
             Assert.Single(Deployment.EnumerateDeployments());
             var d = Deployment.EnumerateDeployments().First();
-            Assert.Equal("nestedTemplate1", d.DeploymentName);
+            Assert.Equal("nestedTemplate1", d.Name);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.NotNull(d.Template);
             var t = d.Template;
@@ -302,7 +302,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         {
             var Deployment = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "ExpressionEvaluationScopeOuter",
+                Name = "ExpressionEvaluationScopeOuter",
                 SubscriptionId = TestHelper.SubscriptionId,
                 ResourceGroup = TestHelper.ResourceGroup,
                 Template = GetTemplate("ExpressionsInNestedTemplates-outer"),
@@ -312,7 +312,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.True(r);
             Assert.Single(Deployment.EnumerateDeployments());
             var d = Deployment.EnumerateDeployments().First();
-            Assert.Equal("nestedTemplate1", d.DeploymentName);
+            Assert.Equal("nestedTemplate1", d.Name);
             Assert.Equal("2017-05-10", d.ApiVersion);
             Assert.NotNull(d.Template);
             var t = d.Template;

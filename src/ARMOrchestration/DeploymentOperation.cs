@@ -29,7 +29,7 @@ namespace maskx.ARMOrchestration
                 IInfrastructure infrastructure = deploymentInput.ServiceProvider.GetService<IInfrastructure>();
                 this.ResourceId = deploymentInput.ResourceId;
                 this.Type = infrastructure.BuiltinServiceTypes.Deployments;
-                this.Name = deploymentInput.DeploymentName;
+                this.Name = deploymentInput.Name;
                 this.ParentResourceId = deploymentInput.ParentId;
                 this.SubscriptionId = deploymentInput.SubscriptionId;
                 this.ManagementGroupId = deploymentInput.ManagementGroupId;

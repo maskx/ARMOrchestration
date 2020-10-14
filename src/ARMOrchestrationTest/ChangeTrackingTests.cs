@@ -24,7 +24,7 @@ namespace ARMOrchestrationTest
         {
             var input = new DeploymentOrchestrationInput()
             {
-                DeploymentName = "VariableIteration",
+                Name = "VariableIteration",
                 Template = TestHelper.GetJsonFileContent("ValidateTemplateTests/Template/Empty"),
                 ServiceProvider = fixture.ServiceProvider
             };

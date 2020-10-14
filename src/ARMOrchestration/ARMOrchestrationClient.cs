@@ -43,7 +43,7 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentNullException("ApiVersion");
             if (string.IsNullOrEmpty(args.CorrelationId))
                 throw new ArgumentNullException("CorrelationId");
-            if (string.IsNullOrEmpty(args.DeploymentName))
+            if (string.IsNullOrEmpty(args.Name))
                 throw new ArgumentNullException("DeploymentName");
             if (string.IsNullOrEmpty(args.GroupId))
                 throw new ArgumentNullException("GroupId");
