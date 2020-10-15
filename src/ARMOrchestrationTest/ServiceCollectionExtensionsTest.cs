@@ -29,6 +29,7 @@ namespace ARMOrchestrationTest
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddHttpClient();
                     var sqlConfig = new ARMOrchestrationSqlServerConfig()
                     {
                         Database = new DatabaseConfig()

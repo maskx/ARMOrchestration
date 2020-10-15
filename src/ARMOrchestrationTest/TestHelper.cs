@@ -96,9 +96,9 @@ namespace ARMOrchestrationTest
             ARMOrchestartionFixture fixture,
             string filename,
             Dictionary<string, string> result,
-            string managementGroupId = null)
+            string managementGroupId = null, bool usingLinkTemplate = false)
         {
-            var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename, managementGroupId);
+            var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename, managementGroupId,usingLinkTemplate);
             Assert.Equal(200, taskResult.Code);
             var outputString = taskResult.Content.ToString();
             var templateString = TestHelper.GetFunctionInputContent(filename);
@@ -126,26 +126,51 @@ namespace ARMOrchestrationTest
         public static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(
             ARMOrchestartionFixture fixture,
             string filename,
-            string managementGroupId = null)
+            string managementGroupId = null, bool usingLinkTemplate = false)
         {
-            var templateString = TestHelper.GetFunctionInputContent(filename);
-            var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
-            {
-                Template = templateString,
-                Parameters = string.Empty,
-                CorrelationId = Guid.NewGuid().ToString("N"),
-                Name = filename.Replace('/', '-'),
-                SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? TestHelper.SubscriptionId : null,
-                ManagementGroupId = managementGroupId,
-                ResourceGroup = TestHelper.ResourceGroup,
-                GroupId = Guid.NewGuid().ToString("N"),
-                GroupType = "ResourceGroup",
-                HierarchyId = "001002003004005",
-                CreateByUserId = TestHelper.CreateByUserId,
-                ApiVersion = "1.0",
-                TenantId = TestHelper.TenantId,
-                DeploymentId = Guid.NewGuid().ToString("N")
-            }).Result;
+            DeploymentOrchestrationInput deployInput;
+            if (usingLinkTemplate)
+                deployInput = new DeploymentOrchestrationInput()
+                {
+                    TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = filename },
+                    Parameters = string.Empty,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Name = filename.Replace('/', '-'),
+                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? TestHelper.SubscriptionId : null,
+                    ManagementGroupId = managementGroupId,
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005",
+                    CreateByUserId = TestHelper.CreateByUserId,
+                    ApiVersion = "1.0",
+                    TenantId = TestHelper.TenantId,
+                    DeploymentId = Guid.NewGuid().ToString("N")
+                };
+            else
+                deployInput = new DeploymentOrchestrationInput()
+                {
+                    Template = TestHelper.GetFunctionInputContent(filename),
+                    Parameters = string.Empty,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Name = filename.Replace('/', '-'),
+                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? TestHelper.SubscriptionId : null,
+                    ManagementGroupId = managementGroupId,
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005",
+                    CreateByUserId = TestHelper.CreateByUserId,
+                    ApiVersion = "1.0",
+                    TenantId = TestHelper.TenantId,
+                    DeploymentId = Guid.NewGuid().ToString("N")
+                };
+            return FunctionTestNotCheckResult(fixture, deployInput);
+        }
+
+        private static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(ARMOrchestartionFixture fixture, DeploymentOrchestrationInput deployInput)
+        {
+            var deployment = fixture.ARMOrchestrationClient.Run(deployInput).Result;
             var instance = new OrchestrationInstance() { InstanceId = deployment.InstanceId, ExecutionId = deployment.ExecutionId };
             TaskCompletionSource<string> t = new TaskCompletionSource<string>();
 
@@ -232,9 +257,10 @@ namespace ARMOrchestrationTest
         public static OrchestrationInstance OrchestrationTest(ARMOrchestartionFixture fixture,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
-            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
+            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null,
+             bool usingLinkTemplate = false)
         {
-            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, isValidateOrchestration, validate);
+            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, isValidateOrchestration, validate, usingLinkTemplate);
             Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
             var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
             Assert.Equal(200, response.Code);
@@ -244,25 +270,50 @@ namespace ARMOrchestrationTest
         public static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture,
             string filename,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
-            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null)
+            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null,
+            bool usingLinkTemplate = false)
         {
-            var id = Guid.NewGuid().ToString("N");
-            var deployment = fixture.ARMOrchestrationClient.Run(new DeploymentOrchestrationInput()
-            {
-                Template = TestHelper.GetTemplateContent(filename),
-                Parameters = string.Empty,
-                CorrelationId = Guid.NewGuid().ToString("N"),
-                Name = filename.Replace('/', '-'),
-                SubscriptionId = TestHelper.SubscriptionId,
-                ResourceGroup = TestHelper.ResourceGroup,
-                DeploymentId = id,
-                GroupId = Guid.NewGuid().ToString("N"),
-                GroupType = "ResourceGroup",
-                HierarchyId = "001002003004005",
-                CreateByUserId = TestHelper.CreateByUserId,
-                ApiVersion = "1.0",
-                TenantId = TestHelper.TenantId
-            }).Result;
+            DeploymentOrchestrationInput deployinput;
+            if (usingLinkTemplate)
+                deployinput = new DeploymentOrchestrationInput()
+                {
+                    TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = filename },
+                    Parameters = string.Empty,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Name = filename.Replace('/', '-'),
+                    SubscriptionId = TestHelper.SubscriptionId,
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005",
+                    CreateByUserId = TestHelper.CreateByUserId,
+                    ApiVersion = "1.0",
+                    TenantId = TestHelper.TenantId
+                };
+            else
+                deployinput = new DeploymentOrchestrationInput()
+                {
+                    Template = TestHelper.GetTemplateContent(filename),
+                    Parameters = string.Empty,
+                    CorrelationId = Guid.NewGuid().ToString("N"),
+                    Name = filename.Replace('/', '-'),
+                    SubscriptionId = TestHelper.SubscriptionId,
+                    ResourceGroup = TestHelper.ResourceGroup,
+                    DeploymentId = Guid.NewGuid().ToString("N"),
+                    GroupId = Guid.NewGuid().ToString("N"),
+                    GroupType = "ResourceGroup",
+                    HierarchyId = "001002003004005",
+                    CreateByUserId = TestHelper.CreateByUserId,
+                    ApiVersion = "1.0",
+                    TenantId = TestHelper.TenantId
+                };
+            return OrchestrationTestNotCheckResult(fixture, isValidateOrchestration, validate, deployinput);
+        }
+
+        private static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture, Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration, Action<OrchestrationInstance, OrchestrationCompletedArgs> validate, DeploymentOrchestrationInput deployinput)
+        {
+            var deployment = fixture.ARMOrchestrationClient.Run(deployinput).Result;
             var instance = new OrchestrationInstance() { InstanceId = deployment.InstanceId, ExecutionId = deployment.ExecutionId };
             TaskCompletionSource<OrchestrationCompletedArgs> t = new TaskCompletionSource<OrchestrationCompletedArgs>();
             if (isValidateOrchestration != null)

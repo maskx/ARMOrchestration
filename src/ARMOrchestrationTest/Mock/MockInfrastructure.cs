@@ -1,22 +1,29 @@
 ﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ARMOrchestrationTest.Mock
 {
     public class MockInfrastructure : IInfrastructure
     {
         private readonly IServiceProvider serviceProvider;
-
+        private readonly IHttpClientFactory _HttpClientFactory;
+        static IMemoryCache _TemplateCache = new MemoryCache(Options.Create(new MemoryCacheOptions() { }));
         public MockInfrastructure(IServiceProvider serviceProvider)
         {
             this.serviceProvider = serviceProvider;
+            this._HttpClientFactory = serviceProvider?.GetService<IHttpClientFactory>();
         }
 
         public (string GroupId, string GroupType, string HierarchyId) GetGroupInfo(string managementGroupId, string subscriptionId, string resourceGroupName)
@@ -122,5 +129,38 @@ namespace ARMOrchestrationTest.Mock
             var c = TestHelper.GetJsonFileContent($"Mock/Response/{resourceName}");
             return new TaskResult() { Content = c, Code = 200 };
         }
+        public async Task<string> GetTemplateContentAsync(TemplateLink link, DeploymentOrchestrationInput input)
+        {
+            if (!_TemplateCache.TryGetValue(link, out object t))
+            {
+                if (link.Uri.StartsWith("http://", StringComparison.InvariantCultureIgnoreCase)
+                || link.Uri.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var client = _HttpClientFactory.CreateClient();
+                    t = await client.GetStringAsync(link.Uri);
+                }
+                else
+                {
+                    t = TestHelper.GetJsonFileContent(link.Uri);
+                }
+                if (t != null)
+                    _TemplateCache.Set(link, t, DateTimeOffset.Now.AddMinutes(5));
+            }
+            return t?.ToString();
+        }
+        public async Task<string> GetParameterContentAsync(ParametersLink link, DeploymentOrchestrationInput input)
+        {
+            if (link.Uri.StartsWith("http://", StringComparison.InvariantCultureIgnoreCase)
+               || link.Uri.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var client = _HttpClientFactory.CreateClient();
+                return await client.GetStringAsync(link.Uri);
+            }
+            else
+            {
+                return TestHelper.GetJsonFileContent(link.Uri);
+            }
+        }
+
     }
 }

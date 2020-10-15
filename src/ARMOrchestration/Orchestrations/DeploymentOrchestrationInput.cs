@@ -1,13 +1,13 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using maskx.ARMOrchestration.Extensions;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -50,7 +50,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (_mode.GetString().Equals(DeploymentMode.OnlyCreation.ToString(), StringComparison.OrdinalIgnoreCase))
                     mode = DeploymentMode.OnlyCreation;
             }
-            string template = string.Empty;
+            string template = null;
             if (rootElement.TryGetProperty("template", out JsonElement _template))
             {
                 template = _template.GetRawText();
@@ -216,20 +216,39 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             get
             {
-                if (template == null && TemplateLink != null)
+                if (template != null)
+                    return template;
+                if (TemplateLink != null)
                 {
-                    // get template from templateLink
+                    Template t = this.ServiceProvider.GetService<IInfrastructure>().GetTemplateContentAsync(TemplateLink, this).Result;
+                    t.Input = this;
+                    return t;
                 }
-                return template;
+                return null;
             }
             set
             {
                 template = value;
-                template.Input = this;
+                if (template != null)
+                    template.Input = this;
             }
         }
-
-        public string Parameters { get; set; }
+        string _Parameters = null;
+        public string Parameters
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_Parameters))
+                    return _Parameters;
+                if (ParametersLink != null)
+                    return this.ServiceProvider.GetService<IInfrastructure>().GetParameterContentAsync(ParametersLink, this).Result;
+                return null;
+            }
+            set
+            {
+                _Parameters = value;
+            }
+        }
         public string ApiVersion { get; set; }
 
         // todo: support OnErrorDeployment
@@ -263,12 +282,12 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
         {
-            return template.Resources.EnumerateDeployments();
+            return Template.Resources.EnumerateDeployments();
         }
         public Resource GetFirstResource(string name, bool includeNestDeployment = false)
         {
             bool withServiceType = name.Contains('.');
-            foreach (var r in template.Resources)
+            foreach (var r in Template.Resources)
             {
                 if (r.Copy != null)
                 {
@@ -307,7 +326,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             List<Resource> resources = new List<Resource>();
             bool withServiceType = name.Contains('.');
-            foreach (var r in template.Resources)
+            foreach (var r in Template.Resources)
             {
                 if (r.Copy != null)
                 {
@@ -398,7 +417,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             if (flatDeployment)
             {
-                foreach (var d in this.template.Resources.EnumerateDeployments())
+                foreach (var d in this.Template.Resources.EnumerateDeployments())
                 {
                     foreach (var r in d.EnumerateResource())
                     {

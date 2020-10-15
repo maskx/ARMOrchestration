@@ -1,6 +1,4 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
-using System.Collections.Concurrent;
+﻿using Newtonsoft.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -25,9 +23,5 @@ namespace maskx.ARMOrchestration.ARMTemplate
         /// If included, must match the ContentVersion in the template.
         /// </summary>
         public string ContentVersion { get; set; }
-        [JsonIgnore]
-        public string Content { get { return string.Empty; } }
-
-        // static IMemeoryCache _TemplateCache;
     }
 }

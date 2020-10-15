@@ -1,6 +1,7 @@
 ﻿using ARMOrchestrationTest.Mock;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace ARMOrchestrationTest.PluginTests
 {

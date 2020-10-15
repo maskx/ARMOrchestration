@@ -1,8 +1,10 @@
 ﻿using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
 {
@@ -112,5 +114,8 @@ namespace maskx.ARMOrchestration
         /// should inherit TaskOrchestration<TaskResult, ResourceOrchestrationInput>
         /// </summary>
         List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; }
+
+        Task<string> GetTemplateContentAsync(TemplateLink link, DeploymentOrchestrationInput input);
+        Task<string> GetParameterContentAsync(ParametersLink link, DeploymentOrchestrationInput input);
     }
 }

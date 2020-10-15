@@ -1,9 +1,5 @@
-﻿using ARMOrchestrationTest;
-using maskx.ARMOrchestration;
-using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.WhatIf;
+﻿using maskx.ARMOrchestration;
 using Microsoft.Extensions.Options;
-using System;
 using Xunit;
 
 namespace ARMOrchestrationTest.WhatIfTests

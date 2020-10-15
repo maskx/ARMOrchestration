@@ -16,12 +16,12 @@ namespace maskx.ARMOrchestration
     {
         private readonly ARMOrchestrationOptions options;
         private readonly string _saveDeploymentOperationCommandString;
-
+     
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options)
         {
             this.options = options?.Value;
-
+           
             this._saveDeploymentOperationCommandString = string.Format(@"
 MERGE {0} with (serializable) [Target]
 USING (VALUES (@InstanceId,@ExecutionId)) as [Source](InstanceId,ExecutionId)
@@ -86,7 +86,7 @@ WHEN MATCHED THEN
                                                      }));
             }
         }
-        public  void ParseTaskResult(string orchestrationName,List<ErrorResponse> errorResponses, Task<TaskResult> item)
+        public void ParseTaskResult(string orchestrationName, List<ErrorResponse> errorResponses, Task<TaskResult> item)
         {
             if (item.IsFaulted)
             {
@@ -113,5 +113,6 @@ WHEN MATCHED THEN
                 errorResponses.Add(item.Result.Content as ErrorResponse);
             }
         }
+        
     }
 }
