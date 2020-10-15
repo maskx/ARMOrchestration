@@ -400,7 +400,11 @@ namespace maskx.ARMOrchestration.Functions
                         }
                         if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
                         {
+                            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
+                            // paramete's default value can be included function
                             args.Result = JsonValue.GetElementValue(defValue);
+                            if (defValue.ValueKind == JsonValueKind.String)
+                                args.Result = this.Evaluate(args.Result.ToString(), cxt);
                         }
                     }
                 }
