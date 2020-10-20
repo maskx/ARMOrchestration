@@ -31,9 +31,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
             input.ServiceProvider = this._ServiceProvider;
             if (string.IsNullOrEmpty(input.RootId))
-            {
                 input.RootId = input.DeploymentId;
-            }
+           
 
             #region InjectBeforeDeployment
 
@@ -180,8 +179,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #endregion DependsOn
 
-
-
             #region Provisioning resources
 
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
@@ -236,22 +233,27 @@ namespace maskx.ARMOrchestration.Orchestrations
                         if (r.Code != 200)
                         {
                             // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
-                            return r;
+                            errorResponses.Add(r.Content as ErrorResponse);
                         }
-                        input = r.Content as DeploymentOrchestrationInput;
-                        input.ServiceProvider = _ServiceProvider;
+                        else
+                        {
+                            input = r.Content as DeploymentOrchestrationInput;
+                            input.ServiceProvider = _ServiceProvider;
+                        }
                     }
                     catch (TaskFailedException ex)
                     {
                         var response = new ErrorResponse()
                         {
-                            Code = $"{DeploymentOrchestration.Name}:{ProvisioningStage.AfterDeploymentOrhcestration}",
+                            Code = $"{Name}:{ProvisioningStage.AfterDeploymentOrhcestration}",
                             Message = ex.Message,
+                            Details = errorResponses.ToArray(),
                             AdditionalInfo = new ErrorAdditionalInfo[] {
-                        new ErrorAdditionalInfo() {
-                            Type=typeof(TaskFailedException).FullName,
-                            Info=ex
-                        } }
+                                new ErrorAdditionalInfo() {
+                                    Type=typeof(TaskFailedException).FullName,
+                                    Info=ex
+                                }
+                            }
                         };
                         helper.SafeSaveDeploymentOperation(new DeploymentOperation(input)
                         {
@@ -289,25 +291,18 @@ namespace maskx.ARMOrchestration.Orchestrations
                              });
                     if (injectAfterDeploymenteResult.Code != 200)
                     {
-                        helper.SafeSaveDeploymentOperation(new DeploymentOperation(input)
-                        {
-                            InstanceId = context.OrchestrationInstance.InstanceId,
-                            ExecutionId = context.OrchestrationInstance.ExecutionId,
-                            Stage = ProvisioningStage.InjectAfterDeploymentFailed,
-                            Input = DataConverter.Serialize(input),
-                            Result = DataConverter.Serialize(injectAfterDeploymenteResult)
-                        });
-                        return injectAfterDeploymenteResult;
+                        errorResponses.Add(injectAfterDeploymenteResult.Content as ErrorResponse);
                     }
                 }
                 catch (TaskFailedException ex)
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{DeploymentOrchestration.Name}:{ProvisioningStage.InjectAfterDeployment}",
+                        Code = $"{Name}:{ProvisioningStage.InjectAfterDeployment}",
                         Message = ex.Message,
+                        Details = errorResponses.ToArray(),
                         AdditionalInfo = new ErrorAdditionalInfo[] {
-                        new ErrorAdditionalInfo() {
+                            new ErrorAdditionalInfo() {
                             Type=typeof(TaskFailedException).FullName,
                             Info=ex
                         } }
@@ -327,10 +322,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                     };
                 }
             }
+            ErrorResponse errorResponse = null;
 
             #region get template outputs
-
-            if (errorResponses.Count == 0 && input.Template.Outputs != null)
+            if (errorResponses.Count > 0)
+            {
+                errorResponse = new ErrorResponse()
+                {
+                    Code = $"{Name}-Provisioning-Failed",
+                    Message = $"{Name}-Provisioning-Failed",
+                    Details = errorResponses.ToArray()
+                };
+            }
+            else if (input.Template.Outputs != null)
             {
                 try
                 {
@@ -338,12 +342,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 catch (Exception ex)
                 {
-                    errorResponses.Add(new ErrorResponse()
+                    errorResponse = new ErrorResponse()
                     {
-                        Code = $"{Name}-GetOutputsFaild",
-                        Message = "exception wehn get outputs",
+                        Code = $"{Name}-GetOutputs-Faild",
+                        Message = "exception when get outputs",
                         AdditionalInfo = new ErrorAdditionalInfo[] { new ErrorAdditionalInfo() { Type = ex.GetType().FullName, Info = ex } }
-                    });
+                    };
                 }
             }
 
@@ -353,13 +357,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = errorResponses.Count == 0 ? ProvisioningStage.Successed : ProvisioningStage.Failed,
-                Result = errorResponses.Count == 0?rtv:DataConverter.Serialize(errorResponses)
+                Stage = errorResponse == null ? ProvisioningStage.Successed : ProvisioningStage.Failed,
+                Result = errorResponse == null ? rtv : DataConverter.Serialize(errorResponses)
             });
-            if (errorResponses.Count == 0)
+            if (errorResponse == null)
                 return new TaskResult(200, rtv);
             else
-                return new TaskResult(500,errorResponses);
+                return new TaskResult(500, errorResponse);
         }
 
         private TaskCompletionSource<string> waitHandler = null;

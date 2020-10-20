@@ -5,8 +5,8 @@
         Pending = 0,
         // begin deployment special
         
-        ValidateTemplate = 100,
-        ValidateTemplateFailed = -100,
+        StartProvisioning = 100,
+        StartProvisioningFailed = -100,
 
         InjectBeforeDeployment = 200,
         InjectBeforeDeploymentFailed = -200,

@@ -66,7 +66,7 @@ namespace maskx.ARMOrchestration
         public string ManagementGroupId { get; set; }
 
         /// <summary>
-        /// child of copy, the ParentId copy's path, like /Microsoft.Resources/deployments/copy/{copyname}
+        /// child of copy, the ParentId copy's path, like /Microsoft.Resources/deployments/{deploymentName}copy/{copyname}
         /// </summary>
         public string ParentResourceId { get; set; }
 

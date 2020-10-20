@@ -59,7 +59,7 @@ namespace ARMOrchestrationTest
                     Name = "UsingARMOrchestrationTest",
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     Template = TestHelper.GetTemplateContent("dependsOn/OneResourceName"),
-                    SubscriptionId = TestHelper.SubscriptionId,
+                    SubscriptionId = Guid.NewGuid().ToString(),
                     ResourceGroup = TestHelper.ResourceGroup,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     GroupId = Guid.NewGuid().ToString("N"),

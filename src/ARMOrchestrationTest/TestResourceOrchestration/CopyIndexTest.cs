@@ -1,5 +1,5 @@
-﻿using ARMOrchestrationTest;
-using maskx.OrchestrationService;
+﻿using maskx.OrchestrationService;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
@@ -22,14 +22,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         public void ResourceIteration()
         {
             TestHelper.OrchestrationTest(fixture,
-                "CopyIndex/ResourceIteration");
+                "CopyIndex/ResourceIteration", subscriptionId: Guid.NewGuid().ToString());
         }
 
         [Fact(DisplayName = "ResourceIteration_BatchSize")]
         public void ResourceIteration_BatchSize()
         {
             TestHelper.OrchestrationTest(fixture,
-                "CopyIndex/ResourceIteration_BatchSize");
+                "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
         }
 
         [Fact(DisplayName = "VariableIteration")]
@@ -44,45 +44,42 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             };
 
             var instance = TestHelper.OrchestrationTest(fixture,
-                "CopyIndex/VariableIteration",
-                (instance, args) =>
-                {
-                    return !args.IsSubOrchestration
-                    && instance.InstanceId == args.InstanceId;
-                }, (instance, cxt) =>
-                {
-                    var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content.ToString();
-                    using var templateDoc = JsonDocument.Parse(TestHelper.GetTemplateContent("CopyIndex/VariableIteration"));
-                    using var outputDoc = JsonDocument.Parse(outputString);
-                    var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
-                    if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
-                    {
-                        List<string> child = new List<string>();
-                        foreach (var item in outputDefineElement.EnumerateObject())
-                        {
-                            Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement o), $"cannot find {item.Name} in output");
-                            o.TryGetProperty("value", out JsonElement v);
-                            if (v.ValueKind == JsonValueKind.String)
-                                Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
-                            else
-                                Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
-                        }
-                    }
-                });
+                "CopyIndex/VariableIteration", subscriptionId: Guid.NewGuid().ToString(),
+                isValidateOrchestration: (instance, args) => { return !args.IsSubOrchestration && instance.InstanceId == args.InstanceId; },
+                validate: (instance, cxt) =>
+                 {
+                     var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content.ToString();
+                     using var templateDoc = JsonDocument.Parse(TestHelper.GetTemplateContent("CopyIndex/VariableIteration"));
+                     using var outputDoc = JsonDocument.Parse(outputString);
+                     var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
+                     if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
+                     {
+                         List<string> child = new List<string>();
+                         foreach (var item in outputDefineElement.EnumerateObject())
+                         {
+                             Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement o), $"cannot find {item.Name} in output");
+                             o.TryGetProperty("value", out JsonElement v);
+                             if (v.ValueKind == JsonValueKind.String)
+                                 Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
+                             else
+                                 Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
+                         }
+                     }
+                 });
         }
 
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
             TestHelper.OrchestrationTest(fixture,
-                "CopyIndex/PropertyIteration");
+                "CopyIndex/PropertyIteration", subscriptionId: Guid.NewGuid().ToString());
         }
 
         [Fact(DisplayName = "CopyIndexOutput")]
         public void CopyIndexOutput()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                  "CopyIndex/output");
+                  "CopyIndex/output", subscriptionId: Guid.NewGuid().ToString());
             var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result[0];
             var result = JsonDocument.Parse(r.Result).RootElement;
             var storageEndpoints = result.GetProperty("properties").GetProperty("outputs").GetProperty("storageEndpoints");
@@ -110,7 +107,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         public void ResourceIteration_NestingDeployment()
         {
             TestHelper.OrchestrationTest(fixture,
-                "CopyIndex/ResourceIteration_NestingDeployment");
+                "CopyIndex/ResourceIteration_NestingDeployment", subscriptionId: Guid.NewGuid().ToString());
         }
     }
 }

@@ -13,7 +13,7 @@
     },
     "secondSubscriptionID": {
       "type": "string",
-      "defaultValue": "178EA31A-0C68-42A1-923F-675E5CDA318D"
+      "defaultValue": "[newGuid()]"
     },
     "secondStorageLocation": {
       "type": "string",
@@ -30,7 +30,7 @@
       "apiVersion": "2019-10-01",
       "name": "Template1",
       "resourceGroup": "firstResourceGroup",
-      "subscriptionId": "558373F7-1F60-47DC-9E05-37ABCF440DA1",
+      "subscriptionId": "[newGuid()]",
       "properties": {
         "mode": "Incremental",
         "template": {

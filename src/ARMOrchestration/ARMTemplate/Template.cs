@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -39,6 +40,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public static implicit operator Template(string rawString)
         {
+            if (string.IsNullOrEmpty(rawString))
+                return null;
             return new Template() { RawString = rawString };
         }
 

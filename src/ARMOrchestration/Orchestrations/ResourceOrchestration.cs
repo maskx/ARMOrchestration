@@ -265,7 +265,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
                             return r;
                         }
-                        input = DataConverter.Deserialize<ResourceOrchestrationInput>(r.Content.ToString());
+                        input = r.Content as ResourceOrchestrationInput;
                         input.ServiceProvider = _ServiceProvider;
                     }
                     catch (TaskFailedException ex)
@@ -316,7 +316,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              });
                     if (injectAfterProvisioningResult.Code != 200)
                     {
-                        
+
                         return injectAfterProvisioningResult;
                     }
                 }

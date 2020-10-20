@@ -1,4 +1,5 @@
 ﻿using maskx.OrchestrationService;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Xunit;
@@ -21,14 +22,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void ResourceIteration()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/CopyIndex/ResourceIteration", null, null, true);
+                "Templates/CopyIndex/ResourceIteration", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "ResourceIteration_BatchSize")]
         public void ResourceIteration_BatchSize()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/CopyIndex/ResourceIteration_BatchSize", null, null, true);
+                "Templates/CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "VariableIteration")]
@@ -43,45 +44,42 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             };
 
             var instance = TestHelper.OrchestrationTest(fixture,
-                "Templates/CopyIndex/VariableIteration",
-                (instance, args) =>
-                {
-                    return !args.IsSubOrchestration
-                    && instance.InstanceId == args.InstanceId;
-                }, (instance, cxt) =>
-                {
-                    var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content.ToString();
-                    using var templateDoc = JsonDocument.Parse(TestHelper.GetTemplateContent("CopyIndex/VariableIteration"));
-                    using var outputDoc = JsonDocument.Parse(outputString);
-                    var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
-                    if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
-                    {
-                        List<string> child = new List<string>();
-                        foreach (var item in outputDefineElement.EnumerateObject())
-                        {
-                            Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement o), $"cannot find {item.Name} in output");
-                            o.TryGetProperty("value", out JsonElement v);
-                            if (v.ValueKind == JsonValueKind.String)
-                                Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
-                            else
-                                Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
-                        }
-                    }
-                },true);
+                "Templates/CopyIndex/VariableIteration", subscriptionId: Guid.NewGuid().ToString(),
+                isValidateOrchestration: (instance, args) => {     return !args.IsSubOrchestration  && instance.InstanceId == args.InstanceId;}, 
+                validate: (instance, cxt) =>
+                 {
+                     var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(cxt.Result).Content.ToString();
+                     using var templateDoc = JsonDocument.Parse(TestHelper.GetTemplateContent("CopyIndex/VariableIteration"));
+                     using var outputDoc = JsonDocument.Parse(outputString);
+                     var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");
+                     if (templateDoc.RootElement.TryGetProperty("outputs", out JsonElement outputDefineElement))
+                     {
+                         List<string> child = new List<string>();
+                         foreach (var item in outputDefineElement.EnumerateObject())
+                         {
+                             Assert.True(outputRoot.TryGetProperty(item.Name, out JsonElement o), $"cannot find {item.Name} in output");
+                             o.TryGetProperty("value", out JsonElement v);
+                             if (v.ValueKind == JsonValueKind.String)
+                                 Assert.True(result[item.Name] == v.GetString(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetString()}");
+                             else
+                                 Assert.True(result[item.Name] == v.GetRawText(), $"{item.Name} test fail, Expected:{result[item.Name]},Actual:{v.GetRawText()}");
+                         }
+                     }
+                 }, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/CopyIndex/PropertyIteration", null, null, true);
+                "Templates/CopyIndex/PropertyIteration", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "CopyIndexOutput")]
         public void CopyIndexOutput()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                  "Templates/CopyIndex/output", null, null, true);
+                  "Templates/CopyIndex/output", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result[0];
             var result = JsonDocument.Parse(r.Result).RootElement;
             var storageEndpoints = result.GetProperty("properties").GetProperty("outputs").GetProperty("storageEndpoints");
@@ -109,7 +107,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void ResourceIteration_NestingDeployment()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/CopyIndex/ResourceIteration_NestingDeployment", null, null, true);
+                "Templates/CopyIndex/ResourceIteration_NestingDeployment", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
     }
 }

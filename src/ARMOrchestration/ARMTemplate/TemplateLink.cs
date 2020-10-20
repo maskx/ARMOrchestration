@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {

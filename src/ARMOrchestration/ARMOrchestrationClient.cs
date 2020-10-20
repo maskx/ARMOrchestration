@@ -19,16 +19,17 @@ namespace maskx.ARMOrchestration
         private readonly string _GetAllResourceListCommandString;
         private readonly ARMOrchestrationOptions _Options;
         private readonly IServiceProvider _ServiceProvider;
-
+        private readonly ARMTemplateHelper _Helper;
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            ARMTemplateHelper helper)
         {
             this._ServiceProvider = serviceProvider;
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
             this._Options = options?.Value;
-
+            this._Helper = helper;
             this._GetResourceListCommandString = string.Format("select * from {0} where deploymentId=@deploymentId",
                 this._Options.Database.DeploymentOperationsTableName);
             this._GetAllResourceListCommandString = string.Format("select * from {0} where RootId=@RootId",
@@ -61,6 +62,14 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentNullException("CreateByUserId");
             if (args.ServiceProvider == null)
                 args.ServiceProvider = _ServiceProvider;
+            var deploymentOperation = new DeploymentOperation(args)
+            {
+                RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
+                InstanceId = args.DeploymentId,
+                Stage = ProvisioningStage.Pending,
+                Input = _DataConverter.Serialize(args)
+            };
+            this._Helper.SaveDeploymentOperation(deploymentOperation);
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
@@ -71,14 +80,9 @@ namespace maskx.ARMOrchestration
                 },
                 Input = _DataConverter.Serialize(args)
             });
-            return new DeploymentOperation(args)
-            {
-                RootId = args.DeploymentId,
-                InstanceId = args.DeploymentId,
-                ExecutionId = instance.ExecutionId,
-                Stage = ProvisioningStage.Pending,
-                Input = _DataConverter.Serialize(args)
-            };
+            deploymentOperation.ExecutionId = instance.ExecutionId;
+            this._Helper.SaveDeploymentOperation(deploymentOperation);
+            return deploymentOperation;
         }
 
         /// <summary>

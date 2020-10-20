@@ -19,7 +19,7 @@ namespace ARMOrchestrationTest.PluginTests
         {
             input.ServiceProvider = _ServiceProvider;
             input.Resource.Name += "_BeforeResourceProvisioning";
-            return Task.FromResult(new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) });
+            return Task.FromResult(new TaskResult() { Code = 200, Content =input });
         }
     }
 }

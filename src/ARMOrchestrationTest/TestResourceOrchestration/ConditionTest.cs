@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System;
+using Xunit;
 
 namespace ARMOrchestrationTest.TestResourceOrchestration
 {
@@ -18,28 +19,28 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         public void TrueCondition()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Condition/TrueCondition");
+                "Condition/TrueCondition", subscriptionId: Guid.NewGuid().ToString());
         }
 
         [Fact(DisplayName = "NoCondition")]
         public void NoCondition()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Condition/NoCondition");
+                "Condition/NoCondition", subscriptionId: Guid.NewGuid().ToString());
         }
 
         [Fact(DisplayName = "FunctionConditionTrue")]
         public void FunctionConditionTrue()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Condition/FunctionConditionTrue");
+                "Condition/FunctionConditionTrue", subscriptionId: Guid.NewGuid().ToString());
         }
 
         [Fact(DisplayName = "FunctionConditionFalse")]
         public void FunctionConditionFalse()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                       "Condition/FunctionConditionFalse");
+                       "Condition/FunctionConditionFalse", subscriptionId: Guid.NewGuid().ToString());
             var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             Assert.Single(r);
         }

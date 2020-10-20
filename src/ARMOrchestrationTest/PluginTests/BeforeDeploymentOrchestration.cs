@@ -30,7 +30,7 @@ namespace ARMOrchestrationTest.PluginTests
             };
             j.Add("BeforeDeploy", p);
             input.Template.Outputs = j.ToString(Newtonsoft.Json.Formatting.None);
-            return Task.FromResult(new TaskResult() { Code = 200, Content = DataConverter.Serialize(input) });
+            return Task.FromResult(new TaskResult() { Code = 200, Content =input });
         }
     }
 }

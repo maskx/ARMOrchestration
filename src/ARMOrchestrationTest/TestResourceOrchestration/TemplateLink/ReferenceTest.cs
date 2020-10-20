@@ -29,7 +29,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 {"referenceOutput",full["properties"].ToString(Newtonsoft.Json.Formatting.None)},
                 {"fullReferenceOutput",full.ToString(Newtonsoft.Json.Formatting.None) }
             };
-            TestHelper.FunctionTest(this.fixture, "TestARMFunctions/json/reference/reference", result,null,true);
+            TestHelper.FunctionTest(this.fixture, "reference/reference", result, managementGroupId: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "ReferenceDependsOn")]
@@ -38,7 +38,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture, "TestARMFunctions/json/reference/referenceDependsOn", result,null,true);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/referenceDependsOn", result, managementGroupId: null, usingLinkTemplate: true);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             bool hasResource = false;
             foreach (var r in rs)
@@ -62,7 +62,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture, "TestARMFunctions/json/reference/IncluedServiceTypeDependsOn", result,null,true);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/IncluedServiceTypeDependsOn", result, managementGroupId: null, usingLinkTemplate: true);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             bool hasResource = false;
             foreach (var r in rs)
@@ -113,7 +113,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture, "TestARMFunctions/json/reference/2referenceDependsOn", result,null,true);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/2referenceDependsOn", result, managementGroupId: null, usingLinkTemplate: true);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             bool hasResource = false;
             foreach (var r in rs)
@@ -139,7 +139,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture, "TestARMFunctions/json/reference/ResourceIteration", result,null,true);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/ResourceIteration", result, managementGroupId: null, usingLinkTemplate: true);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             Assert.Equal(6, rs.Count);
             int copyCount = 0;
@@ -177,7 +177,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
             };
-            var instance = TestHelper.FunctionTest(this.fixture, "TestARMFunctions/json/reference/PropertyIteration", result,null,true);
+            var instance = TestHelper.FunctionTest(this.fixture, "reference/PropertyIteration", result, managementGroupId: null, usingLinkTemplate: true);
             var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
             bool hasexamplevm = false;
             int diskCount = 0;

@@ -57,66 +57,27 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             TemplateLink templateLink = null;
             if (rootElement.TryGetProperty("templateLink", out JsonElement _templateLink))
-            {
-                templateLink = new TemplateLink()
-                {
-                    ContentVersion = _templateLink.GetProperty("contentVersion").GetString(),
-                    Uri = functions.Evaluate(_templateLink.GetProperty("uri").GetString(), context).ToString()
-                };
-            }
+                templateLink = resource.ServiceProvider.GetService<ARMTemplateHelper>().ParseTemplateLink(_templateLink, context);
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
             string parameters = string.Empty;
             ParametersLink parametersLink = null;
-            if (rootElement.TryGetProperty("expressionEvaluationOptions", out JsonElement _expressionEvaluationOptions)
-                && _expressionEvaluationOptions.GetProperty("scope").GetString().Equals("inner", StringComparison.OrdinalIgnoreCase))
+            if (rootElement.TryGetProperty("parameters", out JsonElement _parameters))
             {
-                if (rootElement.TryGetProperty("parameters", out JsonElement _parameters))
-                {
-                    parameters = _parameters.GetRawText();
-                }
-                if (rootElement.TryGetProperty("parametersLink", out JsonElement _parametersLink))
-                {
-                    parametersLink = new ParametersLink()
-                    {
-                        ContentVersion = _parametersLink.GetProperty("contentVersion").GetString(),
-                        Uri = functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), context).ToString()
-                    };
-                }
+                parameters = _parameters.GetRawText();
             }
-            else
+            if (rootElement.TryGetProperty("parametersLink", out JsonElement _parametersLink))
             {
-                parameters = deploymentContext.Parameters;
-                using MemoryStream ms = new MemoryStream();
-                using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-                writer.WriteStartObject();
-                using var doc1 = JsonDocument.Parse(template);
-                var root1 = doc1.RootElement;
-                foreach (var node in root1.EnumerateObject())
+                parametersLink = new ParametersLink()
                 {
-                    if (node.Name.Equals("parameters", StringComparison.OrdinalIgnoreCase)
-                        || node.Name.Equals("variables", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-                    writer.WritePropertyName(node.Name);
-                    node.Value.WriteTo(writer);
-                }
-                if (!string.IsNullOrWhiteSpace(deploymentContext.Template.Parameters))
-                {
-                    using var p = JsonDocument.Parse(deploymentContext.Template.Parameters);
-                    writer.WritePropertyName("parameters");
-                    p.RootElement.WriteTo(writer);
-                }
-                if (deploymentContext.Template.Variables != null)
-                {
-                    using var v = JsonDocument.Parse(deploymentContext.Template.Variables.ToString());
-                    writer.WritePropertyName("variables");
-                    v.RootElement.WriteTo(writer);
-                }
-
-                writer.WriteEndObject();
-                writer.Flush();
-                template = Encoding.UTF8.GetString(ms.ToArray());
+                    ContentVersion = _parametersLink.GetProperty("contentVersion").GetString(),
+                    Uri = functions.Evaluate(_parametersLink.GetProperty("uri").GetString(), context).ToString()
+                };
+            }
+            string expressionEvaluationOptions = "outer";
+            if (rootElement.TryGetProperty("expressionEvaluationOptions", out JsonElement _expressionEvaluationOptions))
+            {
+                if (_expressionEvaluationOptions.TryGetProperty("scope", out JsonElement _scope))
+                    expressionEvaluationOptions = functions.Evaluate(_scope.GetString(), context).ToString();
             }
             var (groupId, groupType, hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
             context.Remove(ContextKeys.ARM_CONTEXT);
@@ -125,6 +86,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 RootId = deploymentContext.RootId,
                 DeploymentId = Guid.NewGuid().ToString("N"),
                 ParentId = deploymentContext.ResourceId,
+                _Parent = deploymentContext,
                 GroupId = groupId,
                 GroupType = groupType,
                 HierarchyId = hierarchyId,
@@ -145,7 +107,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 Extensions = deploymentContext.Extensions,
                 TenantId = deploymentContext.TenantId,
                 Context = context,
-                ServiceProvider = resource.ServiceProvider
+                ServiceProvider = resource.ServiceProvider,
+                ExpressionEvaluationOptions = expressionEvaluationOptions
             };
 
             return deployInput;
@@ -166,7 +129,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         }
 
         public bool IsRuntime { get; set; } = false;
-
+        public string ExpressionEvaluationOptions { get; set; }
         /// <summary>
         /// group Id
         /// </summary>
@@ -191,6 +154,19 @@ namespace maskx.ARMOrchestration.Orchestrations
         /// the deploymentId of parent, DependsOn will search resource status in this deployment's scope
         /// </summary>
         public string ParentId { get; set; }
+        private DeploymentOrchestrationInput _Parent;
+        [JsonIgnore]
+        public DeploymentOrchestrationInput Parent
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(ParentId))
+                    return null;
+                if (_Parent == null)
+                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentOrchestrationInputResourceIdAsync(this.ParentId).Result;
+                return _Parent;
+            }
+        }
 
         public string DeploymentId { get; set; }
         public string CorrelationId { get; set; }

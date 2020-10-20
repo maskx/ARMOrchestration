@@ -19,7 +19,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         [Fact(DisplayName = "HasResourceFail")]
         public void HasResourceFail()
         {
-            var (instance, result) = TestHelper.OrchestrationTestNotCheckResult(this.fixture, "HasResourceFail");
+            var (instance, result) = TestHelper.OrchestrationTestNotCheckResult(this.fixture, "HasResourceFail",TestHelper.SubscriptionId);
             Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
             var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
             Assert.Equal(500, response.Code);

@@ -346,7 +346,14 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 _DependsOn = new DependsOnCollection();
                 if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
                 {
-                    using var dd = JsonDocument.Parse(dependsOn.GetRawText());
+                    string dep;
+                    if (dependsOn.ValueKind == JsonValueKind.String)
+                        dep = _Functions.Evaluate(dependsOn.GetString(), FullContext).ToString();
+                    else if (dependsOn.ValueKind == JsonValueKind.Array)
+                        dep = dependsOn.GetRawText();
+                    else
+                        throw new Exception("dependsON should be an arrary");
+                    using var dd = JsonDocument.Parse(dep);
                     foreach (var item in dd.RootElement.EnumerateArray())
                     {
                         _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);

@@ -46,6 +46,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public void Add(string item, DeploymentOrchestrationInput deployment)
         {
+            if (string.IsNullOrEmpty(item))
+                return;
             if (!Contains(item))
             {
                 var resources = deployment.GetResources(item);

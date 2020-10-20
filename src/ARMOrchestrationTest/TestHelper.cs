@@ -96,9 +96,12 @@ namespace ARMOrchestrationTest
             ARMOrchestartionFixture fixture,
             string filename,
             Dictionary<string, string> result,
-            string managementGroupId = null, bool usingLinkTemplate = false)
+            string subscriptionId = null,
+            string managementGroupId = null,
+            bool usingLinkTemplate = false)
         {
-            var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename, managementGroupId,usingLinkTemplate);
+            if (string.IsNullOrEmpty(subscriptionId)) subscriptionId = Guid.NewGuid().ToString();
+            var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename,subscriptionId, managementGroupId: managementGroupId, usingLinkTemplate: usingLinkTemplate);
             Assert.Equal(200, taskResult.Code);
             var outputString = taskResult.Content.ToString();
             var templateString = TestHelper.GetFunctionInputContent(filename);
@@ -126,17 +129,19 @@ namespace ARMOrchestrationTest
         public static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(
             ARMOrchestartionFixture fixture,
             string filename,
-            string managementGroupId = null, bool usingLinkTemplate = false)
+            string subscriptionId,
+            string managementGroupId = null, bool usingLinkTemplate = false
+)
         {
             DeploymentOrchestrationInput deployInput;
             if (usingLinkTemplate)
                 deployInput = new DeploymentOrchestrationInput()
                 {
-                    TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = filename },
+                    TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = $"TestARMFunctions/json/{filename}" },
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     Name = filename.Replace('/', '-'),
-                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? TestHelper.SubscriptionId : null,
+                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? subscriptionId: null,
                     ManagementGroupId = managementGroupId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     GroupId = Guid.NewGuid().ToString("N"),
@@ -154,7 +159,7 @@ namespace ARMOrchestrationTest
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     Name = filename.Replace('/', '-'),
-                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? TestHelper.SubscriptionId : null,
+                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? subscriptionId : null,
                     ManagementGroupId = managementGroupId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     GroupId = Guid.NewGuid().ToString("N"),
@@ -256,11 +261,12 @@ namespace ARMOrchestrationTest
 
         public static OrchestrationInstance OrchestrationTest(ARMOrchestartionFixture fixture,
             string filename,
+            string subscriptionId,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
-            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null,
+             Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null,
              bool usingLinkTemplate = false)
         {
-            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, isValidateOrchestration, validate, usingLinkTemplate);
+            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, subscriptionId,isValidateOrchestration: isValidateOrchestration, validate: validate, usingLinkTemplate: usingLinkTemplate);
             Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
             var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
             Assert.Equal(200, response.Code);
@@ -269,9 +275,10 @@ namespace ARMOrchestrationTest
 
         public static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture,
             string filename,
+            string subscriptionId,
             Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration = null,
-            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null,
-            bool usingLinkTemplate = false)
+            Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null, bool usingLinkTemplate = false
+)
         {
             DeploymentOrchestrationInput deployinput;
             if (usingLinkTemplate)
@@ -281,7 +288,7 @@ namespace ARMOrchestrationTest
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     Name = filename.Replace('/', '-'),
-                    SubscriptionId = TestHelper.SubscriptionId,
+                    SubscriptionId = subscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     GroupId = Guid.NewGuid().ToString("N"),
@@ -298,7 +305,7 @@ namespace ARMOrchestrationTest
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     Name = filename.Replace('/', '-'),
-                    SubscriptionId = TestHelper.SubscriptionId,
+                    SubscriptionId = subscriptionId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     DeploymentId = Guid.NewGuid().ToString("N"),
                     GroupId = Guid.NewGuid().ToString("N"),

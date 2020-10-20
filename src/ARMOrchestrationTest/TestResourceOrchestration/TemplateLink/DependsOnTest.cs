@@ -22,42 +22,42 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void OneResourceName()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/dependsOn/OneResourceName", null, null, true);
+                "Templates/dependsOn/OneResourceName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "ThreeResourceName")]
         public void ThreeResourceName()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/dependsOn/ThreeResourceName", null, null, true);
+                "Templates/dependsOn/ThreeResourceName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "CopyLoop")]
         public void CopyLoop()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/dependsOn/copyloop", null, null, true);
+                "Templates/dependsOn/copyloop", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "ConditionFalse")]
         public void ConditionFalse()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/dependsOn/ConditionFalse", null, null, true);
+                "Templates/dependsOn/ConditionFalse", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "DeployDepondsOn")]
         public void DeployDepondsOn()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/dependsOn/DeployDepondsOn", null, null, true);
+                "Templates/dependsOn/DeployDepondsOn", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
 
         [Fact(DisplayName = "DuplicatedName")]
         public void DuplicatedName()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                 "Templates/dependsOn/DuplicatedName", null, null, true);
+                 "Templates/dependsOn/DuplicatedName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
@@ -76,7 +76,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void NameAndServiceTypeName()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                 "Templates/dependsOn/NameAndServiceTypeName", null, null, true);
+                 "Templates/dependsOn/NameAndServiceTypeName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
@@ -95,7 +95,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void ServiceTypeNameAndName()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                 "Templates/dependsOn/ServiceTypeNameAndName", null, null, true);
+                 "Templates/dependsOn/ServiceTypeNameAndName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
@@ -121,7 +121,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 Parameters = string.Empty,
                 CorrelationId = Guid.NewGuid().ToString("N"),
                 Name = filename.Replace('/', '-'),
-                SubscriptionId = TestHelper.SubscriptionId,
+                SubscriptionId = Guid.NewGuid().ToString(),
                 ResourceGroup = TestHelper.ResourceGroup,
                 DeploymentId = id,
                 GroupId = Guid.NewGuid().ToString("N"),
@@ -136,7 +136,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             Assert.Equal(1, deployment.Template.Resources["resource2"].DependsOn.Count);
 
             var instance = TestHelper.OrchestrationTest(fixture,
-                 "Templates/dependsOn/DuplicatedServiceTypeName", null, null, true);
+                 "Templates/dependsOn/DuplicatedServiceTypeName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
@@ -155,7 +155,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void DiffServiceTypeSameName()
         {
             var instance = TestHelper.OrchestrationTest(fixture,
-                 "Templates/dependsOn/DiffServiceTypeSameName", null, null, true);
+                 "Templates/dependsOn/DiffServiceTypeSameName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
@@ -175,7 +175,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void DependsOnFullname()
         {
             TestHelper.OrchestrationTest(fixture,
-                "Templates/dependsOn/dependsOnFullname", null, null, true);
+                "Templates/dependsOn/dependsOnFullname", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
     }
 }

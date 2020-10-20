@@ -33,7 +33,7 @@ namespace ARMOrchestrationTest
             #region add new resource
             input.Template.Resources.Add(new Resource()
             {
-                Type = "rp/st",
+                Type = "isv.rp/st",
                 Name = "Name1",
                 RawProperties = "{}"
             });
@@ -71,7 +71,7 @@ namespace ARMOrchestrationTest
             Assert.Empty(r.DependsOn);
             input.Template.Resources.Add(new Resource()
             {
-                Type = "rp/st",
+                Type = "isv.rp/st",
                 Name = "Name2",
                 RawProperties = "{}",
             });
@@ -93,7 +93,7 @@ namespace ARMOrchestrationTest
             Assert.True(docr2.RootElement.TryGetProperty("dependsOn", out JsonElement dependsOnE));
             Assert.Equal(JsonValueKind.Array, dependsOnE.ValueKind);
             Assert.Single(dependsOnE.EnumerateArray());
-            Assert.Equal("Name1-Changed", dependsOnE.EnumerateArray().First().GetString());
+            Assert.Equal("isv.rp/st/Name1-Changed", dependsOnE.EnumerateArray().First().GetString());
 
             #endregion
 

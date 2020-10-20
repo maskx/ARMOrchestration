@@ -357,77 +357,15 @@ namespace maskx.ARMOrchestration.Functions
                 // TODO: support securestring
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
                 // may be need implement at Resource Provider
-
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-
-                // this is User Defined Functions
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
-                if (cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
-                {
-                    using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
-                    if (jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
-                    {
-                        if (ele.TryGetProperty("value", out JsonElement v))
-                        {
-                            args.Result = JsonValue.GetElementValue(v);
-                        }
-                    }
-                }
-                else
-                {
-                    if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
-                        throw new Exception("cannot find context in parameters function");
-                    var context = armcxt as DeploymentOrchestrationInput;
-
-                    if (!string.IsNullOrEmpty(context.Parameters))
-                    {
-                        using var jsonDoc = JsonDocument.Parse(context.Parameters);
-                        if (!jsonDoc.RootElement.TryGetProperty(par1, out JsonElement ele))
-                        {
-                            if (ele.TryGetProperty("value", out JsonElement v))
-                            {
-                                args.Result = JsonValue.GetElementValue(v);
-                            }
-                        }
-                    }
-                    if (!args.HasResult)
-                    {
-                        var pds = context.Template.Parameters;
-                        using var defineDoc = JsonDocument.Parse(pds);
-                        if (!defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
-                        {
-                            throw new Exception($"ARM Template does not define the parameter:{par1}");
-                        }
-                        if (parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
-                        {
-                            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
-                            // paramete's default value can be included function
-                            args.Result = JsonValue.GetElementValue(defValue);
-                            if (defValue.ValueKind == JsonValueKind.String)
-                                args.Result = this.Evaluate(args.Result.ToString(), cxt);
-                        }
-                    }
-                }
-
-                if (args.Result is string s)
-                    args.Result = Evaluate(s, cxt);
+                var rtv = GetParameter(par1, cxt);
+                args.Result = rtv.Result;
             });
             Functions.Add("variables", (args, cxt) =>
             {
-                if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
-                    return;
-                string vars = (armcxt as DeploymentOrchestrationInput).Template.Variables.ToString();
-
                 var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-                using var defineDoc = JsonDocument.Parse(vars);
-                if (defineDoc.RootElement.TryGetProperty(par1, out JsonElement parEleDef))
-                {
-                    args.Result = JsonValue.GetElementValue(parEleDef);
-                }
-                else
-                    throw new Exception($"ARM Template does not define the variables:{par1}");
-                if (args.Result is string s)
-                    args.Result = Evaluate(s, cxt);
+                var rtv = GetVariables(par1, cxt);
+                args.Result = rtv.Result;
             });
             Functions.Add("deployment", (args, cxt) =>
             {
@@ -858,7 +796,84 @@ namespace maskx.ARMOrchestration.Functions
 
             #endregion Resource
         }
-
+        private FunctionArgs GetVariables(string name,Dictionary<string,object> cxt)
+        {
+            FunctionArgs rtv = new FunctionArgs();
+            if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
+                throw new Exception("cannot find context in parameters function");
+            var input = armcxt as DeploymentOrchestrationInput;
+            if (!string.IsNullOrEmpty(input.ParentId) && 
+                (string.IsNullOrEmpty(input.ExpressionEvaluationOptions) || !input.ExpressionEvaluationOptions.Equals("inner", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Dictionary<string, object> parentCxt = new Dictionary<string, object>();
+                foreach (var item in cxt)
+                {
+                    if (item.Key == ContextKeys.ARM_CONTEXT)
+                        parentCxt.Add(ContextKeys.ARM_CONTEXT, input.Parent);
+                    else
+                        parentCxt.Add(item.Key, item.Value);
+                }
+                rtv = GetVariables(name, parentCxt);
+            }
+            if (!rtv.HasResult)
+            {
+                using var defineDoc = JsonDocument.Parse(input.Template.Variables.ToString());
+                if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef))
+                    rtv.Result = JsonValue.GetElementValue(parEleDef);
+            }            
+            if (rtv.HasResult && rtv.Result is string s)
+                rtv.Result = Evaluate(s, cxt);
+            return rtv;
+        }
+        private FunctionArgs GetParameter(string name, Dictionary<string, object> cxt)
+        {
+            if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
+                throw new Exception("cannot find context in parameters function");
+            var input = armcxt as DeploymentOrchestrationInput;
+            FunctionArgs rtv = new FunctionArgs();
+            if (!string.IsNullOrEmpty(input.ParentId) && 
+                (string.IsNullOrEmpty(input.ExpressionEvaluationOptions) || !input.ExpressionEvaluationOptions.Equals("inner", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Dictionary<string, object> parentCxt = new Dictionary<string, object>();
+                foreach (var item in cxt)
+                {
+                    if (item.Key == ContextKeys.ARM_CONTEXT)
+                        parentCxt.Add(ContextKeys.ARM_CONTEXT, input.Parent);
+                    else
+                        parentCxt.Add(item.Key, item.Value);
+                }
+                rtv = GetParameter(name, parentCxt);
+            }
+            if (!rtv.HasResult)
+            {
+                // this is User Defined Functions
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
+                if (cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
+                {
+                    using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
+                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                        rtv.Result = JsonValue.GetElementValue(v);
+                }
+                else if (!string.IsNullOrEmpty(input.Parameters))
+                {
+                    using var jsonDoc = JsonDocument.Parse(input.Parameters);
+                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                        rtv.Result = JsonValue.GetElementValue(v);
+                }
+                if (!rtv.HasResult)
+                {
+                    using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
+                    if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                        rtv.Result = JsonValue.GetElementValue(defValue);
+                }
+            }
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
+            // paramete's default value can be included function
+            if (rtv.HasResult && rtv.Result is string s)
+                rtv.Result = Evaluate(s, cxt);
+            return rtv;
+        }
+        
         public string ResourceId(DeploymentOrchestrationInput input, params object[] pars)
         {
             string groupType = infrastructure.BuiltinPathSegment.Subscription;

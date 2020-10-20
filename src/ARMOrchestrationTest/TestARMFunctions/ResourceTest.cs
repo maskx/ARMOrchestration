@@ -6,6 +6,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using Xunit;
 
@@ -36,13 +37,14 @@ namespace ARMOrchestrationTest.TestARMFunctions
         [Fact(DisplayName = "SubscriptionResourceId")]
         public void SubscriptionResourceId()
         {
+            string subscriptionId = Guid.NewGuid().ToString();
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
                 {"WithSubscriptionId",$"/subscription/11645A35-036C-48F0-BD7F-EA8312B8DC18/providers/Microsoft.Authorization/locks/lockname1"},
-                {"WithOutSubscriptionId",$"/subscription/{TestHelper.SubscriptionId}/providers/Microsoft.Authorization/locks/lockname1"},
-                {"NestResource",$"/subscription/{TestHelper.SubscriptionId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
+                {"WithOutSubscriptionId",$"/subscription/{subscriptionId}/providers/Microsoft.Authorization/locks/lockname1"},
+                {"NestResource",$"/subscription/{subscriptionId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
              };
-            TestHelper.FunctionTest(this.fixture, "subscriptionResourceId", result);
+            TestHelper.FunctionTest(this.fixture, "subscriptionResourceId", result, subscriptionId);
         }
 
         [Fact(DisplayName = "ManagementGroupResourceid")]
@@ -54,20 +56,21 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"WithOutManagementGroupId",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1"},
                 {"NestResource",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
              };
-            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result, TestHelper.ManagemntGroupId);
+            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result, managementGroupId: TestHelper.ManagemntGroupId);
         }
 
         [Fact(DisplayName = "resourceid")]
         public void Resourceid()
         {
+            string subscriptionId = Guid.NewGuid().ToString();
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
-                {"sameRGOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Storage/storageAccounts/examplestorage"},
-                {"differentRGOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                {"sameRGOutput",$"/subscription/{subscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.Storage/storageAccounts/examplestorage"},
+                {"differentRGOutput",$"/subscription/{subscriptionId}/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
                 {"differentSubOutput","/subscription/11111111-1111-1111-1111-111111111111/resourceGroups/otherResourceGroup/providers/Microsoft.Storage/storageAccounts/examplestorage"},
-                { "nestedResourceOutput",$"/subscription/{TestHelper.SubscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
+                { "nestedResourceOutput",$"/subscription/{subscriptionId}/resourceGroups/{TestHelper.ResourceGroup}/providers/Microsoft.SQL/servers/serverName/databases/databaseName"}
             };
-            TestHelper.FunctionTest(this.fixture, "resourceid", result);
+            TestHelper.FunctionTest(this.fixture, "resourceid",result,subscriptionId);
         }
 
         [Fact(DisplayName = "resourceidInternl")]

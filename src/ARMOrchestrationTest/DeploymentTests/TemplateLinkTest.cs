@@ -1,11 +1,4 @@
-﻿using DurableTask.Core;
-using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Orchestrations;
-using maskx.OrchestrationService;
-using maskx.OrchestrationService.Worker;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Threading.Tasks;
+﻿using System;
 using Xunit;
 
 namespace ARMOrchestrationTest.DeploymentTests
@@ -23,7 +16,7 @@ namespace ARMOrchestrationTest.DeploymentTests
         [Fact(DisplayName = "NestTemplateLink")]
         public void NestTemplateLink()
         {
-            TestHelper.OrchestrationTest(fixture, "DeploymentTests/json/NestTemplateLink_main", null,null,true);
+            TestHelper.OrchestrationTest(fixture, "DeploymentTests/json/NestTemplateLink_main", subscriptionId:Guid.NewGuid().ToString(),isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
         }
     }
 }
