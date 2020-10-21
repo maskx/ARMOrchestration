@@ -1,5 +1,6 @@
 ﻿using DurableTask.Core;
 using maskx.OrchestrationService;
+using System;
 using Xunit;
 
 namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
@@ -19,7 +20,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         [Fact(DisplayName = "HasResourceFail")]
         public void HasResourceFail()
         {
-            var (instance, result) = TestHelper.OrchestrationTestNotCheckResult(this.fixture, "Templates/HasResourceFail",subscriptionId:TestHelper.SubscriptionId, isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
+            var (instance, result) = TestHelper.OrchestrationTestNotCheckResult(this.fixture, "Templates/HasResourceFail",subscriptionId:Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
             var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
             Assert.Equal(500, response.Code);

@@ -796,13 +796,13 @@ namespace maskx.ARMOrchestration.Functions
 
             #endregion Resource
         }
-        private FunctionArgs GetVariables(string name,Dictionary<string,object> cxt)
+        private FunctionArgs GetVariables(string name, Dictionary<string, object> cxt)
         {
             FunctionArgs rtv = new FunctionArgs();
             if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                 throw new Exception("cannot find context in parameters function");
             var input = armcxt as DeploymentOrchestrationInput;
-            if (!string.IsNullOrEmpty(input.ParentId) && 
+            if (!string.IsNullOrEmpty(input.ParentId) &&
                 (string.IsNullOrEmpty(input.ExpressionEvaluationOptions) || !input.ExpressionEvaluationOptions.Equals("inner", StringComparison.InvariantCultureIgnoreCase)))
             {
                 Dictionary<string, object> parentCxt = new Dictionary<string, object>();
@@ -815,12 +815,12 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 rtv = GetVariables(name, parentCxt);
             }
-            if (!rtv.HasResult)
+            if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Variables.ToString()))
             {
                 using var defineDoc = JsonDocument.Parse(input.Template.Variables.ToString());
                 if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef))
                     rtv.Result = JsonValue.GetElementValue(parEleDef);
-            }            
+            }
             if (rtv.HasResult && rtv.Result is string s)
                 rtv.Result = Evaluate(s, cxt);
             return rtv;
@@ -831,7 +831,7 @@ namespace maskx.ARMOrchestration.Functions
                 throw new Exception("cannot find context in parameters function");
             var input = armcxt as DeploymentOrchestrationInput;
             FunctionArgs rtv = new FunctionArgs();
-            if (!string.IsNullOrEmpty(input.ParentId) && 
+            if (!string.IsNullOrEmpty(input.ParentId) &&
                 (string.IsNullOrEmpty(input.ExpressionEvaluationOptions) || !input.ExpressionEvaluationOptions.Equals("inner", StringComparison.InvariantCultureIgnoreCase)))
             {
                 Dictionary<string, object> parentCxt = new Dictionary<string, object>();
@@ -839,33 +839,32 @@ namespace maskx.ARMOrchestration.Functions
                 {
                     if (item.Key == ContextKeys.ARM_CONTEXT)
                         parentCxt.Add(ContextKeys.ARM_CONTEXT, input.Parent);
+                    else if (item.Key == ContextKeys.UDF_CONTEXT)
+                        continue;
                     else
                         parentCxt.Add(item.Key, item.Value);
                 }
                 rtv = GetParameter(name, parentCxt);
             }
-            if (!rtv.HasResult)
+            if (!rtv.HasResult && !string.IsNullOrEmpty(input.Parameters))
             {
-                // this is User Defined Functions
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
-                if (cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
-                {
-                    using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
-                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
-                        rtv.Result = JsonValue.GetElementValue(v);
-                }
-                else if (!string.IsNullOrEmpty(input.Parameters))
-                {
                     using var jsonDoc = JsonDocument.Parse(input.Parameters);
                     if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
                         rtv.Result = JsonValue.GetElementValue(v);
-                }
-                if (!rtv.HasResult)
-                {
-                    using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
-                    if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
-                        rtv.Result = JsonValue.GetElementValue(defValue);
-                }
+            }
+            if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Parameters))
+            {
+                using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
+                if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                    rtv.Result = JsonValue.GetElementValue(defValue);
+            }
+            // this is User Defined Functions
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
+            if (!rtv.HasResult && cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
+            {
+                using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
+                if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                    rtv.Result = JsonValue.GetElementValue(v);
             }
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
             // paramete's default value can be included function
@@ -873,7 +872,7 @@ namespace maskx.ARMOrchestration.Functions
                 rtv.Result = Evaluate(s, cxt);
             return rtv;
         }
-        
+
         public string ResourceId(DeploymentOrchestrationInput input, params object[] pars)
         {
             string groupType = infrastructure.BuiltinPathSegment.Subscription;
@@ -1113,7 +1112,25 @@ namespace maskx.ARMOrchestration.Functions
             member = null;
             if (!context.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                 return false;
-            var udfs = (armcxt as DeploymentOrchestrationInput).Template.Functions;
+            var input = armcxt as DeploymentOrchestrationInput;
+            if (!string.IsNullOrEmpty(input.ParentId) &&
+               (string.IsNullOrEmpty(input.ExpressionEvaluationOptions) || !input.ExpressionEvaluationOptions.Equals("inner", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                Dictionary<string, object> parentCxt = new Dictionary<string, object>();
+                foreach (var item in context)
+                {
+                    if (item.Key == ContextKeys.ARM_CONTEXT)
+                        parentCxt.Add(ContextKeys.ARM_CONTEXT, input.Parent);
+                    else
+                        parentCxt.Add(item.Key, item.Value);
+                }
+                if (TryGetCustomFunction(function, parentCxt, out Member parentMmeber))
+                {
+                    member = parentMmeber;
+                    return true;
+                }
+            }
+            var udfs = input.Template.Functions;
             if (udfs == null)
                 return false;
             var names = function.Split('.');

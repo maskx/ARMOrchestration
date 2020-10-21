@@ -1,5 +1,4 @@
-﻿using ARMOrchestrationTest;
-using maskx.OrchestrationService;
+﻿using maskx.OrchestrationService;
 using System;
 using System.Text.Json;
 using Xunit;
@@ -30,7 +29,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             TestHelper.OrchestrationTest(fixture,
               "NestTemplate/ExpressionsInNestedTemplates-inner", subscriptionId: Guid.NewGuid().ToString(),
-              isValidateOrchestration: (instance, args) => { return !args.IsSubOrchestration && args.InstanceId == instance.InstanceId; }, 
+              isValidateOrchestration: (instance, args) => { return !args.IsSubOrchestration && args.InstanceId == instance.InstanceId; },
               validate: (instance, args) =>
                {
                    Assert.True(args.Status);
@@ -42,6 +41,24 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
 
                    Assert.Equal("from nested template", messageFromLinkedTemplate.GetProperty("value").GetString());
                });
+        }
+        [Fact(DisplayName = "NetTemplate_UDF_in_Parent")]
+        public void NetTemplate_UDF_in_Parent()
+        {
+            TestHelper.OrchestrationTest(fixture,
+              "NestTemplate/NetTemplate_UDF_in_Parent", subscriptionId: Guid.NewGuid().ToString(),
+              isValidateOrchestration: (instance, args) => { return !args.IsSubOrchestration && args.InstanceId == instance.InstanceId; },
+              validate: (instance, args) =>
+              {
+                  Assert.True(args.Status);
+                  var r = TestHelper.DataConverter.Deserialize<TaskResult>(args.Result);
+                  Assert.Equal(200, r.Code);
+                  using var doc = JsonDocument.Parse(r.Content.ToString());
+                  var root = doc.RootElement;
+                  Assert.True(root.GetProperty("properties").GetProperty("outputs").TryGetProperty("messageFromLinkedTemplate", out JsonElement messageFromLinkedTemplate));
+
+                  Assert.Equal("abc-123", messageFromLinkedTemplate.GetProperty("value").GetString());
+              });
         }
     }
 }
