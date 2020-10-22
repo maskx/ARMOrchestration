@@ -680,5 +680,14 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
             }
         }
+
+        public override void Change(object value, string name)
+        {
+            if(this.CopyIndex.HasValue)
+            {
+                this.Input.Template.ChangedCopyResoures.Add(this);
+            }
+            base.Change(value, name);
+        }
     }
 }

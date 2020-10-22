@@ -323,5 +323,33 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             using var doc1 = JsonDocument.Parse(s);
             var root1 = doc1.RootElement;
         }
+
+        [Fact(DisplayName = "ModifyCopyResource")]
+        public void ModifyCopyResource()
+        {
+            var Deployment = new DeploymentOrchestrationInput()
+            {
+                Name = "ResourceIteration",
+                SubscriptionId = TestHelper.SubscriptionId,
+                ResourceGroup = TestHelper.ResourceGroup,
+                Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/ResourceIteration"),
+                ServiceProvider = fixture.ServiceProvider
+            };
+            Assert.Empty(Deployment.Template.ChangedCopyResoures);
+            var copy=Deployment.Template.Resources["storagecopy"];
+            var r=copy.Copy.EnumerateResource().First();
+            Assert.Equal(0, r.CopyIndex);
+            r.Comments = "123";
+            Assert.Single(Deployment.Template.ChangedCopyResoures);
+            var rr = copy.Copy.EnumerateResource().First();
+            Assert.Equal("123", rr.Comments);
+            var str=TestHelper.DataConverter.Serialize(Deployment.Template);
+            Assert.Contains("123", str);
+            var t1 = TestHelper.DataConverter.Deserialize<Template>(str);
+            var c1 = t1.Resources["storagecopy"];
+            var r1 = c1.Copy.EnumerateResource().First();
+            Assert.Equal(0, r1.CopyIndex);
+            Assert.Equal("123", r1.Comments);
+        }
     }
 }

@@ -197,7 +197,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     ParentContext = parentContext,
                     Input = _Resource.Input
                 };
-                yield return r;
+                if (_Resource.Input.Template.ChangedCopyResoures.TryGetValue(r.NameWithServiceType, out Resource cr))
+                    yield return cr;
+                else
+                    yield return r;
                 if (flatChild)
                 {
                     foreach (var child in r.FlatEnumerateChild())

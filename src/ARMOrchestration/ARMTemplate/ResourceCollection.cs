@@ -208,7 +208,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public void Add(Resource item)
         {
             string name = item.Name;
-            if (item.Copy != null)
+            if (item.Copy != null && !item.CopyIndex.HasValue)
                 name = item.Copy.Name;
             int index = name.LastIndexOf('/');
             if (index > 0)

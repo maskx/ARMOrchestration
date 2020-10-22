@@ -187,7 +187,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         public DeploymentMode Mode { get; set; } = DeploymentMode.Incremental;
 
         private Template template = null;
-
+      
         public Template Template
         {
             get
@@ -196,11 +196,15 @@ namespace maskx.ARMOrchestration.Orchestrations
                     return template;
                 if (TemplateLink != null)
                 {
-                    Template t = this.ServiceProvider.GetService<IInfrastructure>().GetTemplateContentAsync(TemplateLink, this).Result;
-                    t.Input = this;
-                    return t;
+                    template = this.ServiceProvider.GetService<IInfrastructure>().GetTemplateContentAsync(TemplateLink, this).Result;
+                    if (template != null)
+                        template.Input = this;
                 }
-                return null;
+                if (template == null)
+                {
+                    // TODO: get Template from database
+                }
+                return template;
             }
             set
             {
@@ -370,7 +374,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                                 yield return rInDeploy;
                             }
                         }
-
                     }
                     else
                     {

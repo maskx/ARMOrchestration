@@ -157,7 +157,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 throw new NotSupportedException($"{value.GetType().FullName} is not supported in ChangeJsonValue method");
         }
 
-        public void Change(object value, string name)
+        public virtual void Change(object value, string name)
         {
             _ChangeTracking[name] = value;
             _NewVersion = DateTime.Now.Ticks;

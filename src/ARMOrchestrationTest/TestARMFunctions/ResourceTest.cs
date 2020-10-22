@@ -50,13 +50,14 @@ namespace ARMOrchestrationTest.TestARMFunctions
         [Fact(DisplayName = "ManagementGroupResourceid")]
         public void ManagementGroupResourceid()
         {
+            var mgid = Guid.NewGuid().ToString();
             Dictionary<string, string> result = new Dictionary<string, string>()
             {
                 {"WithManagementGroupId",$"/management/11645A35-036C-48F0-BD7F-EA8312B8DC18/providers/Microsoft.Authorization/locks/lockname1"},
-                {"WithOutManagementGroupId",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1"},
-                {"NestResource",$"/management/{TestHelper.ManagemntGroupId}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
+                {"WithOutManagementGroupId",$"/management/{mgid}/providers/Microsoft.Authorization/locks/lockname1"},
+                {"NestResource",$"/management/{mgid}/providers/Microsoft.Authorization/locks/lockname1/nestResourceType/NestResrouceName"}
              };
-            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result, managementGroupId: TestHelper.ManagemntGroupId);
+            TestHelper.FunctionTest(this.fixture, "ManagementResourceid", result, managementGroupId: mgid);
         }
 
         [Fact(DisplayName = "resourceid")]

@@ -211,5 +211,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
             return (true, "");
         }
+
+        ResourceCollection _ChangedCopyResoures;
+        public ResourceCollection ChangedCopyResoures
+        {
+            get
+            {
+                if (_ChangedCopyResoures == null)
+                    _ChangedCopyResoures = new ResourceCollection("[]", FullContext);
+                return _ChangedCopyResoures;
+            }
+        }
     }
 }
