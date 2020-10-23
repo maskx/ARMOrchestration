@@ -41,7 +41,7 @@ namespace ARMOrchestrationTest.PluginTests
         {
             var client = serviceProvider.GetService<OrchestrationWorkerClient>();
             var instance = serviceProvider.GetService<ARMOrchestrationClient>().Run(
-                new DeploymentOrchestrationInput()
+                new Deployment()
                 {
                     ApiVersion = "1.0",
                     Name = "UsingARMOrchestrationTest",

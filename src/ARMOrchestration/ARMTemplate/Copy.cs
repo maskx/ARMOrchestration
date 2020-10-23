@@ -16,7 +16,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public const string SerialMode = "serial";
         public const string ParallelMode = "parallel";
 
-        public DeploymentOrchestrationInput DeploymentOrchestrationInput { get; set; }
+        public Deployment DeploymentOrchestrationInput { get; set; }
         private Resource _Resource;
         private IInfrastructure _Infrastructure { get { return DeploymentOrchestrationInput.ServiceProvider.GetService<IInfrastructure>(); } }
         private ARMFunctions _ARMFunctions { get { return DeploymentOrchestrationInput.ServiceProvider.GetService<ARMFunctions>(); } }
@@ -176,7 +176,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
         public Copy(string rawString, Dictionary<string, object> context)
         {
-            this.DeploymentOrchestrationInput = context[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+            this.DeploymentOrchestrationInput = context[ContextKeys.ARM_CONTEXT] as Deployment;
             this.RawString = rawString;
             this._ParentContext = context;
         }

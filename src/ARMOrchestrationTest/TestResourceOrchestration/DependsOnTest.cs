@@ -115,7 +115,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             string filename = "dependsOn/DuplicatedServiceTypeName";
             var id = Guid.NewGuid().ToString("N");
-            var deployment = new DeploymentOrchestrationInput()
+            var deployment = new Deployment()
             {
                 Template = TestHelper.GetTemplateContent(filename),
                 Parameters = string.Empty,

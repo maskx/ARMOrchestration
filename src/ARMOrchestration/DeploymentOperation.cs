@@ -1,6 +1,5 @@
 ﻿using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration
@@ -11,7 +10,7 @@ namespace maskx.ARMOrchestration
         {
         }
 
-        public DeploymentOperation(DeploymentOrchestrationInput deploymentInput, Resource resource = null)
+        public DeploymentOperation(Deployment deploymentInput, Resource resource = null)
         {
             this.GroupType = deploymentInput.GroupType;
             this.GroupId = deploymentInput.GroupId;

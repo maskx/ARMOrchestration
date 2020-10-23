@@ -1,5 +1,5 @@
 ﻿using DurableTask.Core;
-using maskx.ARMOrchestration.Orchestrations;
+using maskx.ARMOrchestration;
 using maskx.OrchestrationService;
 using Newtonsoft.Json.Linq;
 using System;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ARMOrchestrationTest.PluginTests
 {
-    public class AfterDeploymentOrhcestration : TaskOrchestration<TaskResult, DeploymentOrchestrationInput>
+    public class AfterDeploymentOrhcestration : TaskOrchestration<TaskResult, Deployment>
     {
         private readonly IServiceProvider _ServiceProvider;
 
@@ -16,7 +16,7 @@ namespace ARMOrchestrationTest.PluginTests
             this._ServiceProvider = serviceProvider;
         }
 
-        public override Task<TaskResult> RunTask(OrchestrationContext context, DeploymentOrchestrationInput input)
+        public override Task<TaskResult> RunTask(OrchestrationContext context, Deployment input)
         {
             input.ServiceProvider = _ServiceProvider;
             string s = input.Template.Outputs.RawString;

@@ -15,7 +15,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class ResourceCollection : ICollection<Resource>, IChangeTracking, IDisposable
     {
-        private DeploymentOrchestrationInput _Input;
+        private Deployment _Input;
         private IServiceProvider _ServiceProvider => _Input.ServiceProvider;
 
         private long _OldVersion;
@@ -82,7 +82,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
-            _Input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+            _Input = fullContext[ContextKeys.ARM_CONTEXT] as Deployment;
 
             foreach (var resource in element.EnumerateArray())
             {
@@ -120,7 +120,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private JsonDocument json;
         private readonly ConcurrentDictionary<string, List<Resource>> _Resources = new ConcurrentDictionary<string, List<Resource>>();
-        private List<DeploymentOrchestrationInput> _Deployments = null;
+        private List<Deployment> _Deployments = null;
 
         public Resource this[string name]
         {
@@ -350,13 +350,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 json.Dispose();
         }
 
-        public IEnumerable<DeploymentOrchestrationInput> EnumerateDeployments()
+        public IEnumerable<Deployment> EnumerateDeployments()
         {
             bool needInit = false;
             if (this._Deployments == null)
             {
                 needInit = true;
-                this._Deployments = new List<DeploymentOrchestrationInput>();
+                this._Deployments = new List<Deployment>();
             }
             if (this.HasChanged || needInit)
             {
@@ -366,7 +366,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     if (item.Type == infra.BuiltinServiceTypes.Deployments)
                     {
-                        this._Deployments.Add(DeploymentOrchestrationInput.Parse(item));
+                        this._Deployments.Add(Deployment.Parse(item));
                     }
                 }
             }

@@ -10,7 +10,7 @@ namespace maskx.ARMOrchestration.Activities
         public string InstanceId { get; set; }
         public string ExecutionId { get; set; }
         public Resource Resource { get; set; }
-        public DeploymentOrchestrationInput Input { get; set; }
+        public Deployment Input { get; set; }
         public ProvisioningStage ProvisioningStage { get; set; }
         private IServiceProvider _ServiceProvider;
 

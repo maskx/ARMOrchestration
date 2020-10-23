@@ -52,7 +52,7 @@ namespace ARMOrchestrationTest
 
             var client = webHost.Services.GetService<OrchestrationWorkerClient>();
             var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
-                new DeploymentOrchestrationInput()
+                new Deployment()
                 {
                     ApiVersion = "1.0",
                     Name = "UsingARMOrchestrationTest",
@@ -124,7 +124,7 @@ namespace ARMOrchestrationTest
 
             var client = webHost.Services.GetService<OrchestrationWorkerClient>();
             var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
-                new DeploymentOrchestrationInput()
+                new Deployment()
                 {
                     ApiVersion = "1.0",
                     Name = "UsingARMOrchestrationTest",

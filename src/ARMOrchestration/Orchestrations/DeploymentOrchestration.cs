@@ -28,11 +28,11 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
-            DeploymentOrchestrationInput input = this.DataConverter.Deserialize<DeploymentOrchestrationInput>(arg);
+            var input = this.DataConverter.Deserialize<Deployment>(arg);
             input.ServiceProvider = this._ServiceProvider;
-            if (string.IsNullOrEmpty(input.RootId))
-                input.RootId = input.DeploymentId;
-           
+            //if (string.IsNullOrEmpty(input.RootId))
+            //    input.RootId = input.DeploymentId;
+
 
             #region InjectBeforeDeployment
 
@@ -107,7 +107,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         return r;
                     }
 
-                    input = r.Content as DeploymentOrchestrationInput;
+                    input = r.Content as Deployment;
                     input.ServiceProvider = _ServiceProvider;
                 }
             }
@@ -202,7 +202,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         DeploymentOrchestration.Name,
                         "1.0",
-                        DataConverter.Serialize(DeploymentOrchestrationInput.Parse(resource))));
+                        DataConverter.Serialize(Deployment.Parse(resource))));
                 }
                 else
                 {
@@ -237,7 +237,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         }
                         else
                         {
-                            input = r.Content as DeploymentOrchestrationInput;
+                            input = r.Content as Deployment;
                             input.ServiceProvider = _ServiceProvider;
                         }
                     }

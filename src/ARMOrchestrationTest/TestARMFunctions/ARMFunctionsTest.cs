@@ -618,38 +618,44 @@ namespace ARMOrchestrationTest.TestARMFunctions
         public void newGuid()
         {
             string filename = "newGuid";
-            var templateString = TestHelper.GetFunctionInputContent(filename);
-            var instance = fixture.OrchestrationWorker.JumpStartOrchestrationAsync(new Job()
-            {
-                InstanceId = Guid.NewGuid().ToString("N"),
-                Orchestration = new OrchestrationSetting()
-                {
-                    Name = "DeploymentOrchestration",
-                    Version = "1.0"
-                },
-                Input = TestHelper.DataConverter.Serialize(new DeploymentOrchestrationInput()
-                {
-                    Template = templateString,
-                    Parameters = string.Empty,
-                    CorrelationId = Guid.NewGuid().ToString("N"),
-                    Name = filename.Replace('/', '-'),
-                    SubscriptionId = TestHelper.SubscriptionId,
-                    ResourceGroup = TestHelper.ResourceGroup,
-                    DeploymentId = Guid.NewGuid().ToString("N"),
-                    GroupId = Guid.NewGuid().ToString("N"),
-                    GroupType = "ResourceGroup",
-                    HierarchyId = "001002003004005",
-                    CreateByUserId = TestHelper.CreateByUserId,
-                })
-            }).Result;
-            TaskCompletionSource<string> t = new TaskCompletionSource<string>();
+            // var templateString = TestHelper.GetFunctionInputContent(filename);
+            //var deploy= fixture.ARMOrchestrationClient.Run(new Deployment()
+            // {
 
-            fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
-            {
-                if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
-                    t.SetResult(args.Result);
-            });
-            var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(t.Task.Result).Content.ToString();
+            // }).Result;
+            // var instance = fixture.OrchestrationWorker.JumpStartOrchestrationAsync(new Job()
+            // {
+            //     InstanceId = Guid.NewGuid().ToString("N"),
+            //     Orchestration = new OrchestrationSetting()
+            //     {
+            //         Name = "DeploymentOrchestration",
+            //         Version = "1.0"
+            //     },
+            //     Input = TestHelper.DataConverter.Serialize(new Deployment()
+            //     {
+            //         Template = templateString,
+            //         Parameters = string.Empty,
+            //         CorrelationId = Guid.NewGuid().ToString("N"),
+            //         Name = filename.Replace('/', '-'),
+            //         SubscriptionId = TestHelper.SubscriptionId,
+            //         ResourceGroup = TestHelper.ResourceGroup,
+            //         DeploymentId = Guid.NewGuid().ToString("N"),
+            //         GroupId = Guid.NewGuid().ToString("N"),
+            //         GroupType = "ResourceGroup",
+            //         HierarchyId = "001002003004005",
+            //         CreateByUserId = TestHelper.CreateByUserId,
+            //     })
+            // }).Result;
+            // TaskCompletionSource<string> t = new TaskCompletionSource<string>();
+
+            // fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
+            // {
+            //     if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
+            //         t.SetResult(args.Result);
+            // });
+            var (instance, state) = TestHelper.FunctionTestNotCheckResult(fixture, filename, Guid.NewGuid().ToString());
+           // var t = TestHelper.DataConverter.Deserialize<TaskResult>(state.Output);
+            var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(state.Output).Content.ToString();
 
             using var outputDoc = JsonDocument.Parse(outputString);
             var outputRoot = outputDoc.RootElement.GetProperty("properties").GetProperty("outputs");

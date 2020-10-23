@@ -21,7 +21,7 @@ namespace ARMOrchestrationTest
         [Fact(DisplayName = "Empty")]
         public void Empty()
         {
-            var input = new DeploymentOrchestrationInput()
+            var input = new maskx.ARMOrchestration.Deployment()
             {
                 Name = "VariableIteration",
                 Template = TestHelper.GetJsonFileContent("ValidateTemplateTests/Template/Empty"),

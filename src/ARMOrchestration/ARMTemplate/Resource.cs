@@ -1,6 +1,5 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
@@ -73,7 +72,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public DeploymentOrchestrationInput Input { get; set; }
+        public Deployment Input { get; set; }
 
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
@@ -85,7 +84,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public Resource(string rawString, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
-            DeploymentOrchestrationInput input = fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput;
+            Deployment input = fullContext[ContextKeys.ARM_CONTEXT] as Deployment;
             this.RawString = rawString;
             this._ParentName = parentName;
             this._ParentType = parentType;
@@ -496,7 +495,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     if (RootElement.TryGetProperty("resourceGroup", out JsonElement resourceGroup))
                         _resourceGroup = _Functions.Evaluate(resourceGroup.GetString(), FullContext).ToString();
                     else
-                        _resourceGroup = (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ResourceGroup;
+                        _resourceGroup = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).ResourceGroup;
                 }
                 return _resourceGroup;
             }
@@ -519,7 +518,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     if (RootElement.TryGetProperty("subscriptionId", out JsonElement subscriptionId))
                         _SubscriptionId = _Functions.Evaluate(subscriptionId.GetString(), FullContext).ToString();
                     else
-                        _SubscriptionId = (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).SubscriptionId;
+                        _SubscriptionId = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).SubscriptionId;
                 }
                 return _SubscriptionId;
             }
@@ -542,7 +541,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     if (RootElement.TryGetProperty("managementGroupId", out JsonElement managementGroupId))
                         _ManagementGroupId = _Functions.Evaluate(managementGroupId.GetString(), FullContext).ToString();
                     else
-                        _ManagementGroupId = (FullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ManagementGroupId;
+                        _ManagementGroupId = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).ManagementGroupId;
                 }
                 return _ManagementGroupId;
             }

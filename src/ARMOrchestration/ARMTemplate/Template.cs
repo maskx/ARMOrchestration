@@ -33,7 +33,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public DeploymentOrchestrationInput Input { get; set; }
+        public Deployment Input { get; set; }
 
         private IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
 

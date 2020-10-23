@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
+﻿using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Orchestrations;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -84,7 +85,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         public void IncluedServiceTypeNotExist()
         {
           
-            var input = new DeploymentOrchestrationInput()
+            var input = new Deployment()
             {
                 TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri= "TestARMFunctions/json/reference/IncluedServiceTypeNotExist" },
                 Parameters = string.Empty,

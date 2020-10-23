@@ -1,5 +1,5 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
-using maskx.OrchestrationService;
+﻿using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Orchestrations;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -85,7 +85,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         public void IncluedServiceTypeNotExist()
         {
             var templateString = TestHelper.GetFunctionInputContent("reference/IncluedServiceTypeNotExist");
-            var input = new DeploymentOrchestrationInput()
+            var input = new Deployment()
             {
                 Template = templateString,
                 Parameters = string.Empty,

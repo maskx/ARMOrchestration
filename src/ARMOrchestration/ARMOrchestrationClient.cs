@@ -36,7 +36,7 @@ namespace maskx.ARMOrchestration
                 this._Options.Database.DeploymentOperationsTableName);
         }
 
-        public async Task<DeploymentOperation> Run(DeploymentOrchestrationInput args)
+        public async Task<DeploymentOperation> Run(Deployment args)
         {
             if (string.IsNullOrEmpty(args.DeploymentId))
                 throw new ArgumentNullException("DeploymentId");
@@ -60,6 +60,7 @@ namespace maskx.ARMOrchestration
                 throw new ArgumentException("SubscriptionId and ManagementGroupId only one can be set value");
             if (string.IsNullOrEmpty(args.CreateByUserId))
                 throw new ArgumentNullException("CreateByUserId");
+            if (string.IsNullOrEmpty(args.RootId)) args.RootId = args.DeploymentId;
             if (args.ServiceProvider == null)
                 args.ServiceProvider = _ServiceProvider;
             var deploymentOperation = new DeploymentOperation(args)

@@ -78,7 +78,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         public void ResourceidInternl()
         {
             var func = this.fixture.ServiceProvider.GetService<ARMFunctions>();
-            DeploymentOrchestrationInput context = new DeploymentOrchestrationInput();
+            Deployment context = new Deployment();
             List<object> pars = new List<object>
             {
                 TestHelper.SubscriptionId,
@@ -100,7 +100,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             object rtv = functions.Evaluate(
                 "[listId('resourceId','2019-01-02')]",
                 new Dictionary<string, object>() {
-                    {"armcontext",new DeploymentOrchestrationInput(){
+                    {"armcontext",new Deployment(){
                         Template=new Template() } }
                 }); ;
             Assert.NotNull(rtv);
@@ -110,7 +110,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         public void ListResourceInPrepareTime()
         {
             Dictionary<string, object> cxt = new Dictionary<string, object>() {
-                    {"armcontext",new DeploymentOrchestrationInput(){
+                    {"armcontext",new Deployment(){
                         Template=new Template() ,
                         IsRuntime=false}}
                 };

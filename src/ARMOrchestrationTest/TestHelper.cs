@@ -101,7 +101,8 @@ namespace ARMOrchestrationTest
             bool usingLinkTemplate = false)
         {
             if (string.IsNullOrEmpty(subscriptionId)) subscriptionId = Guid.NewGuid().ToString();
-            var (instance, taskResult) = FunctionTestNotCheckResult(fixture, filename,subscriptionId, managementGroupId: managementGroupId, usingLinkTemplate: usingLinkTemplate);
+            var (instance, r) = FunctionTestNotCheckResult(fixture, filename, subscriptionId, managementGroupId: managementGroupId, usingLinkTemplate: usingLinkTemplate);
+            var taskResult = TestHelper.DataConverter.Deserialize<TaskResult>(r.Output);
             Assert.Equal(200, taskResult.Code);
             var outputString = taskResult.Content.ToString();
             var templateString = TestHelper.GetFunctionInputContent(filename);
@@ -126,22 +127,22 @@ namespace ARMOrchestrationTest
             return instance;
         }
 
-        public static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(
+        public static (OrchestrationInstance, OrchestrationState) FunctionTestNotCheckResult(
             ARMOrchestartionFixture fixture,
             string filename,
             string subscriptionId,
             string managementGroupId = null, bool usingLinkTemplate = false
 )
         {
-            DeploymentOrchestrationInput deployInput;
+            Deployment deployInput;
             if (usingLinkTemplate)
-                deployInput = new DeploymentOrchestrationInput()
+                deployInput = new Deployment()
                 {
                     TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = $"TestARMFunctions/json/{filename}" },
                     Parameters = string.Empty,
                     CorrelationId = Guid.NewGuid().ToString("N"),
                     Name = filename.Replace('/', '-'),
-                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? subscriptionId: null,
+                    SubscriptionId = string.IsNullOrEmpty(managementGroupId) ? subscriptionId : null,
                     ManagementGroupId = managementGroupId,
                     ResourceGroup = TestHelper.ResourceGroup,
                     GroupId = Guid.NewGuid().ToString("N"),
@@ -153,7 +154,7 @@ namespace ARMOrchestrationTest
                     DeploymentId = Guid.NewGuid().ToString("N")
                 };
             else
-                deployInput = new DeploymentOrchestrationInput()
+                deployInput = new Deployment()
                 {
                     Template = TestHelper.GetFunctionInputContent(filename),
                     Parameters = string.Empty,
@@ -173,20 +174,17 @@ namespace ARMOrchestrationTest
             return FunctionTestNotCheckResult(fixture, deployInput);
         }
 
-        private static (OrchestrationInstance, TaskResult) FunctionTestNotCheckResult(ARMOrchestartionFixture fixture, DeploymentOrchestrationInput deployInput)
+        private static (OrchestrationInstance, OrchestrationState) FunctionTestNotCheckResult(ARMOrchestartionFixture fixture, Deployment deployInput)
         {
             var deployment = fixture.ARMOrchestrationClient.Run(deployInput).Result;
             var instance = new OrchestrationInstance() { InstanceId = deployment.InstanceId, ExecutionId = deployment.ExecutionId };
-            TaskCompletionSource<string> t = new TaskCompletionSource<string>();
-
-            fixture.OrchestrationWorker.RegistOrchestrationCompletedAction((args) =>
+            var taskHubClient = new TaskHubClient(fixture.ServiceProvider.GetService<IOrchestrationServiceClient>());
+            OrchestrationState result = null;
+            while (result == null)
             {
-                if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
-                    t.SetResult(args.Result);
-            });
-            t.Task.Wait();
-            var reslut = DataConverter.Deserialize<TaskResult>(t.Task.Result);
-            return (instance, reslut);
+                result = taskHubClient.WaitForOrchestrationAsync(instance, TimeSpan.FromSeconds(30)).Result;
+            }
+            return (instance, result);
         }
 
         public static IHostBuilder CreateHostBuilder(
@@ -266,7 +264,7 @@ namespace ARMOrchestrationTest
              Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null,
              bool usingLinkTemplate = false)
         {
-            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, subscriptionId,isValidateOrchestration: isValidateOrchestration, validate: validate, usingLinkTemplate: usingLinkTemplate);
+            var (instance, result) = OrchestrationTestNotCheckResult(fixture, filename, subscriptionId, isValidateOrchestration: isValidateOrchestration, validate: validate, usingLinkTemplate: usingLinkTemplate);
             Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
             var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
             Assert.Equal(200, response.Code);
@@ -280,9 +278,9 @@ namespace ARMOrchestrationTest
             Action<OrchestrationInstance, OrchestrationCompletedArgs> validate = null, bool usingLinkTemplate = false
 )
         {
-            DeploymentOrchestrationInput deployinput;
+            Deployment deployinput;
             if (usingLinkTemplate)
-                deployinput = new DeploymentOrchestrationInput()
+                deployinput = new Deployment()
                 {
                     TemplateLink = new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = filename },
                     Parameters = string.Empty,
@@ -299,7 +297,7 @@ namespace ARMOrchestrationTest
                     TenantId = TestHelper.TenantId
                 };
             else
-                deployinput = new DeploymentOrchestrationInput()
+                deployinput = new Deployment()
                 {
                     Template = TestHelper.GetTemplateContent(filename),
                     Parameters = string.Empty,
@@ -318,7 +316,7 @@ namespace ARMOrchestrationTest
             return OrchestrationTestNotCheckResult(fixture, isValidateOrchestration, validate, deployinput);
         }
 
-        private static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture, Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration, Action<OrchestrationInstance, OrchestrationCompletedArgs> validate, DeploymentOrchestrationInput deployinput)
+        private static (OrchestrationInstance, OrchestrationState) OrchestrationTestNotCheckResult(ARMOrchestartionFixture fixture, Func<OrchestrationInstance, OrchestrationCompletedArgs, bool> isValidateOrchestration, Action<OrchestrationInstance, OrchestrationCompletedArgs> validate, Deployment deployinput)
         {
             var deployment = fixture.ARMOrchestrationClient.Run(deployinput).Result;
             var instance = new OrchestrationInstance() { InstanceId = deployment.InstanceId, ExecutionId = deployment.ExecutionId };

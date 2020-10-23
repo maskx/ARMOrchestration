@@ -16,7 +16,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))
                     return;
-                var input = armcxt as DeploymentOrchestrationInput;
+                var input = armcxt as Deployment;
                 JObject obj = new JObject();
                 obj.Add("id", $"/subscription/{input.SubscriptionId}/resourceGroups/{input.ResourceGroup}");
                 obj.Add("name", input.ResourceGroup);

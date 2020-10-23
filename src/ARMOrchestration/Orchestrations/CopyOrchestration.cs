@@ -42,7 +42,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
                 if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    var deploy = DeploymentOrchestrationInput.Parse(new Resource()
+                    var deploy = Deployment.Parse(new Resource()
                     {
                         RawString = input.Resource.RawString,
                         CopyIndex = i,

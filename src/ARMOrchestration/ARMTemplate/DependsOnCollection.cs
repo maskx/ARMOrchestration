@@ -44,7 +44,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return true;
         }
 
-        public void Add(string item, DeploymentOrchestrationInput deployment)
+        public void Add(string item, Deployment deployment)
         {
             if (string.IsNullOrEmpty(item))
                 return;
@@ -70,7 +70,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public void AddRange(IEnumerable<string> collection, DeploymentOrchestrationInput deployment)
+        public void AddRange(IEnumerable<string> collection, Deployment deployment)
         {
             foreach (var item in collection)
             {

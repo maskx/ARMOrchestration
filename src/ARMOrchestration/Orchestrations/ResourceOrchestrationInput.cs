@@ -8,7 +8,7 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public bool IsRedeployment { get; set; } = false;
         public Resource Resource { get; set; }
-        public DeploymentOrchestrationInput Input { get; set; }
+        public Deployment Input { get; set; }
         private IServiceProvider _ServiceProvider;
 
         /// <summary>

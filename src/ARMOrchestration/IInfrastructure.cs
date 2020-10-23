@@ -31,7 +31,7 @@ namespace maskx.ARMOrchestration
         /// <param name="functionValues">An object that has values for the function. Only provide this object for functions that support receiving an object with parameter values</param>
         /// <param name="value"></param>
         /// <returns></returns>
-        TaskResult List(DeploymentOrchestrationInput context, string resourceId, string apiVersion, string functionValues = "", string value = "");
+        TaskResult List(Deployment context, string resourceId, string apiVersion, string functionValues = "", string value = "");
 
         /// <summary>
         /// <see cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#reference"/>
@@ -51,9 +51,9 @@ namespace maskx.ARMOrchestration
         /// <returns>
         /// an object representing a resource's runtime state
         /// </returns>
-        TaskResult Reference(DeploymentOrchestrationInput context, string resourceName, string apiVersion = "", bool full = false);
+        TaskResult Reference(Deployment context, string resourceName, string apiVersion = "", bool full = false);
 
-        TaskResult WhatIf(DeploymentOrchestrationInput context, string resourceName);
+        TaskResult WhatIf(Deployment context, string resourceName);
 
         /// <summary>
         /// <see cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#providers"/>
@@ -115,7 +115,7 @@ namespace maskx.ARMOrchestration
         /// </summary>
         List<(string Name, string Version)> AfterResourceProvisioningOrchestation { get; set; }
 
-        Task<string> GetTemplateContentAsync(TemplateLink link, DeploymentOrchestrationInput input);
-        Task<string> GetParameterContentAsync(ParametersLink link, DeploymentOrchestrationInput input);
+        Task<string> GetTemplateContentAsync(TemplateLink link, Deployment input);
+        Task<string> GetParameterContentAsync(ParametersLink link, Deployment input);
     }
 }

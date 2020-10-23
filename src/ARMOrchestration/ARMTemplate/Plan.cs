@@ -18,7 +18,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             this.RootElement = element;
             this.FullContext = fullContext;
-            this._Functions = (fullContext[ContextKeys.ARM_CONTEXT] as DeploymentOrchestrationInput).ServiceProvider.GetService<ARMFunctions>();
+            this._Functions = (fullContext[ContextKeys.ARM_CONTEXT] as Deployment).ServiceProvider.GetService<ARMFunctions>();
         }
 
         private string _Name = null;

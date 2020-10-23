@@ -33,7 +33,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "EmptyTemplate")]
         public void EmptyTemplate()
         {
-            var r = new DeploymentOrchestrationInput()
+            var r = new Deployment()
             {
                 Name = "EmptyTemplate",
                 Template = GetTemplate("Empty"),
@@ -49,7 +49,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoSchema")]
         public void NoSchema()
         {
-            var input = new DeploymentOrchestrationInput()
+            var input = new Deployment()
             {
                 Name = "NoSchema",
                 Template = GetTemplate("NoSchema"),
@@ -63,7 +63,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoContentVersion")]
         public void NoContentVersion()
         {
-            var input = new DeploymentOrchestrationInput()
+            var input = new Deployment()
             {
                 Name = "NoContentVersion",
                 Template = GetTemplate("NoContentVersion"),
@@ -77,7 +77,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NoResources")]
         public void NoResources()
         {
-            var input = new DeploymentOrchestrationInput()
+            var input = new Deployment()
             {
                 Name = "NoResources",
                 Template = GetTemplate("NoResources"),
@@ -91,7 +91,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "VariableIteration")]
         public void VariableIteration()
         {
-            var input = new DeploymentOrchestrationInput()
+            var input = new Deployment()
             {
                 Name = "VariableIteration",
                 Template = TestHelper.GetJsonFileContent("Templates/CopyIndex/VariableIteration"),
@@ -117,7 +117,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ResourceIteration")]
         public void ResourceIteration()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "ResourceIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -137,7 +137,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "PropertyIteration")]
         public void PropertyIteration()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "PropertyIteration",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -166,7 +166,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ChildResource")]
         public void ChildResource()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "ChildResource",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -193,7 +193,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "NestTemplate")]
         public void NestTemplate()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "NestTemplate",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -225,7 +225,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "DoubleNestTemplate")]
         public void DoubleNestTemplate()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "DoubleNestTemplate",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -273,7 +273,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ExpressionEvaluationScopeInner")]
         public void ExpressionEvaluationScopeInner()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "ExpressionEvaluationScopeInner",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -300,7 +300,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ExpressionEvaluationScopeOuter")]
         public void ExpressionEvaluationScopeOuter()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "ExpressionEvaluationScopeOuter",
                 SubscriptionId = TestHelper.SubscriptionId,
@@ -327,7 +327,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
         [Fact(DisplayName = "ModifyCopyResource")]
         public void ModifyCopyResource()
         {
-            var Deployment = new DeploymentOrchestrationInput()
+            var Deployment = new Deployment()
             {
                 Name = "ResourceIteration",
                 SubscriptionId = TestHelper.SubscriptionId,

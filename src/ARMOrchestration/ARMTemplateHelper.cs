@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -50,7 +51,7 @@ WHEN MATCHED THEN
 
             this._SaveDeploymentOperationInputCommandString = string.Format(@"
 MERGE {0} with (serializable) [Target]
-USING (VALUES (@ResourceId)) as [Source](ResourceId)
+USING (VALUES (@InstanceId,@ResourceId)) as [Source](InstanceId,ResourceId)
 ON [Target].ResourceId = [Source].ResourceId
 WHEN NOT MATCHED THEN
 	INSERT
@@ -93,7 +94,7 @@ WHEN MATCHED THEN
                 // Eat up any exception
             }
         }
-        public void ProvisioningResource(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, DeploymentOrchestrationInput input)
+        public void ProvisioningResource(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, Deployment input)
         {
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
                                       ResourceOrchestration.Name,
@@ -160,19 +161,24 @@ WHEN MATCHED THEN
                 templateLink.Uri = this._ARMFunctions.Evaluate(uri.GetString(), cxt).ToString();
             return templateLink;
         }
-        public async Task<DeploymentOrchestrationInput> GetDeploymentOrchestrationInputResourceIdAsync(string resouceId)
+        public async Task<Deployment> GetDeploymentByResourceIdAsync(string resouceId)
         {
-            DeploymentOrchestrationInput input = null;
+            Deployment input = null;
             using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where ResourceId=@ResourceId", new { ResourceId = resouceId });
                 await db.ExecuteReaderAsync((reader, index) =>
                 {
-                    input = _DataConverter.Deserialize<DeploymentOrchestrationInput>(reader.GetString(0));
+                    input = _DataConverter.Deserialize<Deployment>(reader.GetString(0));
                     input.ServiceProvider = this._ServiceProvider;
                 });
             }
             return input;
+        }
+        public async Task<Deployment> GetDeploymentByNameAsync(string parentId, string name)
+        {
+            var parent = await GetDeploymentByResourceIdAsync(parentId);
+            return parent.EnumerateDeployments().FirstOrDefault(d => d.Name == name);
         }
     }
 }

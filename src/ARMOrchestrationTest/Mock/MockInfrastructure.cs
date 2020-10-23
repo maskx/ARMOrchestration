@@ -1,7 +1,7 @@
 ﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Orchestrations;
+using maskx.ARMOrchestration;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using Microsoft.Extensions.Caching.Memory;
@@ -76,13 +76,13 @@ namespace ARMOrchestrationTest.Mock
             return r;
         }
 
-        public TaskResult List(DeploymentOrchestrationInput context, string resourceId, string apiVersion, string functionValues = "", string value = "")
+        public TaskResult List(maskx.ARMOrchestration.Deployment context, string resourceId, string apiVersion, string functionValues = "", string value = "")
         {
             var ret = TestHelper.GetJsonFileContent($"Mock/Response/list");
             return new TaskResult() { Content = ret };
         }
 
-        public TaskResult Reference(DeploymentOrchestrationInput context, string resourceName, string apiVersion = "", bool full = false)
+        public TaskResult Reference(maskx.ARMOrchestration.Deployment context, string resourceName, string apiVersion = "", bool full = false)
         {
             string c = string.Empty;
             var pars = resourceName.TrimStart('/').Split('/');
@@ -123,13 +123,13 @@ namespace ARMOrchestrationTest.Mock
         public bool InjectBefroeProvisioning { get; set; } = false;
         public bool InjectAfterProvisioning { get; set; } = false;
 
-        public TaskResult WhatIf(DeploymentOrchestrationInput context, string resourceName)
+        public TaskResult WhatIf(Deployment context, string resourceName)
         {
             // var r = context.Template.Resources[resourceName];
             var c = TestHelper.GetJsonFileContent($"Mock/Response/{resourceName}");
             return new TaskResult() { Content = c, Code = 200 };
         }
-        public async Task<string> GetTemplateContentAsync(TemplateLink link, DeploymentOrchestrationInput input)
+        public async Task<string> GetTemplateContentAsync(TemplateLink link, Deployment input)
         {
             if (!_TemplateCache.TryGetValue(link, out object t))
             {
@@ -148,7 +148,7 @@ namespace ARMOrchestrationTest.Mock
             }
             return t?.ToString();
         }
-        public async Task<string> GetParameterContentAsync(ParametersLink link, DeploymentOrchestrationInput input)
+        public async Task<string> GetParameterContentAsync(ParametersLink link, Deployment input)
         {
             if (link.Uri.StartsWith("http://", StringComparison.InvariantCultureIgnoreCase)
                || link.Uri.StartsWith("https://", StringComparison.InvariantCultureIgnoreCase))

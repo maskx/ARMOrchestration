@@ -115,7 +115,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         {
             string filename = "Templates/dependsOn/DuplicatedServiceTypeName";
             var id = Guid.NewGuid().ToString("N");
-            var deployment = new DeploymentOrchestrationInput()
+            var deployment = new Deployment()
             {
                 TemplateLink =new maskx.ARMOrchestration.ARMTemplate.TemplateLink() { Uri = filename },
                 Parameters = string.Empty,
