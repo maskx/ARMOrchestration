@@ -12,11 +12,14 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using DurableTask.Core.Serializing;
+using maskx.ARMOrchestration.Orchestrations;
 
 namespace ARMOrchestrationTest.Mock
 {
     public class MockInfrastructure : IInfrastructure
     {
+        private readonly DataConverter _DataConverter = new JsonDataConverter();
         private readonly IServiceProvider serviceProvider;
         private readonly IHttpClientFactory _HttpClientFactory;
         static IMemoryCache _TemplateCache = new MemoryCache(Options.Create(new MemoryCacheOptions() { }));
@@ -39,19 +42,13 @@ namespace ARMOrchestrationTest.Mock
         public AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input)
         {
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
-            input.ServiceProvider = serviceProvider;
-            if (input.Resource != null)
+            var operation = this.serviceProvider.GetService<ARMOrchestrationClient>().GetDeploymentOperationAsync(input.InstanceId, input.ExecutionId).Result;
+            Deployment deployment = null;
+            ResourceOrchestrationInput resource = null;
+            if(operation.Type==this.BuiltinServiceTypes.Deployments)
             {
-                ruleField.Add("ApiVersion", input.Resource.ApiVersion);
-                ruleField.Add("Type", input.Resource.Type);
-                ruleField.Add("Name", input.Resource.Name);
-                ruleField.Add("Location", input.Resource.Location);
-                ruleField.Add("SKU", input.Resource.SKU?.Name);
-                ruleField.Add("Kind", input.Resource.Kind);
-                ruleField.Add("Plan", input.Resource.Plan);
-            }
-            else
-            {
+                deployment = _DataConverter.Deserialize<Deployment>(operation.Input);
+                deployment.ServiceProvider = this.serviceProvider;
                 ruleField.Add("ApiVersion", DBNull.Value);
                 ruleField.Add("Type", DBNull.Value);
                 ruleField.Add("Name", DBNull.Value);
@@ -60,29 +57,42 @@ namespace ARMOrchestrationTest.Mock
                 ruleField.Add("Kind", DBNull.Value);
                 ruleField.Add("Plan", DBNull.Value);
             }
-            var deploymentContext = input.Input;
-            ruleField.Add("SubscriptionId", deploymentContext.SubscriptionId);
-            ruleField.Add("TenantId", deploymentContext.TenantId);
-            ruleField.Add("ResourceGroup", deploymentContext.ResourceGroup);
+            else
+            {
+                 resource = _DataConverter.Deserialize<ResourceOrchestrationInput>(operation.Input);
+                resource.ServiceProvider = this.serviceProvider;
+                ruleField.Add("ApiVersion", resource.Resource.ApiVersion);
+                ruleField.Add("Type", resource.Resource.Type);
+                ruleField.Add("Name", resource.Resource.Name);
+                ruleField.Add("Location", resource.Resource.Location);
+                ruleField.Add("SKU", resource.Resource.SKU?.Name);
+                ruleField.Add("Kind", resource.Resource.Kind);
+                ruleField.Add("Plan", resource.Resource.Plan);
+                deployment = resource.Resource.Input;
+            }
+ 
+            ruleField.Add("SubscriptionId", deployment.SubscriptionId);
+            ruleField.Add("TenantId", deployment.TenantId);
+            ruleField.Add("ResourceGroup", deployment.ResourceGroup);
             var r = new AsyncRequestInput()
             {
-                EventName = input.ProvisioningStage.ToString(),
-                RequestTo = input.Resource.Type,
+                EventName = operation.Stage.ToString(),
+                RequestTo = operation.Type,
                 RequestOperation = "PUT",
-                RequestContent = input.Resource?.ToString(),
+                RequestContent =operation.Input,
                 RuleField = ruleField,
                 Processor = "MockCommunicationProcessor"
             };
             return r;
         }
 
-        public TaskResult List(maskx.ARMOrchestration.Deployment context, string resourceId, string apiVersion, string functionValues = "", string value = "")
+        public TaskResult List(Deployment context, string resourceId, string apiVersion, string functionValues = "", string value = "")
         {
             var ret = TestHelper.GetJsonFileContent($"Mock/Response/list");
             return new TaskResult() { Content = ret };
         }
 
-        public TaskResult Reference(maskx.ARMOrchestration.Deployment context, string resourceName, string apiVersion = "", bool full = false)
+        public TaskResult Reference(Deployment context, string resourceName, string apiVersion = "", bool full = false)
         {
             string c = string.Empty;
             var pars = resourceName.TrimStart('/').Split('/');

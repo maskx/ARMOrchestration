@@ -76,10 +76,13 @@ WHEN MATCHED THEN
                 deploymentOperation.Stage.ToString());
 
             using var db = new SQLServerAccess(this.options.Database.ConnectionString);
-            if (deploymentOperation.Type.Equals(_Infrastructure.BuiltinServiceTypes.Deployments, System.StringComparison.InvariantCultureIgnoreCase))
+            if (!string.IsNullOrEmpty(deploymentOperation.Type) &&
+                deploymentOperation.Type.Equals(_Infrastructure.BuiltinServiceTypes.Deployments, StringComparison.InvariantCultureIgnoreCase))
                 db.AddStatement(this._SaveDeploymentOperationInputCommandString, deploymentOperation);
-            else
+            else if (!string.IsNullOrEmpty(deploymentOperation.ExecutionId))
                 db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
+            else
+                throw new Exception("SaveDeploymentOperation need executionId");
             db.ExecuteNonQueryAsync().Wait();
         }
         public void SafeSaveDeploymentOperation(DeploymentOperation deploymentOperation)
@@ -180,5 +183,6 @@ WHEN MATCHED THEN
             var parent = await GetDeploymentByResourceIdAsync(parentId);
             return parent.EnumerateDeployments().FirstOrDefault(d => d.Name == name);
         }
+
     }
 }

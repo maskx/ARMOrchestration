@@ -29,6 +29,16 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             input.ServiceProvider = _ServiceProvider;
             input.Input.IsRuntime = true;
+            if (!context.IsReplaying)
+            {
+                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                {
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Stage = ProvisioningStage.StartProvisioning,
+                    Input=DataConverter.Serialize(input)
+                });
+            }
 
             #region DependsOn
 
@@ -110,9 +120,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                                 {
                                                     InstanceId = context.OrchestrationInstance.InstanceId,
                                                     ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                                    ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning,
-                                                    Resource = input.Resource,
-                                                    Input = input.Input
+                                                    ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning
                                                 });
                     if (injectBefroeProvisioningResult.Code != 200)
                     {
@@ -213,9 +221,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                      {
                                          InstanceId = context.OrchestrationInstance.InstanceId,
                                          ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                         ProvisioningStage = ProvisioningStage.ProvisioningResource,
-                                         Input = input.Input,
-                                         Resource = input.Resource
+                                         ProvisioningStage = ProvisioningStage.ProvisioningResource
                                      });
                 if (createResourceResult.Code != 200)
                 {
@@ -310,9 +316,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                 ProvisioningStage = ProvisioningStage.InjectAfterProvisioning,
-                                 Input = input.Input,
-                                 Resource = input.Resource
+                                 ProvisioningStage = ProvisioningStage.InjectAfterProvisioning
                              });
                     if (injectAfterProvisioningResult.Code != 200)
                     {

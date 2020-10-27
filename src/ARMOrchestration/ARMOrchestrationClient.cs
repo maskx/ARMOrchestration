@@ -82,7 +82,6 @@ namespace maskx.ARMOrchestration
                 Input = _DataConverter.Serialize(args)
             });
             deploymentOperation.ExecutionId = instance.ExecutionId;
-            this._Helper.SaveDeploymentOperation(deploymentOperation);
             return deploymentOperation;
         }
 
@@ -170,6 +169,41 @@ namespace maskx.ARMOrchestration
                 });
             }
             return rs;
+        }
+
+        public async Task<DeploymentOperation> GetDeploymentOperationAsync(string instanceId, string executionId)
+        {
+            DeploymentOperation deployment = null;
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
+            {
+                db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where InstanceId=@InstanceId and ExecutionId=@ExecutionId", new { InstanceId = instanceId, ExecutionId = executionId });
+                await db.ExecuteReaderAsync((reader, index) =>
+                {
+                    deployment = new DeploymentOperation()
+                    {
+                        InstanceId = reader["InstanceId"].ToString(),
+                        ExecutionId = reader["ExecutionId"].ToString(),
+                        GroupId = reader["GroupId"].ToString(),
+                        GroupType = reader["GroupType"].ToString(),
+                        HierarchyId = reader["HierarchyId"].ToString(),
+                        RootId = reader["RootId"].ToString(),
+                        DeploymentId = reader["DeploymentId"].ToString(),
+                        CorrelationId = reader["CorrelationId"].ToString(),
+                        ResourceId = reader["ResourceId"].ToString(),
+                        Name = reader["Name"].ToString(),
+                        Type = reader["Type"].ToString(),
+                        Stage = (ProvisioningStage)(int)reader["Stage"],
+                        SubscriptionId = reader["SubscriptionId"]?.ToString(),
+                        ManagementGroupId = reader["ManagementGroupId"].ToString(),
+                        ParentResourceId = reader["ParentResourceId"]?.ToString(),
+                        Input = reader["Input"].ToString(),
+                        Result = reader["Result"]?.ToString(),
+                        CreateByUserId = reader["CreateByUserId"].ToString(),
+                        LastRunUserId = reader["LastRunUserId"].ToString()
+                    };
+                });
+            }
+            return deployment;
         }
     }
 }

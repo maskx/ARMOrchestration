@@ -30,9 +30,16 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             var input = this.DataConverter.Deserialize<Deployment>(arg);
             input.ServiceProvider = this._ServiceProvider;
-            //if (string.IsNullOrEmpty(input.RootId))
-            //    input.RootId = input.DeploymentId;
-
+            if (!context.IsReplaying)
+            {
+                helper.SaveDeploymentOperation(new DeploymentOperation(input)
+                {
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Stage = ProvisioningStage.StartProvisioning,
+                    Input=DataConverter.Serialize(input)
+                });
+            }
 
             #region InjectBeforeDeployment
 
@@ -47,9 +54,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                 ProvisioningStage = ProvisioningStage.InjectBeforeDeployment,
-
-                                 Resource = null
+                                 ProvisioningStage = ProvisioningStage.InjectBeforeDeployment
                              });
                     if (injectBeforeDeploymenteResult.Code != 200)
                     {
@@ -285,9 +290,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
                                  ExecutionId = context.OrchestrationInstance.ExecutionId,
-                                 ProvisioningStage = ProvisioningStage.InjectAfterDeployment,
-                                 Input = input,
-                                 Resource = null
+                                 ProvisioningStage = ProvisioningStage.InjectAfterDeployment
                              });
                     if (injectAfterDeploymenteResult.Code != 200)
                     {
@@ -375,7 +378,5 @@ namespace maskx.ARMOrchestration.Orchestrations
                 this.waitHandler.SetResult(input);
             }
         }
-
-
     }
 }

@@ -25,7 +25,6 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, AsyncRequestActivityInput input)
         {
-            input.ServiceProvider = _ServiceProvider;
             this.eventName = input.ProvisioningStage.ToString();
             this.waitHandler = new TaskCompletionSource<TaskResult>();
             try
@@ -44,7 +43,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                 });
-                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation()
                 {
                     InstanceId = input.InstanceId,
                     ExecutionId = input.ExecutionId,
@@ -56,7 +55,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             await waitHandler.Task;
             var r = waitHandler.Task.Result;
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation()
             {
                 InstanceId = input.InstanceId,
                 ExecutionId = input.ExecutionId,

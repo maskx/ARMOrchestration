@@ -345,8 +345,8 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             Assert.Equal("123", rr.Comments);
             var str=TestHelper.DataConverter.Serialize(Deployment.Template);
             Assert.Contains("123", str);
-            var t1 = TestHelper.DataConverter.Deserialize<Template>(str);
-            var c1 = t1.Resources["storagecopy"];
+          
+            var c1 = Deployment.Template.Resources["storagecopy"];
             var r1 = c1.Copy.EnumerateResource().First();
             Assert.Equal(0, r1.CopyIndex);
             Assert.Equal("123", r1.Comments);
