@@ -47,7 +47,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 if (r.Name == "ReferenceInProperty")
                 {
                     hasResource = true;
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
@@ -71,7 +71,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 if (r.Name == "ReferenceInProperty")
                 {
                     hasResource = true;
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
@@ -122,7 +122,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 if (r.Name == "ReferenceInProperty")
                 {
                     hasResource = true;
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
@@ -159,7 +159,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 {
                     copyCount++;
                     Assert.True(int.TryParse(r.Name, out int i));
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     using var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
@@ -187,7 +187,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                 if (r.Name == "examplevm")
                 {
                     hasexamplevm = true;
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     Assert.True(p.RootElement.TryGetProperty("storageProfile", out JsonElement storageProfile));

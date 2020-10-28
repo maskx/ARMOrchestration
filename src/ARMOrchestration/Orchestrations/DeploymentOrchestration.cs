@@ -30,8 +30,11 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             var input = this.DataConverter.Deserialize<Deployment>(arg);
             input.ServiceProvider = this._ServiceProvider;
+            input.IsRuntime = true;
             if (!context.IsReplaying)
             {
+                // for persistence variable, cos function like newGuid() should always return same value in variable
+                var _=input.Template.Variables;
                 helper.SaveDeploymentOperation(new DeploymentOperation(input)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,

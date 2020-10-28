@@ -44,8 +44,8 @@ namespace ARMOrchestrationTest.Mock
             Dictionary<string, object> ruleField = new Dictionary<string, object>();
             var operation = this.serviceProvider.GetService<ARMOrchestrationClient>().GetDeploymentOperationAsync(input.InstanceId, input.ExecutionId).Result;
             Deployment deployment = null;
-            ResourceOrchestrationInput resource = null;
-            if(operation.Type==this.BuiltinServiceTypes.Deployments)
+            // ResourceOrchestrationInput resource = null;
+            if (operation.Type == this.BuiltinServiceTypes.Deployments)
             {
                 deployment = _DataConverter.Deserialize<Deployment>(operation.Input);
                 deployment.ServiceProvider = this.serviceProvider;
@@ -59,18 +59,18 @@ namespace ARMOrchestrationTest.Mock
             }
             else
             {
-                 resource = _DataConverter.Deserialize<ResourceOrchestrationInput>(operation.Input);
-                resource.ServiceProvider = this.serviceProvider;
-                ruleField.Add("ApiVersion", resource.Resource.ApiVersion);
-                ruleField.Add("Type", resource.Resource.Type);
-                ruleField.Add("Name", resource.Resource.Name);
-                ruleField.Add("Location", resource.Resource.Location);
-                ruleField.Add("SKU", resource.Resource.SKU?.Name);
-                ruleField.Add("Kind", resource.Resource.Kind);
-                ruleField.Add("Plan", resource.Resource.Plan);
-                deployment = resource.Resource.Input;
+                var rinput = _DataConverter.Deserialize<ResInput>(operation.Input);
+                rinput.ServiceProvider = serviceProvider;
+                ruleField.Add("ApiVersion", rinput.Resource.ApiVersion);
+                ruleField.Add("Type", rinput.Resource.Type);
+                ruleField.Add("Name", rinput.Resource.Name);
+                ruleField.Add("Location", rinput.Resource.Location);
+                ruleField.Add("SKU", rinput.Resource.SKU?.Name);
+                ruleField.Add("Kind", rinput.Resource.Kind);
+                ruleField.Add("Plan", rinput.Resource.Plan);
+                deployment = rinput.Resource.Input;
             }
- 
+
             ruleField.Add("SubscriptionId", deployment.SubscriptionId);
             ruleField.Add("TenantId", deployment.TenantId);
             ruleField.Add("ResourceGroup", deployment.ResourceGroup);
@@ -79,7 +79,7 @@ namespace ARMOrchestrationTest.Mock
                 EventName = operation.Stage.ToString(),
                 RequestTo = operation.Type,
                 RequestOperation = "PUT",
-                RequestContent =operation.Input,
+                RequestContent = operation.Input,
                 RuleField = ruleField,
                 Processor = "MockCommunicationProcessor"
             };

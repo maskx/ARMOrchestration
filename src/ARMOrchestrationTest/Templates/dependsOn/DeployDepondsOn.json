@@ -21,8 +21,8 @@
     }
   },
   "variables": {
-    "firstStorageName": "[concat(parameters('storagePrefix'), uniqueString(resourceGroup().id))]",
-    "secondStorageName": "[concat(parameters('storagePrefix'), uniqueString(parameters('secondSubscriptionID'), parameters('secondResourceGroup')))]"
+    "firstStorageName": "[concat(parameters('storagePrefix'),'-1-', uniqueString(resourceGroup().id))]",
+    "secondStorageName": "[concat(parameters('storagePrefix'), '-2-',uniqueString(parameters('secondSubscriptionID'), parameters('secondResourceGroup')))]"
   },
   "resources": [
     {

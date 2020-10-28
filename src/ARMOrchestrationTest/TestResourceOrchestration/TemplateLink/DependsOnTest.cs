@@ -64,7 +64,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
@@ -83,7 +83,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
@@ -102,7 +102,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
@@ -143,7 +143,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(1, input.Resource.DependsOn.Count);
                     Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
@@ -162,7 +162,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
+                    var input = TestHelper.DataConverter.Deserialize<ResInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
                     Assert.Equal(2, input.Resource.DependsOn.Count);
                     Assert.Contains("ns.rp/st/resource1", input.Resource.DependsOn);

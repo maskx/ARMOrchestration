@@ -102,20 +102,24 @@ WHEN MATCHED THEN
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
                                       ResourceOrchestration.Name,
                                       "1.0",
-                                      new ResourceOrchestrationInput()
+                                      new ResInput()
                                       {
-                                          Resource = resource,
-                                          Input = input,
+                                          DeploymentResourceId = resource.Input.ResourceId,
+                                          NameWithServiceType = resource.NameWithServiceType,
+                                          ServiceProvider = resource.ServiceProvider,
+                                          CopyIndex = resource.CopyIndex.HasValue ? resource.CopyIndex.Value : -1
                                       }));
             foreach (var child in resource.FlatEnumerateChild())
             {
                 tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
                                                      ResourceOrchestration.Name,
                                                      "1.0",
-                                                     new ResourceOrchestrationInput()
+                                                     new ResInput()
                                                      {
-                                                         Resource = child,
-                                                         Input = input,
+                                                         DeploymentResourceId = child.Input.ResourceId,
+                                                         NameWithServiceType = child.NameWithServiceType,
+                                                         ServiceProvider = child.ServiceProvider,
+                                                         CopyIndex = child.CopyIndex.HasValue ? child.CopyIndex.Value : -1
                                                      }));
             }
         }

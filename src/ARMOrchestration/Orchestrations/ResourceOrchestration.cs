@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+    public class ResourceOrchestration : TaskOrchestration<TaskResult, ResInput>
     {
         public const string Name = "ResourceOrchestration";
         private readonly IInfrastructure infrastructure;
@@ -25,18 +25,18 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.templateHelper = templateHelper;
         }
 
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResInput input)
         {
             input.ServiceProvider = _ServiceProvider;
-            input.Input.IsRuntime = true;
+            input.Deployment.IsRuntime = true;
             if (!context.IsReplaying)
             {
-                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.StartProvisioning,
-                    Input=DataConverter.Serialize(input)
+                    Input = DataConverter.Serialize(input)
                 });
             }
 
@@ -51,11 +51,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                     new WaitDependsOnActivityInput()
                     {
                         DependsOn = input.Resource.DependsOn.ToList(),
-                        DeploymentId = input.Input.DeploymentId,
-                        RootId = input.Input.RootId,
+                        DeploymentId = input.Deployment.DeploymentId,
+                        RootId = input.Deployment.RootId,
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        DeploymentOperation = new DeploymentOperation(input.Input, input.Resource)
+                        DeploymentOperation = new DeploymentOperation(input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId
@@ -74,7 +74,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                     };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -93,7 +93,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
                 if (r.Code != 200)
                 {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -124,7 +124,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                                 });
                     if (injectBefroeProvisioningResult.Code != 200)
                     {
-                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -147,7 +147,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                     };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -176,7 +176,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             return r;
                         }
 
-                        input = r.Content as ResourceOrchestrationInput;
+                        input = r.Content as ResInput;
                         input.ServiceProvider = _ServiceProvider;
                     }
                     catch (TaskFailedException ex)
@@ -191,7 +191,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                         };
-                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -240,7 +240,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                 };
-                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -271,7 +271,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
                             return r;
                         }
-                        input = r.Content as ResourceOrchestrationInput;
+                        input = r.Content as ResInput;
                         input.ServiceProvider = _ServiceProvider;
                     }
                     catch (TaskFailedException ex)
@@ -286,7 +286,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                         });
-                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -299,7 +299,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Content = response
                         };
                     }
-
                 }
             }
 
@@ -336,7 +335,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                     };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -354,7 +353,7 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region Ready Resource
 
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,

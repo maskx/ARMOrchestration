@@ -1,6 +1,6 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {

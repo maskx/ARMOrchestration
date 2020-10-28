@@ -33,7 +33,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             catch (TaskFailedException ex)
             {
-                var response = DataConverter.Serialize(new ErrorResponse()
+                var response = new ErrorResponse()
                 {
                     Code = $"{AsyncRequestActivity.Name}:{input.ProvisioningStage}",
                     Message = ex.Message,
@@ -42,13 +42,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Type=typeof(TaskFailedException).FullName,
                             Info=ex
                         } }
-                });
+                };
                 templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation()
                 {
                     InstanceId = input.InstanceId,
                     ExecutionId = input.ExecutionId,
                     Stage = (ProvisioningStage)(0 - input.ProvisioningStage),
-                    Result = response
+                    Result = DataConverter.Serialize(response)
                 });
                 return new TaskResult() { Code = 500, Content = response };
             }

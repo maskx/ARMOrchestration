@@ -33,22 +33,10 @@ namespace maskx.ARMOrchestration.Orchestrations
             // You can't use a copy loop for a child resource.
             for (int i = 0; i < copy.Count; i++)
             {
-                var ParentContext = new Dictionary<string, object>();
-                foreach (var item in input.Resource.FullContext)
-                {
-                    if (item.Key == ContextKeys.ARM_CONTEXT) continue;
-                    ParentContext.Add(item.Key, item.Value);
-                }
-
+                var r = input.Resource.Copy.GetResource(i);
                 if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    var deploy = Deployment.Parse(new Resource()
-                    {
-                        RawString = input.Resource.RawString,
-                        CopyIndex = i,
-                        ParentContext = ParentContext,
-                        Input = input.Input
-                    });
+                    var deploy = Deployment.Parse(r);
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         DeploymentOrchestration.Name,
                         "1.0",
@@ -56,13 +44,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    helper.ProvisioningResource(new Resource()
-                    {
-                        RawString = input.Resource.RawString,
-                        CopyIndex = i,
-                        ParentContext = ParentContext,
-                        Input = input.Input
-                    }, tasks, context, input.Input);
+                    helper.ProvisioningResource(r, tasks, context, input.Input);
                 }
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)
@@ -73,7 +55,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     foreach (var item in tasks)
                     {
                         if (item.IsCompleted)
-                            helper.ParseTaskResult(Name,errorResponses, item);
+                            helper.ParseTaskResult(Name, errorResponses, item);
                         else
                             temp.Add(item);
                     }
@@ -83,11 +65,11 @@ namespace maskx.ARMOrchestration.Orchestrations
             await Task.WhenAll(tasks);
             foreach (var item in tasks)
             {
-                helper.ParseTaskResult(Name,errorResponses, item);
+                helper.ParseTaskResult(Name, errorResponses, item);
             }
             if (errorResponses.Count > 0)
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -99,7 +81,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             else
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Input, input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,

@@ -1,9 +1,8 @@
 ﻿using maskx.ARMOrchestration.Functions;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using maskx.ARMOrchestration.Orchestrations;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -184,19 +183,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             for (int i = 0; i < this.Count; i++)
             {
-                var parentContext = new Dictionary<string, object>();
-                foreach (var item in _Resource.FullContext)
-                {
-                    if (item.Key == ContextKeys.ARM_CONTEXT) continue;
-                    parentContext.Add(item.Key, item.Value);
-                }
-                var r = new Resource()
-                {
-                    RawString = _Resource.RawString,
-                    CopyIndex = i,
-                    ParentContext = parentContext,
-                    Input = _Resource.Input
-                };
+                var r = GetResource(i);
                 if (_Resource.Input.Template.ChangedCopyResoures.TryGetValue(r.NameWithServiceType, out Resource cr))
                     yield return cr;
                 else
@@ -209,6 +196,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     }
                 }
             }
+        }
+        public Resource GetResource(int index)
+        {
+            return new Resource(_Resource.RawString, _Resource.FullContext)
+            {
+                CopyIndex = index
+            };
         }
     }
 }

@@ -67,8 +67,7 @@ namespace maskx.ARMOrchestration
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
                 InstanceId = args.DeploymentId,
-                Stage = ProvisioningStage.Pending,
-                Input = _DataConverter.Serialize(args)
+                Stage = ProvisioningStage.Pending
             };
             this._Helper.SaveDeploymentOperation(deploymentOperation);
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job

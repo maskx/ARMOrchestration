@@ -1,6 +1,5 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
@@ -197,6 +196,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     return (false, "not find $schema in template");
                 if (!RootElement.TryGetProperty("contentVersion", out JsonElement contentVersion))
                     return (false, "not find contentVersion in template");
+                _ = this.Variables;
                 _ = this.ApiProfile;
                 _ = this.Functions;
                 foreach (var res in this.Resources)

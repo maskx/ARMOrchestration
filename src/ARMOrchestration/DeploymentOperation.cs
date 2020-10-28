@@ -9,39 +9,41 @@ namespace maskx.ARMOrchestration
         public DeploymentOperation()
         {
         }
-
-        public DeploymentOperation(Deployment deploymentInput, Resource resource = null)
+        public DeploymentOperation(Deployment deployment)
         {
-            this.GroupType = deploymentInput.GroupType;
-            this.GroupId = deploymentInput.GroupId;
-            this.HierarchyId = deploymentInput.HierarchyId;
-            this.RootId = deploymentInput.RootId;
-            this.DeploymentId = deploymentInput.DeploymentId;
-            this.CorrelationId = deploymentInput.CorrelationId;
-            this.CreateByUserId = deploymentInput.CreateByUserId;
-            if (string.IsNullOrEmpty(deploymentInput.LastRunUserId))
+            BuildDeploymentInformation(deployment);
+            IInfrastructure infrastructure = deployment.ServiceProvider.GetService<IInfrastructure>();
+            this.ResourceId = deployment.ResourceId;
+            this.Type = infrastructure.BuiltinServiceTypes.Deployments;
+            this.Name = deployment.Name;
+            this.ParentResourceId = deployment.ParentId;
+            this.SubscriptionId = deployment.SubscriptionId;
+            this.ManagementGroupId = deployment.ManagementGroupId;
+        }
+        private void BuildDeploymentInformation(Deployment deployment)
+        {
+            this.GroupType = deployment.GroupType;
+            this.GroupId = deployment.GroupId;
+            this.HierarchyId = deployment.HierarchyId;
+            this.RootId = deployment.RootId;
+            this.DeploymentId = deployment.DeploymentId;
+            this.CorrelationId = deployment.CorrelationId;
+            this.CreateByUserId = deployment.CreateByUserId;
+            if (string.IsNullOrEmpty(deployment.LastRunUserId))
                 this.LastRunUserId = this.CreateByUserId;
             else
-                this.LastRunUserId = deploymentInput.LastRunUserId;
-            if (resource == null)
-            {
-                IInfrastructure infrastructure = deploymentInput.ServiceProvider.GetService<IInfrastructure>();
-                this.ResourceId = deploymentInput.ResourceId;
-                this.Type = infrastructure.BuiltinServiceTypes.Deployments;
-                this.Name = deploymentInput.Name;
-                this.ParentResourceId = deploymentInput.ParentId;
-                this.SubscriptionId = deploymentInput.SubscriptionId;
-                this.ManagementGroupId = deploymentInput.ManagementGroupId;
-            }
-            else
-            {
-                this.ResourceId = resource.ResourceId;
-                this.Name = resource.Name;
-                this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.Type : resource.Type;
-                this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : deploymentInput.ResourceId;
-                this.SubscriptionId = resource.SubscriptionId;
-                this.ManagementGroupId = resource.ManagementGroupId;
-            }
+                this.LastRunUserId = deployment.LastRunUserId;
+
+        }
+        public DeploymentOperation(Resource resource)
+        {
+            BuildDeploymentInformation(resource.Input);
+            this.ResourceId = resource.ResourceId;
+            this.Name = resource.Name;
+            this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.Type : resource.Type;
+            this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : resource.Input.ResourceId;
+            this.SubscriptionId = resource.SubscriptionId;
+            this.ManagementGroupId = resource.ManagementGroupId;
         }
 
         /// <summary>
