@@ -175,9 +175,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
                             return r;
                         }
-
-                        input = r.Content as ResInput;
-                        input.ServiceProvider = _ServiceProvider;
                     }
                     catch (TaskFailedException ex)
                     {
@@ -271,8 +268,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
                             return r;
                         }
-                        input = r.Content as ResInput;
-                        input.ServiceProvider = _ServiceProvider;
                     }
                     catch (TaskFailedException ex)
                     {
