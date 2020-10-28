@@ -39,8 +39,8 @@ namespace maskx.ARMOrchestration
         {
             BuildDeploymentInformation(resource.Input);
             this.ResourceId = resource.ResourceId;
-            this.Name = resource.Name;
-            this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.Type : resource.Type;
+            this.Name = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullName : resource.Name;
+            this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullType : resource.Type;
             this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : resource.Input.ResourceId;
             this.SubscriptionId = resource.SubscriptionId;
             this.ManagementGroupId = resource.ManagementGroupId;

@@ -1,7 +1,5 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService;
 using System;
 using System.Collections.Generic;
@@ -9,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class CopyOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+    public class CopyOrchestration : TaskOrchestration<TaskResult, ResInput>
     {
         public const string Name = "CopyOrchestration";
         private readonly ARMTemplateHelper helper;
@@ -23,10 +21,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.infrastructure = infrastructure;
         }
 
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResInput input)
         {
             input.ServiceProvider = _ServiceProvider;
+            input.Deployment.IsRuntime = true;
             var copy = input.Resource.Copy;
+            if (copy == null)
+                return new TaskResult(500,new ErrorResponse() {Code= "CopyOrchestration-Fail", Message="input is not Copy resource" });
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
             List<ErrorResponse> errorResponses = new List<ErrorResponse>();
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
@@ -44,7 +45,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    helper.ProvisioningResource(r, tasks, context, input.Input);
+                    helper.ProvisioningResource(r, tasks, context, input.Deployment);
                 }
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)

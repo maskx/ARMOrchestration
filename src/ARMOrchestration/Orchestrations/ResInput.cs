@@ -9,7 +9,7 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public string DeploymentResourceId { get; set; }
         public string NameWithServiceType { get; set; }
-        public int CopyIndex { get; set; }
+        public int CopyIndex { get; set; } = -1;
         private Deployment _Deployment;
         [JsonIgnore]
         public Deployment Deployment
@@ -32,7 +32,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (_Resource == null)
                 {
                     _Resource = Deployment.GetFirstResource(NameWithServiceType);
-                    if (_Resource.Copy != null)
+                    if (_Resource.Copy != null && CopyIndex!=-1)
                     {
                         _Resource = _Resource.Copy.GetResource(CopyIndex);
                     }

@@ -199,10 +199,10 @@ namespace maskx.ARMOrchestration.Orchestrations
                 // because BuiltinServiceTypes.Deployments can be a copy resource
                 if (resource.Copy != null)
                 {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new ResourceOrchestrationInput()
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new ResInput()
                     {
-                        Resource = resource,
-                        Input = input
+                        DeploymentResourceId=input.ResourceId,
+                        NameWithServiceType=resource.Copy.NameWithServiceType
                     }));
                 }
                 else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
