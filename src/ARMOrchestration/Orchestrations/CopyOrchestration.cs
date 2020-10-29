@@ -28,6 +28,16 @@ namespace maskx.ARMOrchestration.Orchestrations
             var copy = input.Resource.Copy;
             if (copy == null)
                 return new TaskResult(500,new ErrorResponse() {Code= "CopyOrchestration-Fail", Message="input is not Copy resource" });
+            if (!context.IsReplaying)
+            {
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                {
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    Stage = ProvisioningStage.StartProvisioning,
+                    Input = DataConverter.Serialize(input)
+                });
+            }
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
             List<ErrorResponse> errorResponses = new List<ErrorResponse>();
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
@@ -75,7 +85,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.Failed,
-                    Input = DataConverter.Serialize(input),
                     Result = DataConverter.Serialize(errorResponses)
                 });
                 return new TaskResult(500, errorResponses);
@@ -86,8 +95,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.Successed,
-                    Input = DataConverter.Serialize(input)
+                    Stage = ProvisioningStage.Successed
                 });
                 return new TaskResult() { Code = 200 };
             }
