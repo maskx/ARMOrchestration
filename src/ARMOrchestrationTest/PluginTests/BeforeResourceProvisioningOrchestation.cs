@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ARMOrchestrationTest.PluginTests
 {
-    public class BeforeResourceProvisioningOrchestation : TaskOrchestration<TaskResult, ResInput>
+    public class BeforeResourceProvisioningOrchestation : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
         private readonly IServiceProvider _ServiceProvider;
 
@@ -15,7 +15,7 @@ namespace ARMOrchestrationTest.PluginTests
             this._ServiceProvider = serviceProvider;
         }
 
-        public override Task<TaskResult> RunTask(OrchestrationContext context, ResInput input)
+        public override Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
             input.Resource.Name += "_BeforeResourceProvisioning";

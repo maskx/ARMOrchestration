@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class ResourceOrchestration : TaskOrchestration<TaskResult, ResInput>
+    public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
         public const string Name = "ResourceOrchestration";
         private readonly IInfrastructure infrastructure;
@@ -25,7 +25,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.templateHelper = templateHelper;
         }
 
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResInput input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
             input.Deployment.IsRuntime = true;

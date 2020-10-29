@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class CopyOrchestration : TaskOrchestration<TaskResult, ResInput>
+    public class CopyOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
     {
         public const string Name = "CopyOrchestration";
         private readonly ARMTemplateHelper helper;
@@ -21,7 +21,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.infrastructure = infrastructure;
         }
 
-        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResInput input)
+        public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
             input.Deployment.IsRuntime = true;

@@ -102,7 +102,7 @@ WHEN MATCHED THEN
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
                                       ResourceOrchestration.Name,
                                       "1.0",
-                                      new ResInput()
+                                      new ResourceOrchestrationInput()
                                       {
                                           DeploymentResourceId = resource.Input.ResourceId,
                                           NameWithServiceType = resource.NameWithServiceType,
@@ -114,7 +114,7 @@ WHEN MATCHED THEN
                 tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
                                                      ResourceOrchestration.Name,
                                                      "1.0",
-                                                     new ResInput()
+                                                     new ResourceOrchestrationInput()
                                                      {
                                                          DeploymentResourceId = child.Input.ResourceId,
                                                          NameWithServiceType = child.NameWithServiceType,

@@ -84,6 +84,7 @@ namespace maskx.ARMOrchestration.Workers
         }
         private async Task ResolveDependsOn(string instanceId, string executionId, string eventName, int failCount)
         {
+            // todo:  This may be raised multiple times when multiple instances are running
             await this.taskHubClient.RaiseEventAsync(
                                            new OrchestrationInstance()
                                            {

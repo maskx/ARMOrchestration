@@ -59,7 +59,7 @@ namespace ARMOrchestrationTest.Mock
             }
             else
             {
-                var rinput = _DataConverter.Deserialize<ResInput>(operation.Input);
+                var rinput = _DataConverter.Deserialize<ResourceOrchestrationInput>(operation.Input);
                 rinput.ServiceProvider = serviceProvider;
                 ruleField.Add("ApiVersion", rinput.Resource.ApiVersion);
                 ruleField.Add("Type", rinput.Resource.Type);
