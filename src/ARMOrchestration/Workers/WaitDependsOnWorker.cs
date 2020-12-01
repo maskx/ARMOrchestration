@@ -1,8 +1,10 @@
 ﻿using DurableTask.Core;
 using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
@@ -12,15 +14,17 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Workers
 {
-    public class WaitDependsOnWorker : BackgroundService
+    public class WaitDependsOnWorker<T> : BackgroundService where T : CommunicationJob, new()
     {
         private readonly ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
         private readonly DataConverter dataConverter = new JsonDataConverter();
+        private readonly OrchestrationWorker orchestrationWorker;
 
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
-            IOptions<ARMOrchestrationOptions> options)
+            IOptions<ARMOrchestrationOptions> options,
+            OrchestrationWorker orchestrationWorker)
         {
             this.options = options?.Value;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
@@ -29,11 +33,19 @@ namespace maskx.ARMOrchestration.Workers
                 this.options.Database.DeploymentOperationsTableName,
                 (int)ProvisioningStage.Successed);
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
+            this.orchestrationWorker = orchestrationWorker;
         }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            await this.CreateIfNotExistsAsync(false);
+            if (this.options.Database.AutoCreate)
+                await this.CreateIfNotExistsAsync(false);
+            this.orchestrationWorker.AddActivity(typeof(WaitDependsOnActivity), WaitDependsOnActivity.Name, "1.0");
+            this.orchestrationWorker.AddActivity(typeof(AsyncRequestActivity<T>), AsyncRequestActivity<T>.Name, "1.0");
+            this.orchestrationWorker.AddOrchestration(typeof(DeploymentOrchestration<T>), DeploymentOrchestration<T>.Name, "1.0");
+            this.orchestrationWorker.AddOrchestration(typeof(ResourceOrchestration<T>), ResourceOrchestration<T>.Name, "1.0");
+            this.orchestrationWorker.AddOrchestration(typeof(RequestOrchestration<T>), RequestOrchestration<T>.Name, "1.0");
+            this.orchestrationWorker.AddOrchestration(typeof(CopyOrchestration<T>), CopyOrchestration<T>.Name, "1.0");
             await base.StartAsync(cancellationToken);
         }
 
@@ -72,6 +84,7 @@ namespace maskx.ARMOrchestration.Workers
                 }
                 catch (Exception ex)
                 {
+                    var d = ex;
                     //todo: make sure loop does not stop by any exception 
                     //logging
                 }
@@ -92,7 +105,7 @@ namespace maskx.ARMOrchestration.Workers
                                                ExecutionId = executionId
                                            },
                                            eventName,
-                                           dataConverter.Serialize(new TaskResult() { Code = failCount > 0 ? 500 : 200 })
+                                           dataConverter.Serialize(failCount > 0 ? new TaskResult(500, "One of dependsOn resources has failed") : new TaskResult(200, null))
                                            );
             using var db = new DbAccess(this.options.Database.ConnectionString);
             db.AddStatement(this.removeCommandString,

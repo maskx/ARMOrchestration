@@ -205,7 +205,6 @@ namespace ARMOrchestrationTest
              .ConfigureServices((hostContext, services) =>
              {
                  config?.Invoke(hostContext, services);
-                 services.AddHttpClient();
                  CommunicationWorkerOptions options = new CommunicationWorkerOptions
                  {
                      AutoCreate = true
@@ -214,19 +213,9 @@ namespace ARMOrchestrationTest
                  {
                      options.HubName = communicationWorkerOptions.HubName;
                      options.MaxConcurrencyRequest = communicationWorkerOptions.MaxConcurrencyRequest;
-                     options.RuleFields.AddRange(communicationWorkerOptions.RuleFields);
+
                      options.SchemaName = communicationWorkerOptions.SchemaName;
                  }
-                 options.RuleFields.Add("ApiVersion");
-                 options.RuleFields.Add("Type");
-                 options.RuleFields.Add("Name");
-                 options.RuleFields.Add("Location");
-                 options.RuleFields.Add("SKU");
-                 options.RuleFields.Add("Kind");
-                 options.RuleFields.Add("Plan");
-                 options.RuleFields.Add("SubscriptionId");
-                 options.RuleFields.Add("TenantId");
-                 options.RuleFields.Add("ResourceGroup");
                  var sqlConfig = new ARMOrchestrationSqlServerConfig()
                  {
                      Database = new DatabaseConfig()
@@ -242,9 +231,9 @@ namespace ARMOrchestrationTest
                      sqlConfig.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) => activityTypes;
                  if (interfaceActivitys != null)
                      sqlConfig.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
-                 services.UsingARMOrchestration(sqlConfig);
-                 services.AddSingleton<IInfrastructure>((sp) => new MockInfrastructure(sp));
-                 services.AddSingleton<ICommunicationProcessor>((sp) =>
+                 services.UsingARMOrchestration<CustomCommunicationJob>(sp => sqlConfig);
+                 services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp => sqlConfig);
+                 services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>
                  {
                      return new MockCommunicationProcessor();
                  });

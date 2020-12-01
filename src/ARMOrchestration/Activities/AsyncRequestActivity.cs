@@ -2,28 +2,24 @@
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
-using System;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
 {
-    public class AsyncRequestActivity : AsyncTaskActivity<AsyncRequestActivityInput, TaskResult>
+    public class AsyncRequestActivity<T> : AsyncTaskActivity<AsyncRequestActivityInput, TaskResult> where T : CommunicationJob, new()
     {
         public const string Name = "AsyncRequestActivity";
         private readonly ARMTemplateHelper templateHelper;
-        private readonly OrchestrationService.Activity.AsyncRequestActivity asyncRequestActivity;
+        private readonly OrchestrationService.Activity.AsyncRequestActivity<T> asyncRequestActivity;
         private readonly IInfrastructure infrastructure;
-        private readonly IServiceProvider _ServiceProvider;
 
         public AsyncRequestActivity(IOptions<CommunicationWorkerOptions> options,
             ARMTemplateHelper templateHelper,
-            IInfrastructure infrastructure,
-            IServiceProvider serviceProvider)
+            IInfrastructure infrastructure)
         {
-            this._ServiceProvider = serviceProvider;
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
-            asyncRequestActivity = new OrchestrationService.Activity.AsyncRequestActivity(options);
+            asyncRequestActivity = new OrchestrationService.Activity.AsyncRequestActivity<T>(options);
         }
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, AsyncRequestActivityInput input)
@@ -34,12 +30,11 @@ namespace maskx.ARMOrchestration.Activities
                 ExecutionId = input.ExecutionId,
                 Stage = input.ProvisioningStage
             });
-            await asyncRequestActivity.SaveRequest(infrastructure.GetRequestInput(input),
-                new OrchestrationInstance()
-                {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId
-                });
+            var request = (T)infrastructure.GetRequestInput(input);
+            request.EventName = input.ProvisioningStage.ToString();
+            request.InstanceId = context.OrchestrationInstance.InstanceId;
+            request.ExecutionId = context.OrchestrationInstance.ExecutionId;
+            await asyncRequestActivity.SaveRequest(request);
             return new TaskResult() { Code = 200 };
         }
     }

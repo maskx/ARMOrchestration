@@ -1,4 +1,5 @@
-﻿using DurableTask.Core;
+﻿using ARMOrchestrationTest.Mock;
+using DurableTask.Core;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
@@ -40,7 +41,7 @@ namespace ARMOrchestrationTest.PluginTests
         public void Test()
         {
             var client = serviceProvider.GetService<OrchestrationWorkerClient>();
-            var instance = serviceProvider.GetService<ARMOrchestrationClient>().Run(
+            var instance = serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().Run(
                 new Deployment()
                 {
                     ApiVersion = "1.0",

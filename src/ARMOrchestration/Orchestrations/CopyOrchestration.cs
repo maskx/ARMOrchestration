@@ -1,13 +1,15 @@
 ﻿using DurableTask.Core;
 using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Worker;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class CopyOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+    public class CopyOrchestration<T> : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+        where T : CommunicationJob, new()
     {
         public const string Name = "CopyOrchestration";
         private readonly ARMTemplateHelper helper;
@@ -27,7 +29,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             input.Deployment.IsRuntime = true;
             var copy = input.Resource.Copy;
             if (copy == null)
-                return new TaskResult(500,new ErrorResponse() {Code= "CopyOrchestration-Fail", Message="input is not Copy resource" });
+                return new TaskResult(500, new ErrorResponse() { Code = "CopyOrchestration-Fail", Message = "input is not Copy resource" });
             if (!context.IsReplaying)
             {
                 helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
@@ -49,13 +51,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var deploy = Deployment.Parse(r);
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        DeploymentOrchestration.Name,
+                        DeploymentOrchestration<T>.Name,
                         "1.0",
                         DataConverter.Serialize(deploy)));
                 }
                 else
                 {
-                    helper.ProvisioningResource(r, tasks, context, input.Deployment);
+                    helper.ProvisioningResource<T>(r, tasks, context, input.Deployment);
                 }
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)

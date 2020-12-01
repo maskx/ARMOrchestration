@@ -1,9 +1,9 @@
-﻿using maskx.ARMOrchestration;
+﻿using DurableTask.Core.Serializing;
+using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -12,8 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using DurableTask.Core.Serializing;
-using maskx.ARMOrchestration.Orchestrations;
 
 namespace ARMOrchestrationTest.Mock
 {
@@ -39,50 +37,42 @@ namespace ARMOrchestrationTest.Mock
             return new TaskResult();
         }
 
-        public AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input)
+        public object GetRequestInput(AsyncRequestActivityInput input)
         {
-            Dictionary<string, object> ruleField = new Dictionary<string, object>();
-            var operation = this.serviceProvider.GetService<ARMOrchestrationClient>().GetDeploymentOperationAsync(input.InstanceId, input.ExecutionId).Result;
-            Deployment deployment = null;
-            // ResourceOrchestrationInput resource = null;
-            if (operation.Type == this.BuiltinServiceTypes.Deployments)
-            {
-                deployment = _DataConverter.Deserialize<Deployment>(operation.Input);
-                deployment.ServiceProvider = this.serviceProvider;
-                ruleField.Add("ApiVersion", DBNull.Value);
-                ruleField.Add("Type", DBNull.Value);
-                ruleField.Add("Name", DBNull.Value);
-                ruleField.Add("Location", DBNull.Value);
-                ruleField.Add("SKU", DBNull.Value);
-                ruleField.Add("Kind", DBNull.Value);
-                ruleField.Add("Plan", DBNull.Value);
-            }
-            else
-            {
-                var rinput = _DataConverter.Deserialize<ResourceOrchestrationInput>(operation.Input);
-                rinput.ServiceProvider = serviceProvider;
-                ruleField.Add("ApiVersion", rinput.Resource.ApiVersion);
-                ruleField.Add("Type", rinput.Resource.Type);
-                ruleField.Add("Name", rinput.Resource.Name);
-                ruleField.Add("Location", rinput.Resource.Location);
-                ruleField.Add("SKU", rinput.Resource.SKU?.Name);
-                ruleField.Add("Kind", rinput.Resource.Kind);
-                ruleField.Add("Plan", rinput.Resource.Plan);
-                deployment = rinput.Resource.Input;
-            }
-
-            ruleField.Add("SubscriptionId", deployment.SubscriptionId);
-            ruleField.Add("TenantId", deployment.TenantId);
-            ruleField.Add("ResourceGroup", deployment.ResourceGroup);
-            var r = new AsyncRequestInput()
+            var operation = this.serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().GetDeploymentOperationAsync(input.InstanceId, input.ExecutionId).Result;
+            var r = new CustomCommunicationJob()
             {
                 EventName = operation.Stage.ToString(),
                 RequestTo = operation.Type,
                 RequestOperation = "PUT",
                 RequestContent = operation.Input,
-                RuleField = ruleField,
                 Processor = "MockCommunicationProcessor"
             };
+
+            Deployment deployment;
+            // ResourceOrchestrationInput resource = null;
+            if (operation.Type == this.BuiltinServiceTypes.Deployments)
+            {
+                deployment = _DataConverter.Deserialize<Deployment>(operation.Input);
+                deployment.ServiceProvider = this.serviceProvider;
+            }
+            else
+            {
+                var rinput = _DataConverter.Deserialize<ResourceOrchestrationInput>(operation.Input);
+                rinput.ServiceProvider = serviceProvider;
+                r.ApiVersion = rinput.Resource.ApiVersion;
+                r.Type = rinput.Resource.Type;
+                r.Name = rinput.Resource.Name;
+                r.Location = rinput.Resource.Location;
+                r.SKU = rinput.Resource.SKU?.Name;
+                r.Kind = rinput.Resource.Kind;
+                deployment = rinput.Resource.Input;
+            }
+
+            r.SubscriptionId = deployment.SubscriptionId;
+            r.TenantId = deployment.TenantId;
+            r.ResourceGroup = deployment.ResourceGroup;
+
             return r;
         }
 
@@ -99,7 +89,7 @@ namespace ARMOrchestrationTest.Mock
             if (pars[^2].Equals("deployments", StringComparison.OrdinalIgnoreCase)
                 && pars[^3].Equals("Microsoft.Resources", StringComparison.OrdinalIgnoreCase))
             {
-                var client = this.serviceProvider.GetService<ARMOrchestrationClient>();
+                var client = this.serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
                 var rs = client.GetAllResourceListAsync(context.RootId).Result;
                 foreach (var item in rs)
                 {

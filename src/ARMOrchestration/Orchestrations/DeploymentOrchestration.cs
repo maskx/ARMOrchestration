@@ -2,6 +2,7 @@
 using DurableTask.Core.Exceptions;
 using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Worker;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,8 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class DeploymentOrchestration : TaskOrchestration<TaskResult, string>
+    public class DeploymentOrchestration<T> : TaskOrchestration<TaskResult, string>
+        where T : CommunicationJob, new()
     {
         public const string Name = "DeploymentOrchestration";
         private readonly ARMTemplateHelper helper;
@@ -34,13 +36,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             if (!context.IsReplaying)
             {
                 // for persistence variable, cos function like newGuid() should always return same value in variable
-                var _=input.Template.Variables;
+                var _ = input.Template.Variables;
                 helper.SaveDeploymentOperation(new DeploymentOperation(input)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.StartProvisioning,
-                    Input=DataConverter.Serialize(input)
+                    Input = DataConverter.Serialize(input)
                 });
             }
 
@@ -51,7 +53,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 try
                 {
                     var injectBeforeDeploymenteResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                             RequestOrchestration.Name,
+                             RequestOrchestration<T>.Name,
                              "1.0",
                              new AsyncRequestActivityInput()
                              {
@@ -75,7 +77,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{DeploymentOrchestration.Name}:{ProvisioningStage.InjectBeforeDeployment}",
+                        Code = $"{DeploymentOrchestration<T>.Name}:{ProvisioningStage.InjectBeforeDeployment}",
                         Message = ex.Message,
                         AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -148,7 +150,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{DeploymentOrchestration.Name}:{ProvisioningStage.DependsOnWaited}",
+                        Code = $"{DeploymentOrchestration<T>.Name}:{ProvisioningStage.DependsOnWaited}",
                         Message = ex.Message,
                         AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -199,22 +201,22 @@ namespace maskx.ARMOrchestration.Orchestrations
                 // because BuiltinServiceTypes.Deployments can be a copy resource
                 if (resource.Copy != null)
                 {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration.Name, "1.0", new ResourceOrchestrationInput()
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(CopyOrchestration<T>.Name, "1.0", new ResourceOrchestrationInput()
                     {
-                        DeploymentResourceId=input.ResourceId,
-                        NameWithServiceType=resource.Copy.NameWithServiceType
+                        DeploymentResourceId = input.ResourceId,
+                        NameWithServiceType = resource.Copy.NameWithServiceType
                     }));
                 }
                 else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        DeploymentOrchestration.Name,
+                        DeploymentOrchestration<T>.Name,
                         "1.0",
                         DataConverter.Serialize(Deployment.Parse(resource))));
                 }
                 else
                 {
-                    helper.ProvisioningResource(resource, tasks, context, input);
+                    helper.ProvisioningResource<T>(resource, tasks, context, input);
                 }
             }
 
@@ -287,7 +289,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 try
                 {
                     var injectAfterDeploymenteResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                             RequestOrchestration.Name,
+                             RequestOrchestration<T>.Name,
                              "1.0",
                              new AsyncRequestActivityInput()
                              {

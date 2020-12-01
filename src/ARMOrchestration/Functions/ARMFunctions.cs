@@ -1,9 +1,9 @@
 ﻿using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.Expression;
+using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
@@ -225,6 +225,19 @@ namespace maskx.ARMOrchestration.Functions
             });
 
             #endregion Array and object
+
+            #region object https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-object?tabs=json#createobject
+            // todo: createObject
+            Functions.Add("createObject", (args, cxt) =>
+            {
+                List<string> rtv = new List<string>();
+                var pars = args.EvaluateParameters(cxt);
+                for (int i = 0; i < pars.Length-1; i++)
+                {
+                    rtv.Add("");
+                }
+            });
+            #endregion
 
             #region Comparison
 
@@ -848,9 +861,9 @@ namespace maskx.ARMOrchestration.Functions
             }
             if (!rtv.HasResult && !string.IsNullOrEmpty(input.Parameters))
             {
-                    using var jsonDoc = JsonDocument.Parse(input.Parameters);
-                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
-                        rtv.Result = JsonValue.GetElementValue(v);
+                using var jsonDoc = JsonDocument.Parse(input.Parameters);
+                if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                    rtv.Result = JsonValue.GetElementValue(v);
             }
             if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Parameters))
             {

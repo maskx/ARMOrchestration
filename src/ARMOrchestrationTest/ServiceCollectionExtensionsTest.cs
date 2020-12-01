@@ -2,7 +2,6 @@
 using DurableTask.Core;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
@@ -28,7 +27,6 @@ namespace ARMOrchestrationTest
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddHttpClient();
                     var sqlConfig = new ARMOrchestrationSqlServerConfig()
                     {
                         Database = new DatabaseConfig()
@@ -37,8 +35,9 @@ namespace ARMOrchestrationTest
                             AutoCreate = true
                         }
                     };
-                    services.UsingARMOrchestration(sqlConfig);
-                    services.AddSingleton<ICommunicationProcessor>((sp) =>
+                    services.UsingARMOrchestration<CustomCommunicationJob>(sp=>sqlConfig);
+                    services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp=>sqlConfig);
+                    services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>
                     {
                         return new MockCommunicationProcessor();
                     });
@@ -51,7 +50,7 @@ namespace ARMOrchestrationTest
             webHost.RunAsync();
 
             var client = webHost.Services.GetService<OrchestrationWorkerClient>();
-            var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
+            var instance = webHost.Services.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().Run(
                 new Deployment()
                 {
                     ApiVersion = "1.0",
@@ -92,25 +91,24 @@ namespace ARMOrchestrationTest
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.UsingARMOrchestration((sp) =>
+                    var confi = new ARMOrchestrationSqlServerConfig()
                     {
-                        return new ARMOrchestrationSqlServerConfig()
+                        Database = new DatabaseConfig()
                         {
-                            Database = new DatabaseConfig()
+                            ConnectionString = TestHelper.ConnectionString,
+                            AutoCreate = true
+                        },
+                        ConfigARMFunctions = (func) =>
+                        {
+                            func.SetFunction("customeFunctions", (args, cxt) =>
                             {
-                                ConnectionString = TestHelper.ConnectionString,
-                                AutoCreate = true
-                            },
-                            ConfigARMFunctions = (func) =>
-                            {
-                                func.SetFunction("customeFunctions", (args, cxt) =>
-                                {
-                                    args.Result = 123;
-                                });
-                            }
-                        };
-                    });
-                    services.AddSingleton<ICommunicationProcessor>((sp) =>
+                                args.Result = 123;
+                            });
+                        }
+                    }; 
+                    services.UsingARMOrchestration<CustomCommunicationJob>((sp) =>confi);
+                    services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp=>confi);
+                    services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>
                     {
                         return new MockCommunicationProcessor();
                     });
@@ -123,7 +121,7 @@ namespace ARMOrchestrationTest
             webHost.RunAsync();
 
             var client = webHost.Services.GetService<OrchestrationWorkerClient>();
-            var instance = webHost.Services.GetService<ARMOrchestrationClient>().Run(
+            var instance = webHost.Services.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().Run(
                 new Deployment()
                 {
                     ApiVersion = "1.0",

@@ -1,4 +1,5 @@
 ﻿using maskx.ARMOrchestration.Functions;
+using maskx.OrchestrationService.Worker;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -87,7 +88,7 @@ namespace maskx.ARMOrchestration.Extensions
             return null;
         }
 
-        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
+        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure) 
         {
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);

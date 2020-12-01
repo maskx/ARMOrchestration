@@ -7,6 +7,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.SQL;
+using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -97,10 +98,11 @@ WHEN MATCHED THEN
                 // Eat up any exception
             }
         }
-        public void ProvisioningResource(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, Deployment input)
+        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, Deployment input)
+            where T:CommunicationJob,new()
         {
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
-                                      ResourceOrchestration.Name,
+                                      ResourceOrchestration<T>.Name,
                                       "1.0",
                                       new ResourceOrchestrationInput()
                                       {
@@ -112,7 +114,7 @@ WHEN MATCHED THEN
             foreach (var child in resource.FlatEnumerateChild())
             {
                 tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
-                                                     ResourceOrchestration.Name,
+                                                     ResourceOrchestration<T>.Name,
                                                      "1.0",
                                                      new ResourceOrchestrationInput()
                                                      {

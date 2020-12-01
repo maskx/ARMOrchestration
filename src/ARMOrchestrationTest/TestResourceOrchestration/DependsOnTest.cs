@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration;
+﻿using ARMOrchestrationTest.Mock;
+using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -59,7 +60,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                  "dependsOn/DuplicatedName", subscriptionId: Guid.NewGuid().ToString());
-            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
@@ -78,7 +79,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                  "dependsOn/NameAndServiceTypeName", subscriptionId: Guid.NewGuid().ToString());
-            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
@@ -97,7 +98,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                  "dependsOn/ServiceTypeNameAndName", subscriptionId: Guid.NewGuid().ToString());
-            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
@@ -138,7 +139,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
 
             var instance = TestHelper.OrchestrationTest(fixture,
                  "dependsOn/DuplicatedServiceTypeName", subscriptionId: Guid.NewGuid().ToString("N"));
-            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
@@ -157,7 +158,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                  "dependsOn/DiffServiceTypeSameName", subscriptionId: Guid.NewGuid().ToString());
-            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
             var resources = client.GetResourceListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {

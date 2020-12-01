@@ -4,19 +4,17 @@ using System.Threading.Tasks;
 
 namespace ARMOrchestrationTest.Mock
 {
-    public class MockCommunicationProcessor : ICommunicationProcessor
+    public class MockCommunicationProcessor : ICommunicationProcessor<CustomCommunicationJob>
     {
         public string Name { get; set; } = "MockCommunicationProcessor";
         public int MaxBatchCount { get; set; } = 1;
-        public CommunicationWorker CommunicationWorker { get; set; }
 
-        public Task<CommunicationJob[]> ProcessAsync(params CommunicationJob[] jobs)
+        public Task<CustomCommunicationJob[]> ProcessAsync(params CustomCommunicationJob[] jobs)
         {
-            List<CommunicationJob> rtv = new List<CommunicationJob>();
+            List<CustomCommunicationJob> rtv = new List<CustomCommunicationJob>();
             foreach (var job in jobs)
             {
-                if (job.RuleField.ContainsKey("Type") && job.RuleField["Type"].ToString() == "Test.Mock/HasResourceFail"
-                    && job.RuleField["Name"].ToString() == "fail")
+                if (job.Type == "Test.Mock/HasResourceFail" && job.Name == "fail")
                 {
                     job.ResponseCode = 500;
                     job.ResponseContent = "MockCommunicationProcessor";

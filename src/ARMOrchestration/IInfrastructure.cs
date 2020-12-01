@@ -1,7 +1,6 @@
 ﻿using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Activity;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -19,7 +18,7 @@ namespace maskx.ARMOrchestration
         /// </summary>
         /// <param name="input">AsyncRequestActivityInput</param>
         /// <returns>AsyncRequestInput</returns>
-        AsyncRequestInput GetRequestInput(AsyncRequestActivityInput input);
+        object GetRequestInput(AsyncRequestActivityInput input);
 
         /// <summary>
         /// <see cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#list"/>

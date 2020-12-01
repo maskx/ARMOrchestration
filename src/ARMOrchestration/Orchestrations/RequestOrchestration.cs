@@ -2,24 +2,22 @@
 using DurableTask.Core.Exceptions;
 using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
-using System;
+using maskx.OrchestrationService.Worker;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class RequestOrchestration : TaskOrchestration<TaskResult, AsyncRequestActivityInput, TaskResult, string>
+    public class RequestOrchestration<T> : TaskOrchestration<TaskResult, AsyncRequestActivityInput, TaskResult, string>
+        where T:CommunicationJob,new()
     {
         public const string Name = "RequestOrchestration";
         private string eventName = string.Empty;
         private TaskCompletionSource<TaskResult> waitHandler = null;
         private readonly ARMTemplateHelper templateHelper;
-        private readonly IServiceProvider _ServiceProvider;
 
-        public RequestOrchestration(
-            ARMTemplateHelper templateHelper,
-            IServiceProvider serviceProvider)
+        public RequestOrchestration(ARMTemplateHelper templateHelper)
         {
-            this._ServiceProvider = serviceProvider;
             this.templateHelper = templateHelper;
         }
 
@@ -29,13 +27,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.waitHandler = new TaskCompletionSource<TaskResult>();
             try
             {
-                await context.ScheduleTask<TaskResult>(AsyncRequestActivity.Name, "1.0", input);
+                await context.ScheduleTask<TaskResult>(AsyncRequestActivity<T>.Name, "1.0", input);
             }
             catch (TaskFailedException ex)
             {
                 var response = new ErrorResponse()
                 {
-                    Code = $"{AsyncRequestActivity.Name}:{input.ProvisioningStage}",
+                    Code = $"{AsyncRequestActivity<T>.Name}:{input.ProvisioningStage}",
                     Message = ex.Message,
                     AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {

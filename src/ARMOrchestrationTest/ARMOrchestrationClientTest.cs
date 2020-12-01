@@ -1,4 +1,5 @@
 ﻿using ARMOrchestrationTest;
+using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -10,12 +11,12 @@ namespace ARMOrchestrationTest
     public class ARMOrchestrationClientTest
     {
         private readonly ARMOrchestartionFixture _Fixture;
-        private readonly ARMOrchestrationClient _Client;
+        private readonly ARMOrchestrationClient<CustomCommunicationJob> _Client;
         public ARMOrchestrationClientTest(ARMOrchestartionFixture fixture)
         {
             this._Fixture = fixture;
-            this._Client = this._Fixture.ServiceProvider.GetService<ARMOrchestrationClient>();
+            this._Client = this._Fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
         }
-       
+
     }
 }

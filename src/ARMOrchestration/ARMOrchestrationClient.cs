@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration
 {
-    public class ARMOrchestrationClient
+    public class ARMOrchestrationClient<T> where T : CommunicationJob, new()
     {
         private readonly OrchestrationWorkerClient _OrchestrationWorkerClient;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
@@ -75,7 +75,7 @@ namespace maskx.ARMOrchestration
                 InstanceId = args.DeploymentId,
                 Orchestration = new OrchestrationSetting()
                 {
-                    Name = DeploymentOrchestration.Name,
+                    Name = DeploymentOrchestration<T>.Name,
                     Version = args.ApiVersion
                 },
                 Input = _DataConverter.Serialize(args)

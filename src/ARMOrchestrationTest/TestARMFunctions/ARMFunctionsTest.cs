@@ -1,15 +1,12 @@
 ﻿using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
-using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace ARMOrchestrationTest.TestARMFunctions

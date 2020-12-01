@@ -2,13 +2,15 @@
 using DurableTask.Core.Exceptions;
 using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.Worker;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class ResourceOrchestration : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+    public class ResourceOrchestration<T>: TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+        where T:CommunicationJob,new()
     {
         public const string Name = "ResourceOrchestration";
         private readonly IInfrastructure infrastructure;
@@ -66,7 +68,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{ResourceOrchestration.Name}:{ProvisioningStage.DependsOnWaited}",
+                        Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.DependsOnWaited}",
                         Message = ex.Message,
                         AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -114,7 +116,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 try
                 {
                     var injectBefroeProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                                RequestOrchestration.Name,
+                                                RequestOrchestration<T>.Name,
                                                 "1.0",
                                                 new AsyncRequestActivityInput()
                                                 {
@@ -139,7 +141,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{ResourceOrchestration.Name}:{ProvisioningStage.InjectBefroeProvisioning}",
+                        Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.InjectBefroeProvisioning}",
                         Message = ex.Message,
                         AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -180,7 +182,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var response = new ErrorResponse()
                         {
-                            Code = $"{ResourceOrchestration.Name}:{ProvisioningStage.BeforeResourceProvisioning}",
+                            Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.BeforeResourceProvisioning}",
                             Message = ex.Message,
                             AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -212,7 +214,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             try
             {
                 var createResourceResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                                     RequestOrchestration.Name,
+                                     RequestOrchestration<T>.Name,
                                      "1.0",
                                      new AsyncRequestActivityInput()
                                      {
@@ -229,7 +231,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 var response = new ErrorResponse()
                 {
-                    Code = $"{ResourceOrchestration.Name}:{ProvisioningStage.ProvisioningResource}",
+                    Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.ProvisioningResource}",
                     Message = ex.Message,
                     AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -273,7 +275,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var response = DataConverter.Serialize(new ErrorResponse()
                         {
-                            Code = $"{ResourceOrchestration.Name}:{ProvisioningStage.AfterResourceProvisioningOrchestation}",
+                            Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.AfterResourceProvisioningOrchestation}",
                             Message = ex.Message,
                             AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -304,7 +306,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 try
                 {
                     var injectAfterProvisioningResult = await context.CreateSubOrchestrationInstance<TaskResult>(
-                             RequestOrchestration.Name,
+                             RequestOrchestration<T>.Name,
                              "1.0",
                              new AsyncRequestActivityInput()
                              {
@@ -322,7 +324,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{ResourceOrchestration.Name}:{ProvisioningStage.AfterResourceProvisioningOrchestation}",
+                        Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.AfterResourceProvisioningOrchestation}",
                         Message = ex.Message,
                         AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {

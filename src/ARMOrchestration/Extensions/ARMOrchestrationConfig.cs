@@ -1,5 +1,5 @@
 ﻿using maskx.ARMOrchestration.Functions;
-using maskx.OrchestrationService.Extensions;
+using maskx.OrchestrationService.Worker;
 using System;
 
 namespace maskx.ARMOrchestration.Extensions

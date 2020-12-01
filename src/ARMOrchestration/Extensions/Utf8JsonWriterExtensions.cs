@@ -1,5 +1,6 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
+using maskx.OrchestrationService.Worker;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;

@@ -100,6 +100,8 @@ namespace maskx.ARMOrchestration.Functions
 
         public static object GetElementValue(JsonElement element)
         {
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-syntax#parameters
+            // see type description
             switch (element.ValueKind)
             {
                 case JsonValueKind.Undefined:

@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration;
+﻿using ARMOrchestrationTest.Mock;
+using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Functions;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,14 +9,14 @@ using Xunit;
 
 namespace ARMOrchestrationTest
 {
-    public class ARMOrchestartionFixture 
+    public class ARMOrchestartionFixture
     {
         private IHost workerHost = null;
         public IServiceProvider ServiceProvider { get; private set; }
         public OrchestrationWorker OrchestrationWorker { get; private set; }
         public OrchestrationWorkerClient OrchestrationWorkerClient { get; private set; }
         public ARMFunctions ARMFunctions { get; set; }
-        public ARMOrchestrationClient ARMOrchestrationClient { get; private set; }
+        public ARMOrchestrationClient<CustomCommunicationJob> ARMOrchestrationClient { get; private set; }
 
         public ARMOrchestartionFixture()
         {
@@ -24,7 +25,7 @@ namespace ARMOrchestrationTest
             OrchestrationWorker = workerHost.Services.GetService<OrchestrationWorker>();
             OrchestrationWorkerClient = workerHost.Services.GetService<OrchestrationWorkerClient>();
             this.ARMFunctions = workerHost.Services.GetService<ARMFunctions>();
-            this.ARMOrchestrationClient = workerHost.Services.GetService<ARMOrchestrationClient>();
+            this.ARMOrchestrationClient = workerHost.Services.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
             this.ServiceProvider = workerHost.Services;
         }
     }

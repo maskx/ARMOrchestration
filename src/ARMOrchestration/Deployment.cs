@@ -233,7 +233,7 @@ namespace maskx.ARMOrchestration
         /// </summary>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error"/>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/rollback-on-error#rest-api"/>
-        public bool OnErrorDeployment { get; set; } = false;
+        public OnErrorDeployment OnErrorDeployment { get; set; }
 
         /// <summary>
         /// the user id of create this deployment

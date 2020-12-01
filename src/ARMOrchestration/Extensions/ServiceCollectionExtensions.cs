@@ -1,142 +1,117 @@
-﻿using maskx.ARMOrchestration.Activities;
-using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
+﻿using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Workers;
 using maskx.OrchestrationService.Extensions;
+using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection UsingARMOrchestration(this IServiceCollection services, Func<IServiceProvider, ARMOrchestrationSqlServerConfig> configOption)
+        public static IServiceCollection UsingARMOrchestration<T>(this IServiceCollection services, Func<IServiceProvider, ARMOrchestrationSqlServerConfig> configOption)
+        where T : CommunicationJob, new()
         {
-            services.AddSingleton((sp) =>
+            ARMOrchestrationSqlServerConfig config = null;
+            services.TryAddSingleton((sp) =>
             {
-                return configOption(sp);
-            });
-            services.UsingOrchestration((sp) =>
-            {
-                var config = sp.GetService<ARMOrchestrationSqlServerConfig>();
-                SqlServerConfiguration sqlServerConfiguration = new SqlServerConfiguration()
-                {
-                    AutoCreate = config.Database.AutoCreate,
-                    ConnectionString = config.Database.ConnectionString,
-                    HubName = config.Database.HubName,
-                    SchemaName = config.Database.SchemaName,
-                    CommunicationWorkerOptions = config.CommunicationWorkerOptions,
-                    OrchestrationServiceSettings = config.OrchestrationServiceSettings
-                };
-                sqlServerConfiguration.OrchestrationWorkerOptions.FetchJobCount = config.OrchestrationWorkerOptions.FetchJobCount;
-                sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = config.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface;
-                sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInOrchestrators = (sp) =>
-                {
-                    IList<(string, string, Type)> orchList;
-                    if (config.OrchestrationWorkerOptions.GetBuildInOrchestrators == null)
-                        orchList = new List<(string, string, Type)>();
-                    else
-                        orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
-                    orchList.Add((ResourceOrchestration.Name, "1.0", typeof(ResourceOrchestration)));
-                    orchList.Add((DeploymentOrchestration.Name, "1.0", typeof(DeploymentOrchestration)));
-                    orchList.Add((RequestOrchestration.Name, "1.0", typeof(RequestOrchestration)));
-                    orchList.Add((CopyOrchestration.Name, "1.0", typeof(CopyOrchestration)));
-                    return orchList;
-                };
-                sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>
-                {
-                    IList<(string, string, Type)> activityTypes;
-                    if (config.OrchestrationWorkerOptions.GetBuildInTaskActivities == null)
-                        activityTypes = new List<(string, string, Type)>();
-                    else
-                        activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                    activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
-                    activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
-                    return activityTypes;
-                };
-                return sqlServerConfiguration;
-            });
-            services.AddSingleton<ARMOrchestrationClient>();
-            services.AddSingleton<ARMTemplateHelper>();
-            services.AddSingleton<ARMFunctions>((sp) =>
-            {
-                var options = sp.GetService<IOptions<ARMOrchestrationOptions>>();
-                var infra = sp.GetService<IInfrastructure>();
-                var config = sp.GetService<ARMOrchestrationSqlServerConfig>();
-                var func = new ARMFunctions(options, sp, infra);
-                config.ConfigARMFunctions?.Invoke(func);
-                return func;
-            });
-            services.AddSingleton<WaitDependsOnWorker>();
-            services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker>());
-            services.AddSingleton((sp) =>
-            {
-                var config = sp.GetService<ARMOrchestrationSqlServerConfig>();
+                if (config == null)
+                    config = configOption(sp);
                 var option = new ARMOrchestrationOptions
                 {
                     Database = config.Database
                 };
                 return Options.Create(option);
             });
+            services.UsingSQLServerOrchestration((sp) =>
+            {
+                if (config == null)
+                    config = configOption(sp);
+                return new SqlServerOrchestrationConfiguration()
+                {
+                    ConnectionString = config.Database.ConnectionString,
+                    HubName = config.Database.HubName,
+                    SchemaName = config.Database.SchemaName
+                };
+            });
+            services.UsingOrchestrationWorker((sp) =>
+            {
+                if (config == null)
+                    config = configOption(sp);
+                return new OrchestrationWorkerOptions()
+                {
+                    AutoCreate = config.Database.AutoCreate,
+                    FetchJobCount = config.OrchestrationWorkerOptions.FetchJobCount,
+                    GetBuildInOrchestrators = config.OrchestrationWorkerOptions.GetBuildInOrchestrators,
+                    GetBuildInTaskActivities = config.OrchestrationWorkerOptions.GetBuildInTaskActivities,
+                    GetBuildInTaskActivitiesFromInterface = config.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface,
+                    IncludeDetails = config.IncludeDetails
+                };
+            });
+
+            services.UsingCommunicationWorker<T>((sp) =>
+            {
+                if (config == null)
+                    config = configOption(sp);
+                return new CommunicationWorkerOptions()
+                {
+                    AutoCreate = config.Database.AutoCreate,
+                    ConnectionString = config.Database.ConnectionString,
+                    HubName = config.Database.HubName,
+                    SchemaName = config.Database.SchemaName,
+                    IdelMilliseconds = config.CommunicationWorkerOptions.IdelMilliseconds,
+                    MaxConcurrencyRequest = config.CommunicationWorkerOptions.MaxConcurrencyRequest,
+                    MessageLockedSeconds = config.CommunicationWorkerOptions.MessageLockedSeconds
+                };
+            });
+            services.TryAddSingleton<ARMOrchestrationClient<T>>();
+            services.TryAddSingleton<ARMTemplateHelper>();
+            services.TryAddSingleton<ARMFunctions>((sp) =>
+            {
+                var options = sp.GetService<IOptions<ARMOrchestrationOptions>>();
+                var infra = sp.GetService<IInfrastructure>();
+                if (config == null)
+                    config = configOption(sp);
+                var func = new ARMFunctions(options, sp, infra);
+                config.ConfigARMFunctions?.Invoke(func);
+                return func;
+            });
+            services.TryAddSingleton<WaitDependsOnWorker<T>>();
+            services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker<T>>());
+            
             return services;
         }
-
-        public static IServiceCollection UsingARMOrchestration(this IServiceCollection services, ARMOrchestrationSqlServerConfig config)
+        public static IServiceCollection UsingARMOrhcestrationClient<T>(this IServiceCollection services, Func<IServiceProvider, ARMOrchestrationSqlServerConfig> configOption)
+            where T : CommunicationJob, new()
         {
-            SqlServerConfiguration sqlServerConfiguration = new SqlServerConfiguration()
+            ARMOrchestrationSqlServerConfig config = null;
+            services.UsingSQLServerOrchestration((sp) =>
             {
-                AutoCreate = config.Database.AutoCreate,
-                ConnectionString = config.Database.ConnectionString,
-                HubName = config.Database.HubName,
-                SchemaName = config.Database.SchemaName,
-                CommunicationWorkerOptions = config.CommunicationWorkerOptions,
-                OrchestrationServiceSettings = config.OrchestrationServiceSettings
-            };
-            sqlServerConfiguration.OrchestrationWorkerOptions.FetchJobCount = config.OrchestrationWorkerOptions.FetchJobCount;
-            sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = config.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface;
-            sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInOrchestrators = (sp) =>
-            {
-                IList<(string, string, Type)> orchList;
-                if (config.OrchestrationWorkerOptions.GetBuildInOrchestrators == null)
-                    orchList = new List<(string, string, Type)>();
-                else
-                    orchList = config.OrchestrationWorkerOptions.GetBuildInOrchestrators(sp);
-                orchList.Add((ResourceOrchestration.Name, "1.0", typeof(ResourceOrchestration)));
-                orchList.Add((DeploymentOrchestration.Name, "1.0", typeof(DeploymentOrchestration)));
-                orchList.Add((RequestOrchestration.Name, "1.0", typeof(RequestOrchestration)));
-                orchList.Add((CopyOrchestration.Name, "1.0", typeof(CopyOrchestration)));
-                return orchList;
-            };
-            sqlServerConfiguration.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) =>
-            {
-                IList<(string, string, Type)> activityTypes;
-                if (config.OrchestrationWorkerOptions.GetBuildInTaskActivities == null)
-                    activityTypes = new List<(string, string, Type)>();
-                else
-                    activityTypes = config.OrchestrationWorkerOptions.GetBuildInTaskActivities(sp);
-                activityTypes.Add((WaitDependsOnActivity.Name, "1.0", typeof(WaitDependsOnActivity)));
-                activityTypes.Add((AsyncRequestActivity.Name, "1.0", typeof(AsyncRequestActivity)));
-                return activityTypes;
-            };
-            services.UsingOrchestration((sp)=>sqlServerConfiguration);
-
-            #region WaitDependsOnWorker
-
-            services.AddSingleton<WaitDependsOnWorker>();
-            services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker>());
-
-            #endregion WaitDependsOnWorker
-
-            services.AddSingleton<ARMOrchestrationClient>();
-            services.AddSingleton<ARMTemplateHelper>();
-            services.AddSingleton<ARMFunctions>();
-            services.Configure<ARMOrchestrationOptions>((opt) =>
-            {
-                opt.Database = config.Database;
+                if (config == null)
+                    config = configOption(sp);
+                return new SqlServerOrchestrationConfiguration()
+                {
+                    ConnectionString = config.Database.ConnectionString,
+                    HubName = config.Database.HubName,
+                    SchemaName = config.Database.SchemaName
+                };
             });
+            services.TryAddSingleton<OrchestrationWorkerClient>();
+            services.TryAddSingleton<ARMTemplateHelper>();
+            services.TryAddSingleton((sp) =>
+            {
+                if (config == null)
+                    config = configOption(sp);
+                var option = new ARMOrchestrationOptions
+                {
+                    Database = config.Database
+                };
+                return Options.Create(option);
+            });
+            services.TryAddSingleton<ARMOrchestrationClient<T>>();
             return services;
         }
     }
