@@ -42,7 +42,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.StartProvisioning,
-                    Input = DataConverter.Serialize(input)
+                    Input = arg
                 });
             }
 
@@ -110,6 +110,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 foreach (var t in infrastructure.BeforeDeploymentOrchestration)
                 {
+                    // todo: change input to input.ResourceId, otherwise Serialize will invoke reference method at runtime
                     var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                     if (r.Code != 200)
                     {
@@ -216,7 +217,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    helper.ProvisioningResource<T>(resource, tasks, context, input);
+                    helper.ProvisioningResource<T>(resource, tasks, context);
                 }
             }
 

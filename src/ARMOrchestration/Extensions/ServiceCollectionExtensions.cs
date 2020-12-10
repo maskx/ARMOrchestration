@@ -22,7 +22,13 @@ namespace maskx.ARMOrchestration.Extensions
                     config = configOption(sp);
                 var option = new ARMOrchestrationOptions
                 {
-                    Database = config.Database
+                    Database = new DatabaseConfig()
+                    {
+                        AutoCreate = config.AutoCreate,
+                        ConnectionString = config.ConnectionString,
+                        HubName = config.HubName,
+                        SchemaName = config.SchemaName
+                    }
                 };
                 return Options.Create(option);
             });
@@ -32,9 +38,9 @@ namespace maskx.ARMOrchestration.Extensions
                     config = configOption(sp);
                 return new SqlServerOrchestrationConfiguration()
                 {
-                    ConnectionString = config.Database.ConnectionString,
-                    HubName = config.Database.HubName,
-                    SchemaName = config.Database.SchemaName
+                    ConnectionString = config.ConnectionString,
+                    HubName = config.HubName,
+                    SchemaName = config.SchemaName
                 };
             });
             services.UsingOrchestrationWorker((sp) =>
@@ -43,11 +49,11 @@ namespace maskx.ARMOrchestration.Extensions
                     config = configOption(sp);
                 return new OrchestrationWorkerOptions()
                 {
-                    AutoCreate = config.Database.AutoCreate,
-                    FetchJobCount = config.OrchestrationWorkerOptions.FetchJobCount,
-                    GetBuildInOrchestrators = config.OrchestrationWorkerOptions.GetBuildInOrchestrators,
-                    GetBuildInTaskActivities = config.OrchestrationWorkerOptions.GetBuildInTaskActivities,
-                    GetBuildInTaskActivitiesFromInterface = config.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface,
+                    AutoCreate = config.AutoCreate,
+                    FetchJobCount = config.OrchestrationSettings.FetchJobCount,
+                    GetBuildInOrchestrators = config.OrchestrationSettings.GetBuildInOrchestrators,
+                    GetBuildInTaskActivities = config.OrchestrationSettings.GetBuildInTaskActivities,
+                    GetBuildInTaskActivitiesFromInterface = config.OrchestrationSettings.GetBuildInTaskActivitiesFromInterface,
                     IncludeDetails = config.IncludeDetails
                 };
             });
@@ -58,13 +64,13 @@ namespace maskx.ARMOrchestration.Extensions
                     config = configOption(sp);
                 return new CommunicationWorkerOptions()
                 {
-                    AutoCreate = config.Database.AutoCreate,
-                    ConnectionString = config.Database.ConnectionString,
-                    HubName = config.Database.HubName,
-                    SchemaName = config.Database.SchemaName,
-                    IdelMilliseconds = config.CommunicationWorkerOptions.IdelMilliseconds,
-                    MaxConcurrencyRequest = config.CommunicationWorkerOptions.MaxConcurrencyRequest,
-                    MessageLockedSeconds = config.CommunicationWorkerOptions.MessageLockedSeconds
+                    AutoCreate = config.AutoCreate,
+                    ConnectionString = config.ConnectionString,
+                    HubName = config.HubName,
+                    SchemaName = config.SchemaName,
+                    IdelMilliseconds = config.CommunicationSettings.IdelMilliseconds,
+                    MaxConcurrencyRequest = config.CommunicationSettings.MaxConcurrencyRequest,
+                    MessageLockedSeconds = config.CommunicationSettings.MessageLockedSeconds
                 };
             });
             services.TryAddSingleton<ARMOrchestrationClient<T>>();
@@ -81,7 +87,7 @@ namespace maskx.ARMOrchestration.Extensions
             });
             services.TryAddSingleton<WaitDependsOnWorker<T>>();
             services.AddSingleton<IHostedService>(p => p.GetService<WaitDependsOnWorker<T>>());
-            
+
             return services;
         }
         public static IServiceCollection UsingARMOrhcestrationClient<T>(this IServiceCollection services, Func<IServiceProvider, ARMOrchestrationSqlServerConfig> configOption)
@@ -94,9 +100,9 @@ namespace maskx.ARMOrchestration.Extensions
                     config = configOption(sp);
                 return new SqlServerOrchestrationConfiguration()
                 {
-                    ConnectionString = config.Database.ConnectionString,
-                    HubName = config.Database.HubName,
-                    SchemaName = config.Database.SchemaName
+                    ConnectionString = config.ConnectionString,
+                    HubName = config.HubName,
+                    SchemaName = config.SchemaName
                 };
             });
             services.TryAddSingleton<OrchestrationWorkerClient>();
@@ -107,7 +113,13 @@ namespace maskx.ARMOrchestration.Extensions
                     config = configOption(sp);
                 var option = new ARMOrchestrationOptions
                 {
-                    Database = config.Database
+                    Database = new DatabaseConfig()
+                    {
+                        AutoCreate = config.AutoCreate,
+                        ConnectionString = config.ConnectionString,
+                        HubName = config.HubName,
+                        SchemaName = config.SchemaName
+                    }
                 };
                 return Options.Create(option);
             });

@@ -57,7 +57,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    helper.ProvisioningResource<T>(r, tasks, context, input.Deployment);
+                    helper.ProvisioningResource<T>(r, tasks, context);
                 }
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)

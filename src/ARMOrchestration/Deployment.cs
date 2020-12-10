@@ -25,6 +25,7 @@ namespace maskx.ARMOrchestration
                 this.ServiceProvider = service;
             if (this.ServiceProvider == null)
                 throw new Exception("validate template need ServiceProvider");
+            // todo: validate parameter schema and parameter input
             return this.Template.Validate();
         }
 

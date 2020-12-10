@@ -98,7 +98,7 @@ WHEN MATCHED THEN
                 // Eat up any exception
             }
         }
-        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, Deployment input)
+        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext)
             where T:CommunicationJob,new()
         {
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
@@ -109,7 +109,7 @@ WHEN MATCHED THEN
                                           DeploymentResourceId = resource.Input.ResourceId,
                                           NameWithServiceType = resource.NameWithServiceType,
                                           ServiceProvider = resource.ServiceProvider,
-                                          CopyIndex = resource.CopyIndex.HasValue ? resource.CopyIndex.Value : -1
+                                          CopyIndex = resource.CopyIndex ?? -1
                                       }));
             foreach (var child in resource.FlatEnumerateChild())
             {
@@ -121,7 +121,7 @@ WHEN MATCHED THEN
                                                          DeploymentResourceId = child.Input.ResourceId,
                                                          NameWithServiceType = child.NameWithServiceType,
                                                          ServiceProvider = child.ServiceProvider,
-                                                         CopyIndex = child.CopyIndex.HasValue ? child.CopyIndex.Value : -1
+                                                         CopyIndex = child.CopyIndex ?? -1
                                                      }));
             }
         }
@@ -183,11 +183,6 @@ WHEN MATCHED THEN
                 });
             }
             return input;
-        }
-        public async Task<Deployment> GetDeploymentByNameAsync(string parentId, string name)
-        {
-            var parent = await GetDeploymentByResourceIdAsync(parentId);
-            return parent.EnumerateDeployments().FirstOrDefault(d => d.Name == name);
         }
 
     }

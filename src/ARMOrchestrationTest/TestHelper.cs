@@ -17,6 +17,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using static maskx.ARMOrchestration.Extensions.ARMOrchestrationSqlServerConfig;
 
 namespace ARMOrchestrationTest
 {
@@ -205,32 +206,23 @@ namespace ARMOrchestrationTest
              .ConfigureServices((hostContext, services) =>
              {
                  config?.Invoke(hostContext, services);
-                 CommunicationWorkerOptions options = new CommunicationWorkerOptions
-                 {
-                     AutoCreate = true
-                 };
+                 CommunicationSetting options = new CommunicationSetting();
                  if (communicationWorkerOptions != null)
                  {
-                     options.HubName = communicationWorkerOptions.HubName;
                      options.MaxConcurrencyRequest = communicationWorkerOptions.MaxConcurrencyRequest;
-
-                     options.SchemaName = communicationWorkerOptions.SchemaName;
                  }
                  var sqlConfig = new ARMOrchestrationSqlServerConfig()
                  {
-                     Database = new DatabaseConfig()
-                     {
-                         ConnectionString = TestHelper.ConnectionString,
-                         AutoCreate = true
-                     },
-                     CommunicationWorkerOptions = options
+                     ConnectionString = TestHelper.ConnectionString,
+                     AutoCreate = true,
+                     CommunicationSettings = options
                  };
                  if (orchestrationTypes != null)
-                     sqlConfig.OrchestrationWorkerOptions.GetBuildInOrchestrators = (sp) => orchestrationTypes;
+                     sqlConfig.OrchestrationSettings.GetBuildInOrchestrators = (sp) => orchestrationTypes;
                  if (activityTypes != null)
-                     sqlConfig.OrchestrationWorkerOptions.GetBuildInTaskActivities = (sp) => activityTypes;
+                     sqlConfig.OrchestrationSettings.GetBuildInTaskActivities = (sp) => activityTypes;
                  if (interfaceActivitys != null)
-                     sqlConfig.OrchestrationWorkerOptions.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
+                     sqlConfig.OrchestrationSettings.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
                  services.UsingARMOrchestration<CustomCommunicationJob>(sp => sqlConfig);
                  services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp => sqlConfig);
                  services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>

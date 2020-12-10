@@ -29,14 +29,11 @@ namespace ARMOrchestrationTest
                 {
                     var sqlConfig = new ARMOrchestrationSqlServerConfig()
                     {
-                        Database = new DatabaseConfig()
-                        {
-                            ConnectionString = TestHelper.ConnectionString,
-                            AutoCreate = true
-                        }
+                        ConnectionString = TestHelper.ConnectionString,
+                        AutoCreate = true
                     };
-                    services.UsingARMOrchestration<CustomCommunicationJob>(sp=>sqlConfig);
-                    services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp=>sqlConfig);
+                    services.UsingARMOrchestration<CustomCommunicationJob>(sp => sqlConfig);
+                    services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp => sqlConfig);
                     services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>
                     {
                         return new MockCommunicationProcessor();
@@ -93,11 +90,8 @@ namespace ARMOrchestrationTest
                 {
                     var confi = new ARMOrchestrationSqlServerConfig()
                     {
-                        Database = new DatabaseConfig()
-                        {
-                            ConnectionString = TestHelper.ConnectionString,
-                            AutoCreate = true
-                        },
+                        ConnectionString = TestHelper.ConnectionString,
+                        AutoCreate = true,
                         ConfigARMFunctions = (func) =>
                         {
                             func.SetFunction("customeFunctions", (args, cxt) =>
@@ -105,9 +99,9 @@ namespace ARMOrchestrationTest
                                 args.Result = 123;
                             });
                         }
-                    }; 
-                    services.UsingARMOrchestration<CustomCommunicationJob>((sp) =>confi);
-                    services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp=>confi);
+                    };
+                    services.UsingARMOrchestration<CustomCommunicationJob>((sp) => confi);
+                    services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp => confi);
                     services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>
                     {
                         return new MockCommunicationProcessor();
