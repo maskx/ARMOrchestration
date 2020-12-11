@@ -184,6 +184,12 @@ WHEN MATCHED THEN
             }
             return input;
         }
+        // todo: update deployment input by deploymenId
+        // using this in before deployment plugin to modify user input
+        public async Task UpdateDeploymentInput(string deploymentId,string input)
+        {
+         
+        }
 
     }
 }

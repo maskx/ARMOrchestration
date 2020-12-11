@@ -90,7 +90,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.InjectBeforeDeploymentFailed,
-                        Input = DataConverter.Serialize(input),
+                        Input = arg,
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -108,19 +108,27 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (infrastructure.BeforeDeploymentOrchestration != null)
             {
-                foreach (var t in infrastructure.BeforeDeploymentOrchestration)
+                try
                 {
-                    // todo: change input to input.ResourceId, otherwise Serialize will invoke reference method at runtime
-                    var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
-                    if (r.Code != 200)
+                    foreach (var t in infrastructure.BeforeDeploymentOrchestration)
                     {
-                        // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
-                        return r;
-                    }
+                        // todo: 如果需要修改ARM 报文，在plugin的 orchestartion 里面 update 数据库，通过 ResourceId
+                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
+                        if (r.Code != 200)
+                        {
+                            // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
+                            // todo: SafeSaveDeploymentOperation, 基于性能考虑不在此处SafeSaveDeploymentOperation，但是只有after才有多次执行的问题，before的时候，如果出错，已经马上退出了，不存咋反复执行的问题
+                            return r;
+                        }
 
-                    input = r.Content as Deployment;
-                    input.ServiceProvider = _ServiceProvider;
+                    }
                 }
+                catch (TaskFailedException ex)
+                {
+
+                    throw;
+                }
+               
             }
 
             #endregion Before Deployment
