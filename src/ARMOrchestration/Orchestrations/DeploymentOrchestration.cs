@@ -67,11 +67,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
-                            Stage = ProvisioningStage.BeforeDeploymentFailed,
+                            Stage = ProvisioningStage.InjectBeforeDeploymentFailed,
                             Result = DataConverter.Serialize(injectBeforeDeploymenteResult)
                         });
                         return injectBeforeDeploymenteResult;
                     }
+                    input = helper.GetDeploymentByResourceId(input.ResourceId);
                 }
                 catch (TaskFailedException ex)
                 {
@@ -90,7 +91,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.InjectBeforeDeploymentFailed,
-                        Input = arg,
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -99,7 +99,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Content = response
                     };
                 }
-
             }
 
             #endregion InjectBeforeDeployment
@@ -112,21 +111,43 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     foreach (var t in infrastructure.BeforeDeploymentOrchestration)
                     {
-                        // todo: 如果需要修改ARM 报文，在plugin的 orchestartion 里面 update 数据库，通过 ResourceId
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
                         if (r.Code != 200)
                         {
-                            // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
-                            // todo: SafeSaveDeploymentOperation, 基于性能考虑不在此处SafeSaveDeploymentOperation，但是只有after才有多次执行的问题，before的时候，如果出错，已经马上退出了，不存咋反复执行的问题
+                            helper.SafeSaveDeploymentOperation(new DeploymentOperation(input) {
+                                InstanceId = context.OrchestrationInstance.InstanceId,
+                                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                Stage = ProvisioningStage.BeforeDeploymentFailed
+                            });
                             return r;
                         }
-
                     }
+                    input = helper.GetDeploymentByResourceId(input.ResourceId);
                 }
                 catch (TaskFailedException ex)
                 {
-
-                    throw;
+                    var response = new ErrorResponse()
+                    {
+                        Code = $"{DeploymentOrchestration<T>.Name}:{ProvisioningStage.BeforeDeployment}",
+                        Message = ex.Message,
+                        AdditionalInfo = new ErrorAdditionalInfo[] {
+                        new ErrorAdditionalInfo() {
+                            Type=typeof(TaskFailedException).FullName,
+                            Info=ex
+                        } }
+                    };
+                    helper.SafeSaveDeploymentOperation(new DeploymentOperation(input)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.BeforeDeploymentFailed,
+                        Result = DataConverter.Serialize(response)
+                    }) ;
+                    return new TaskResult()
+                    {
+                        Code = 500,
+                        Content = response
+                    };
                 }
                
             }
@@ -172,7 +193,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Input = DataConverter.Serialize(input),
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -236,8 +256,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
             #endregion Provisioning resources
-
-            input.IsRuntime = true;
             string rtv = null;
 
             #region After Deployment
@@ -248,16 +266,15 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     try
                     {
-                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
+                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
                         if (r.Code != 200)
                         {
-                            // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
+                            helper.SafeSaveDeploymentOperation(new DeploymentOperation(input) {
+                                InstanceId = context.OrchestrationInstance.InstanceId,
+                                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                Stage = ProvisioningStage.AfterDeploymentOrhcestrationFailed
+                            });
                             errorResponses.Add(r.Content as ErrorResponse);
-                        }
-                        else
-                        {
-                            input = r.Content as Deployment;
-                            input.ServiceProvider = _ServiceProvider;
                         }
                     }
                     catch (TaskFailedException ex)
@@ -279,7 +296,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.AfterDeploymentOrhcestrationFailed,
-                            Input = DataConverter.Serialize(input),
                             Result = DataConverter.Serialize(response)
                         });
                         return new TaskResult()
@@ -289,6 +305,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         };
                     }
                 }
+                input = helper.GetDeploymentByResourceId(input.ResourceId);
             }
 
             #endregion After Deployment
@@ -329,7 +346,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.InjectAfterDeploymentFailed,
-                        Input = DataConverter.Serialize(input),
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -338,6 +354,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Content = response
                     };
                 }
+                input = helper.GetDeploymentByResourceId(input.ResourceId);
             }
             ErrorResponse errorResponse = null;
 

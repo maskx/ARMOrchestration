@@ -19,7 +19,6 @@ namespace maskx.ARMOrchestration.Workers
         private readonly ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
         private readonly DataConverter dataConverter = new JsonDataConverter();
-        private readonly OrchestrationWorker orchestrationWorker;
 
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
@@ -33,19 +32,18 @@ namespace maskx.ARMOrchestration.Workers
                 this.options.Database.DeploymentOperationsTableName,
                 (int)ProvisioningStage.Successed);
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
-            this.orchestrationWorker = orchestrationWorker;
+            orchestrationWorker.AddActivity(typeof(WaitDependsOnActivity), WaitDependsOnActivity.Name, "1.0");
+            orchestrationWorker.AddActivity(typeof(AsyncRequestActivity<T>), AsyncRequestActivity<T>.Name, "1.0");
+            orchestrationWorker.AddOrchestration(typeof(DeploymentOrchestration<T>), DeploymentOrchestration<T>.Name, "1.0");
+            orchestrationWorker.AddOrchestration(typeof(ResourceOrchestration<T>), ResourceOrchestration<T>.Name, "1.0");
+            orchestrationWorker.AddOrchestration(typeof(RequestOrchestration<T>), RequestOrchestration<T>.Name, "1.0");
+            orchestrationWorker.AddOrchestration(typeof(CopyOrchestration<T>), CopyOrchestration<T>.Name, "1.0");
         }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             if (this.options.Database.AutoCreate)
-                await this.CreateIfNotExistsAsync(false);
-            this.orchestrationWorker.AddActivity(typeof(WaitDependsOnActivity), WaitDependsOnActivity.Name, "1.0");
-            this.orchestrationWorker.AddActivity(typeof(AsyncRequestActivity<T>), AsyncRequestActivity<T>.Name, "1.0");
-            this.orchestrationWorker.AddOrchestration(typeof(DeploymentOrchestration<T>), DeploymentOrchestration<T>.Name, "1.0");
-            this.orchestrationWorker.AddOrchestration(typeof(ResourceOrchestration<T>), ResourceOrchestration<T>.Name, "1.0");
-            this.orchestrationWorker.AddOrchestration(typeof(RequestOrchestration<T>), RequestOrchestration<T>.Name, "1.0");
-            this.orchestrationWorker.AddOrchestration(typeof(CopyOrchestration<T>), CopyOrchestration<T>.Name, "1.0");
+                await this.CreateIfNotExistsAsync(false);            
             await base.StartAsync(cancellationToken);
         }
 

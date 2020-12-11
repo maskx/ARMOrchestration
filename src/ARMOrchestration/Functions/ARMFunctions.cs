@@ -3,7 +3,6 @@ using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.Expression;
-using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
@@ -13,6 +12,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+
 
 namespace maskx.ARMOrchestration.Functions
 {
@@ -183,7 +183,7 @@ namespace maskx.ARMOrchestration.Functions
                 int numberToSkip = Convert.ToInt32(pars[1]);
                 if (pars[0] is string s)
                 {
-                    args.Result = s.Substring(numberToSkip);
+                    args.Result = s[numberToSkip..];
                 }
                 else if (pars[0] is JsonValue jv)
                 {
@@ -232,7 +232,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 List<string> rtv = new List<string>();
                 var pars = args.EvaluateParameters(cxt);
-                for (int i = 0; i < pars.Length-1; i++)
+                for (int i = 0; i < pars.Length - 1; i++)
                 {
                     rtv.Add("");
                 }
@@ -390,7 +390,7 @@ namespace maskx.ARMOrchestration.Functions
                               new
                               {
                                   input.DeploymentId,
-                                  Name = input.Name
+                                  input.Name
                               });
                     db.ExecuteReaderAsync((r, resultSet) =>
                     {
@@ -454,7 +454,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 var s = (par1 as string);
-                s = s.Substring(s.LastIndexOf(',') + 1).Trim();
+                s = s[(s.LastIndexOf(',') + 1)..].Trim();
                 var base64EncodedBytes = Convert.FromBase64String(s);
                 args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
             });
@@ -580,7 +580,7 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 else
                 {
-                    args.Result = s.Substring(startIndex);
+                    args.Result = s[startIndex..];
                 }
             });
             Functions.Add("tolower", (args, cxt) =>

@@ -18,7 +18,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (_Deployment == null)
                 {
-                    _Deployment = _ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentByResourceIdAsync(this.DeploymentResourceId).Result;
+                    _Deployment = _ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentByResourceId(this.DeploymentResourceId);
                 }
                 return _Deployment;
             }

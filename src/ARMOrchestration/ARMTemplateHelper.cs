@@ -12,7 +12,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -170,26 +169,20 @@ WHEN MATCHED THEN
                 templateLink.Uri = this._ARMFunctions.Evaluate(uri.GetString(), cxt).ToString();
             return templateLink;
         }
-        public async Task<Deployment> GetDeploymentByResourceIdAsync(string resouceId)
+        public Deployment GetDeploymentByResourceId(string resouceId)
         {
             Deployment input = null;
             using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where ResourceId=@ResourceId", new { ResourceId = resouceId });
-                await db.ExecuteReaderAsync((reader, index) =>
+                db.ExecuteReaderAsync((reader, index) =>
                 {
                     input = _DataConverter.Deserialize<Deployment>(reader.GetString(0));
                     input.ServiceProvider = this._ServiceProvider;
-                });
+                }).Wait();
             }
             return input;
         }
-        // todo: update deployment input by deploymenId
-        // using this in before deployment plugin to modify user input
-        public async Task UpdateDeploymentInput(string deploymentId,string input)
-        {
-         
-        }
-
+       
     }
 }

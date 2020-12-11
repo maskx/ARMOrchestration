@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
-    public class ResourceOrchestration<T>: TaskOrchestration<TaskResult, ResourceOrchestrationInput>
-        where T:CommunicationJob,new()
+    public class ResourceOrchestration<T> : TaskOrchestration<TaskResult, ResourceOrchestrationInput>
+        where T : CommunicationJob, new()
     {
         public const string Name = "ResourceOrchestration";
         private readonly IInfrastructure infrastructure;
@@ -81,7 +81,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Input = DataConverter.Serialize(input),
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -100,7 +99,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Input = DataConverter.Serialize(input),
                         Result = DataConverter.Serialize(r)
                     });
                     return r;
@@ -131,7 +129,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.InjectBefroeProvisioningFailed,
-                            Input = DataConverter.Serialize(input),
                             Result = DataConverter.Serialize(injectBefroeProvisioningResult)
                         });
                         return injectBefroeProvisioningResult;
@@ -153,7 +150,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.InjectBefroeProvisioning,
+                        Stage = ProvisioningStage.InjectBefroeProvisioningFailed,
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -162,7 +159,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Content = response
                     };
                 }
-
             }
 
             if (infrastructure.BeforeResourceProvisioningOrchestation != null)
@@ -174,7 +170,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                         if (r.Code != 200)
                         {
-                            // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
+                            templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                            {
+                                InstanceId = context.OrchestrationInstance.InstanceId,
+                                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                Stage = ProvisioningStage.BeforeResourceProvisioningFailed,
+                                Result = DataConverter.Serialize(r)
+                            });
                             return r;
                         }
                     }
@@ -203,7 +205,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Content = response
                         };
                     }
-
                 }
             }
 
@@ -267,28 +268,35 @@ namespace maskx.ARMOrchestration.Orchestrations
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                         if (r.Code != 200)
                         {
-                            // doesnot SafeSaveDeploymentOperation, should SafeSaveDeploymentOperation in plugin orchestration
+                            templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                            {
+                                InstanceId = context.OrchestrationInstance.InstanceId,
+                                ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
+                                Result = DataConverter.Serialize(r)
+                            });
                             return r;
                         }
                     }
                     catch (TaskFailedException ex)
                     {
-                        var response = DataConverter.Serialize(new ErrorResponse()
+                        var response = new ErrorResponse()
                         {
                             Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.AfterResourceProvisioningOrchestation}",
                             Message = ex.Message,
                             AdditionalInfo = new ErrorAdditionalInfo[] {
-                        new ErrorAdditionalInfo() {
-                            Type=typeof(TaskFailedException).FullName,
-                            Info=ex
-                        } }
-                        });
+                                new ErrorAdditionalInfo() {
+                                    Type=typeof(TaskFailedException).FullName,
+                                    Info=ex
+                                }
+                            }
+                        };
                         templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
-                            Stage = ProvisioningStage.AfterResourceProvisioningOrchestation,
-                            Result = response
+                            Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
+                            Result = DataConverter.Serialize(response)
                         });
                         return new TaskResult()
                         {
@@ -316,7 +324,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                              });
                     if (injectAfterProvisioningResult.Code != 200)
                     {
-
+                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.InjectAfterProvisioningFailed,
+                            Result = DataConverter.Serialize(injectAfterProvisioningResult)
+                        });
                         return injectAfterProvisioningResult;
                     }
                 }
@@ -324,7 +338,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var response = new ErrorResponse()
                     {
-                        Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.AfterResourceProvisioningOrchestation}",
+                        Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.InjectAfterProvisioning}",
                         Message = ex.Message,
                         AdditionalInfo = new ErrorAdditionalInfo[] {
                         new ErrorAdditionalInfo() {
@@ -336,7 +350,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.AfterResourceProvisioningOrchestation,
+                        Stage = ProvisioningStage.InjectAfterProvisioningFailed,
                         Result = DataConverter.Serialize(response)
                     });
                     return new TaskResult()
@@ -354,8 +368,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 InstanceId = context.OrchestrationInstance.InstanceId,
                 ExecutionId = context.OrchestrationInstance.ExecutionId,
-                Stage = ProvisioningStage.Successed,
-                Input = DataConverter.Serialize(input)
+                Stage = ProvisioningStage.Successed
             });
 
             #endregion Ready Resource

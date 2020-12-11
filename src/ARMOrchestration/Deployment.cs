@@ -164,7 +164,7 @@ namespace maskx.ARMOrchestration
                 if (string.IsNullOrEmpty(ParentId))
                     return null;
                 if (_Parent == null)
-                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentByResourceIdAsync(this.ParentId).Result;
+                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentByResourceId(this.ParentId);
                 return _Parent;
             }
         }
