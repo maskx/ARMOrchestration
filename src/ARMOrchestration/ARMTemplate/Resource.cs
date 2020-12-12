@@ -382,6 +382,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private SKU _SKU;
 
+        // todo: support modify
         [DisplayName("sku")]
         public SKU SKU
         {
@@ -395,11 +396,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _SKU = new SKU() { Name = SKU.Default };
                 }
                 return _SKU;
-            }
-            set
-            {
-                _SKU = value;
-                Change(value, "sku");
             }
         }
 

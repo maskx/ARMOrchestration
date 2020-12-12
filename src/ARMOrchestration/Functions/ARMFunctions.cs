@@ -223,21 +223,34 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 args.Result = jv;
             });
-
-            #endregion Array and object
-
-            #region object https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-object?tabs=json#createobject
-            // todo: createObject
-            Functions.Add("createObject", (args, cxt) =>
+            //createObject https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-object?tabs=json#createobject
+            Functions.Add("createobject", (args, cxt) =>
             {
                 List<string> rtv = new List<string>();
                 var pars = args.EvaluateParameters(cxt);
-                for (int i = 0; i < pars.Length - 1; i++)
+                JObject jo = new JObject();
+                for (int i = 0; i < pars.Length - 1; i += 2)
                 {
-                    rtv.Add("");
+                    if (pars[i + 1] is JsonValue j)
+                    {
+                        if (j.ValueKind == JsonValueKind.Array)
+                        {
+                            jo.Add(pars[i].ToString(), JArray.Parse(j.RawString));
+                        }
+                        else
+                        {
+                            jo.Add(pars[i].ToString(), JObject.Parse(j.RawString));
+                        }
+                    }
+                    else
+                    {
+                        jo.Add(pars[i].ToString(), JToken.FromObject(pars[i + 1]));
+                    }
+
                 }
+                args.Result = new JsonValue(jo.ToString());
             });
-            #endregion
+            #endregion Array and object
 
             #region Comparison
 
@@ -335,6 +348,10 @@ namespace maskx.ARMOrchestration.Functions
                 else
                     args.Result = false;
             });
+            Functions.Add("false", (args, cxt) =>
+            {
+                args.Result = false;
+            });
             Functions.Add("if", (args, cxt) =>
             {
                 if ((bool)args.Parameters[0].Evaluate(cxt))
@@ -360,7 +377,10 @@ namespace maskx.ARMOrchestration.Functions
                     }
                 }
             });
-
+            Functions.Add("true", (args, cxt) =>
+            {
+                args.Result = true;
+            });
             #endregion Logical
 
             #region Deployment

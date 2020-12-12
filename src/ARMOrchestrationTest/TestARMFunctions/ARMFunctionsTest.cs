@@ -47,6 +47,16 @@ namespace ARMOrchestrationTest.TestARMFunctions
         }
 
         #region Array and object
+        [Trait("ARMFunctions", "Array and object")]
+        [Fact(DisplayName = "CreateObject")]
+        public void CreateObject()
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>()
+            {
+                { "newObject","{\"intProp\":1,\"stringProp\":\"abc\",\"boolProp\":true,\"arrayProp\":[\"a\",\"b\",\"c\"],\"objectProp\":{\"key1\":\"value1\"}}"}
+            };
+            TestHelper.FunctionTest(this.fixture, "createObject", result);
+        }
 
         [Trait("ARMFunctions", "Array and object")]
         [Fact(DisplayName = "array")]
