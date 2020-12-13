@@ -73,6 +73,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         return injectBeforeDeploymenteResult;
                     }
                     input = helper.GetDeploymentByResourceId(input.ResourceId);
+                    input.IsRuntime = true;
                 }
                 catch (TaskFailedException ex)
                 {
@@ -123,6 +124,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         }
                     }
                     input = helper.GetDeploymentByResourceId(input.ResourceId);
+                    input.IsRuntime = true;
                 }
                 catch (TaskFailedException ex)
                 {
@@ -306,6 +308,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                 }
                 input = helper.GetDeploymentByResourceId(input.ResourceId);
+                input.IsRuntime = true;
             }
 
             #endregion After Deployment
@@ -355,6 +358,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     };
                 }
                 input = helper.GetDeploymentByResourceId(input.ResourceId);
+                input.IsRuntime = true;
             }
             ErrorResponse errorResponse = null;
 

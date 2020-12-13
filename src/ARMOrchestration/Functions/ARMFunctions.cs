@@ -31,14 +31,12 @@ namespace maskx.ARMOrchestration.Functions
             this.options = options?.Value;
             this.serviceProvider = serviceProvider;
             this.infrastructure = infrastructure;
-
             this.InitBuiltInFunction();
         }
 
         private void InitBuiltInFunction()
         {
-            #region Array and object
-
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-array?tabs=json
             Functions.Add("array", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
@@ -58,18 +56,6 @@ namespace maskx.ARMOrchestration.Functions
                 else
                     str = $"[{par1}]";
                 args.Result = new JsonValue(str);
-            });
-            Functions.Add("coalesce", (args, cxt) =>
-            {
-                for (int i = 0; i < args.Parameters.Length; i++)
-                {
-                    var a = args.Parameters[i].Evaluate(cxt);
-                    if (a != null)
-                    {
-                        args.Result = a;
-                        break;
-                    }
-                }
             });
             Functions.Add("concat", (args, cxt) =>
             {
@@ -98,6 +84,21 @@ namespace maskx.ARMOrchestration.Functions
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = new JsonValue($"[{string.Join(",", pars.Select(JsonValue.PackageJson))}]");
             });
+            Functions.Add("empty", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                args.Result = false;
+                if (par1 is null)
+                    args.Result = true;
+                else if (par1 is JsonValue)
+                {
+                    var p = par1 as JsonValue;
+                    if (p.RawString == "{}" || p.RawString == "[]" || p.RawString == "null")
+                        args.Result = true;
+                }
+                else if (par1 is string && string.IsNullOrEmpty(par1 as string))
+                    args.Result = true;
+            });
             Functions.Add("first", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
@@ -115,15 +116,6 @@ namespace maskx.ARMOrchestration.Functions
                     jv = jv.Intersect(pars[i] as JsonValue);
                 }
                 args.Result = jv;
-            });
-            Functions.Add("json", (args, cxt) =>
-            {
-                var par1 = args.Parameters[0].Evaluate(cxt);
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#null-values
-                if (par1.ToString() == "null")
-                    args.Result = null;
-                else
-                    args.Result = new JsonValue(par1.ToString());
             });
             Functions.Add("last", (args, cxt) =>
             {
@@ -223,37 +215,21 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 args.Result = jv;
             });
-            //createObject https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-object?tabs=json#createobject
-            Functions.Add("createobject", (args, cxt) =>
+            #endregion
+
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-comparison?tabs=json
+            Functions.Add("coalesce", (args, cxt) =>
             {
-                List<string> rtv = new List<string>();
-                var pars = args.EvaluateParameters(cxt);
-                JObject jo = new JObject();
-                for (int i = 0; i < pars.Length - 1; i += 2)
+                for (int i = 0; i < args.Parameters.Length; i++)
                 {
-                    if (pars[i + 1] is JsonValue j)
+                    var a = args.Parameters[i].Evaluate(cxt);
+                    if (a != null)
                     {
-                        if (j.ValueKind == JsonValueKind.Array)
-                        {
-                            jo.Add(pars[i].ToString(), JArray.Parse(j.RawString));
-                        }
-                        else
-                        {
-                            jo.Add(pars[i].ToString(), JObject.Parse(j.RawString));
-                        }
+                        args.Result = a;
+                        break;
                     }
-                    else
-                    {
-                        jo.Add(pars[i].ToString(), JToken.FromObject(pars[i + 1]));
-                    }
-
                 }
-                args.Result = new JsonValue(jo.ToString());
             });
-            #endregion Array and object
-
-            #region Comparison
-
             Functions.Add("equals", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -323,9 +299,92 @@ namespace maskx.ARMOrchestration.Functions
                 }
             });
 
-            #endregion Comparison
 
-            #region Logical
+            #endregion Array and object
+
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-date?tabs=json
+
+            Functions.Add("datetimeadd", (args, cxt) =>
+            {
+                // TODO: dateTimeAdd
+            });
+            Functions.Add("utcnow", (args, cxt) =>
+            {
+                if (args.Parameters.Length > 0)
+                {
+                    args.Result = DateTime.UtcNow.ToString(args.Parameters[0].Evaluate(cxt).ToString());
+                }
+                else
+                {
+                    args.Result = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
+                }
+            });
+            #endregion
+
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-deployment?tabs=json
+            Functions.Add("deployment", (args, cxt) =>
+            {
+                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
+                int stage = 0;
+                using (var db = new DbAccess(options.Database.ConnectionString))
+                {
+                    db.AddStatement($"select TOP 1 Stage from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
+                              new
+                              {
+                                  input.DeploymentId,
+                                  input.Name
+                              });
+                    db.ExecuteReaderAsync((r, resultSet) =>
+                    {
+                        stage = (int)r["Stage"];
+                    }).Wait();
+                }
+                using MemoryStream ms = new MemoryStream();
+                using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+                writer.WriteStartObject();
+                writer.WriteString("name", input.Name);
+                writer.WritePropertyName("properties");
+                writer.WriteStartObject();
+                if (!string.IsNullOrEmpty(input.Parameters))
+                    writer.WriteRawString("parameters", input.Parameters);
+                if (input.TemplateLink != null)
+                {
+                    writer.WritePropertyName("templateLink");
+                    writer.WriteStartObject();
+                    writer.WriteString("uri", input.TemplateLink.Uri);
+                    writer.WriteString("contentVersion", input.TemplateLink.ContentVersion);
+                    writer.WriteEndObject();
+                }
+                writer.WriteRawString("template", input.Template.ToString());
+                writer.WriteString("mode", input.Mode.ToString().ToLower());
+                writer.WriteString("provisioningState", stage.ToString());
+                writer.WriteEndObject();
+                writer.WriteEndObject();
+                writer.Flush();
+                args.Result = new JsonValue(Encoding.UTF8.GetString(ms.ToArray()));
+            });
+            Functions.Add("environment", (args, cxt) =>
+            {
+                // TODO: environment
+            });
+            Functions.Add("parameters", (args, cxt) =>
+            {
+                // TODO: support securestring
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
+                // may be need implement at Resource Provider
+                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
+                var rtv = GetParameter(par1, cxt);
+                args.Result = rtv.Result;
+            });
+            Functions.Add("variables", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
+                var rtv = GetVariables(par1, cxt);
+                args.Result = rtv.Result;
+            });
+            #endregion Deployment
+
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-logical?tabs=json
 
             Functions.Add("and", (args, cxt) =>
             {
@@ -383,68 +442,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             #endregion Logical
 
-            #region Deployment
-
-            Functions.Add("parameters", (args, cxt) =>
-            {
-                // TODO: support securestring
-                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
-                // may be need implement at Resource Provider
-                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-                var rtv = GetParameter(par1, cxt);
-                args.Result = rtv.Result;
-            });
-            Functions.Add("variables", (args, cxt) =>
-            {
-                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
-                var rtv = GetVariables(par1, cxt);
-                args.Result = rtv.Result;
-            });
-            Functions.Add("deployment", (args, cxt) =>
-            {
-                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
-                int stage = 0;
-                using (var db = new DbAccess(options.Database.ConnectionString))
-                {
-                    db.AddStatement($"select TOP 1 Stage from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
-                              new
-                              {
-                                  input.DeploymentId,
-                                  input.Name
-                              });
-                    db.ExecuteReaderAsync((r, resultSet) =>
-                    {
-                        stage = (int)r["Stage"];
-                    }).Wait();
-                }
-                using MemoryStream ms = new MemoryStream();
-                using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-                writer.WriteStartObject();
-                writer.WriteString("name", input.Name);
-                writer.WritePropertyName("properties");
-                writer.WriteStartObject();
-                if (!string.IsNullOrEmpty(input.Parameters))
-                    writer.WriteRawString("parameters", input.Parameters);
-                if (input.TemplateLink != null)
-                {
-                    writer.WritePropertyName("templateLink");
-                    writer.WriteStartObject();
-                    writer.WriteString("uri", input.TemplateLink.Uri);
-                    writer.WriteString("contentVersion", input.TemplateLink.ContentVersion);
-                    writer.WriteEndObject();
-                }
-                writer.WriteRawString("template", input.Template.ToString());
-                writer.WriteString("mode", input.Mode.ToString().ToLower());
-                writer.WriteString("provisioningState", stage.ToString());
-                writer.WriteEndObject();
-                writer.WriteEndObject();
-                writer.Flush();
-                args.Result = new JsonValue(Encoding.UTF8.GetString(ms.ToArray()));
-            });
-
-            #endregion Deployment
-
-            #region String
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-string?tabs=json
 
             Functions.Add("base64", (args, cxt) =>
             {
@@ -452,18 +450,20 @@ namespace maskx.ARMOrchestration.Functions
                 var plainTextBytes = Encoding.UTF8.GetBytes(par1 as string);
                 args.Result = Convert.ToBase64String(plainTextBytes);
             });
-            Functions.Add("base64tostring", (args, cxt) =>
-            {
-                var par1 = args.Parameters[0].Evaluate(cxt);
-                var base64EncodedBytes = Convert.FromBase64String(par1 as string);
-                args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
-            });
             Functions.Add("base64tojson", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 var base64EncodedBytes = Convert.FromBase64String(par1 as string);
                 args.Result = new JsonValue(Encoding.UTF8.GetString(base64EncodedBytes));
             });
+            Functions.Add("base64tostring", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                var base64EncodedBytes = Convert.FromBase64String(par1 as string);
+                args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
+            });
+            // concat in array function group
+            // contains in array function group
             Functions.Add("datauri", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
@@ -478,16 +478,13 @@ namespace maskx.ARMOrchestration.Functions
                 var base64EncodedBytes = Convert.FromBase64String(s);
                 args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
             });
+            // empty in array function group
             Functions.Add("endswith", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = (pars[0] as string).EndsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
-            Functions.Add("startswith", (args, cxt) =>
-            {
-                var pars = args.EvaluateParameters(cxt);
-                args.Result = (pars[0] as string).StartsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
-            });
+            // first in array function group           
             Functions.Add("format", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -499,33 +496,23 @@ namespace maskx.ARMOrchestration.Functions
                 MD5 md5 = new MD5CryptoServiceProvider();
                 byte[] bytes = md5.ComputeHash(Encoding.Unicode.GetBytes(string.Join('-', pars)));
                 args.Result = new Guid(bytes).ToString();
-            });
-            // https://stackoverflow.com/a/48305669
-            Functions.Add("uniquestring", (args, cxt) =>
-            {
-                var pars = args.EvaluateParameters(cxt);
-                string result = "";
-                var buffer = Encoding.UTF8.GetBytes(string.Join('-', pars));
-                var hashArray = new SHA512Managed().ComputeHash(buffer);
-                for (int i = 1; i <= 13; i++)
-                {
-                    var b = hashArray[i];
-                    if (b >= 48 && b <= 57)// keep number
-                        result += Convert.ToChar(b);
-                    else // change to letter
-                        result += Convert.ToChar((b % 26) + (byte)'a');
-                }
-                args.Result = result;
-            });
+            });           
             Functions.Add("indexof", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = (pars[0] as string).IndexOf(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
+            // json in ojbect function group
+            // last in array function group
             Functions.Add("lastindexof", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = (pars[0] as string).LastIndexOf(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
+            });
+            // length in array function group
+            Functions.Add("newguid", (args, cxt) =>
+            {
+                args.Result = Guid.NewGuid().ToString();
             });
             Functions.Add("padleft", (args, cxt) =>
             {
@@ -545,6 +532,7 @@ namespace maskx.ARMOrchestration.Functions
                 var pars = args.EvaluateParameters(cxt);
                 args.Result = (pars[0] as string).Replace(pars[1] as string, pars[2] as string);
             });
+            // skip in array function group
             Functions.Add("split", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -565,30 +553,16 @@ namespace maskx.ARMOrchestration.Functions
                     rtv = null;
                 args.Result = new JsonValue($"[\"{ string.Join("\",\"", rtv)}\"]");
             });
-            Functions.Add("newguid", (args, cxt) =>
+            Functions.Add("startswith", (args, cxt) =>
             {
-                args.Result = Guid.NewGuid().ToString();
+                var pars = args.EvaluateParameters(cxt);
+                args.Result = (pars[0] as string).StartsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
             Functions.Add("string", (args, cxt) =>
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 args.Result = par1.ToString();
-            });
-            Functions.Add("empty", (args, cxt) =>
-            {
-                var par1 = args.Parameters[0].Evaluate(cxt);
-                args.Result = false;
-                if (par1 is null)
-                    args.Result = true;
-                else if (par1 is JsonValue)
-                {
-                    var p = par1 as JsonValue;
-                    if (p.RawString == "{}" || p.RawString == "[]" || p.RawString == "null")
-                        args.Result = true;
-                }
-                else if (par1 is string && string.IsNullOrEmpty(par1 as string))
-                    args.Result = true;
-            });
+            });            
             Functions.Add("substring", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -603,6 +577,7 @@ namespace maskx.ARMOrchestration.Functions
                     args.Result = s[startIndex..];
                 }
             });
+            // take in array function group
             Functions.Add("tolower", (args, cxt) =>
             {
                 args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToLower();
@@ -610,10 +585,27 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("toupper", (args, cxt) =>
             {
                 args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToUpper();
-            });
+            });           
             Functions.Add("trim", (args, cxt) =>
             {
                 args.Result = args.Parameters[0].Evaluate(cxt).ToString().Trim();
+            });
+            // https://stackoverflow.com/a/48305669
+            Functions.Add("uniquestring", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                string result = "";
+                var buffer = Encoding.UTF8.GetBytes(string.Join('-', pars));
+                var hashArray = new SHA512Managed().ComputeHash(buffer);
+                for (int i = 1; i <= 13; i++)
+                {
+                    var b = hashArray[i];
+                    if (b >= 48 && b <= 57)// keep number
+                        result += Convert.ToChar(b);
+                    else // change to letter
+                        result += Convert.ToChar((b % 26) + (byte)'a');
+                }
+                args.Result = result;
             });
             Functions.Add("uri", (args, cxt) =>
             {
@@ -630,21 +622,9 @@ namespace maskx.ARMOrchestration.Functions
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 args.Result = Uri.UnescapeDataString(par1 as string);
             });
-            Functions.Add("utcnow", (args, cxt) =>
-            {
-                if (args.Parameters.Length > 0)
-                {
-                    args.Result = DateTime.UtcNow.ToString(args.Parameters[0].Evaluate(cxt).ToString());
-                }
-                else
-                {
-                    args.Result = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
-                }
-            });
-
             #endregion String
 
-            #region Numeric
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-numeric?tabs=json
 
             Functions.Add("add", (args, cxt) =>
             {
@@ -694,6 +674,8 @@ namespace maskx.ARMOrchestration.Functions
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 args.Result = Convert.ToInt32(par1);
             });
+            // max in array function group
+            // min in array function group
             Functions.Add("mod", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -713,7 +695,53 @@ namespace maskx.ARMOrchestration.Functions
 
             #endregion Numeric
 
-            #region Resource
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-object?tabs=json
+            // contains in array function gruop
+            Functions.Add("createobject", (args, cxt) =>
+            {
+                List<string> rtv = new List<string>();
+                var pars = args.EvaluateParameters(cxt);
+                JObject jo = new JObject();
+                for (int i = 0; i < pars.Length - 1; i += 2)
+                {
+                    if (pars[i + 1] is JsonValue j)
+                    {
+                        if (j.ValueKind == JsonValueKind.Array)
+                        {
+                            jo.Add(pars[i].ToString(), JArray.Parse(j.RawString));
+                        }
+                        else
+                        {
+                            jo.Add(pars[i].ToString(), JObject.Parse(j.RawString));
+                        }
+                    }
+                    else
+                    {
+                        jo.Add(pars[i].ToString(), JToken.FromObject(pars[i + 1]));
+                    }
+
+                }
+                args.Result = new JsonValue(jo.ToString());
+            });
+            // empty  in array function gruop
+            // intersection in array function gruop
+            Functions.Add("json", (args, cxt) =>
+            {
+                var par1 = args.Parameters[0].Evaluate(cxt);
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#null-values
+                if (par1.ToString() == "null")
+                    args.Result = null;
+                else
+                    args.Result = new JsonValue(par1.ToString());
+            });
+            // length in array function gruop
+            Functions.Add("null",(args,cxt)=> {
+                args.Result = null;
+            });
+            // union in array function gruop
+            #endregion
+
+            #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource?tabs=json
 
             Functions.Add("extensionresourceid", (args, cxt) =>
             {
@@ -728,35 +756,13 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 args.Result = $"{pars[0]}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{pars[2]}/{nestr}";
             });
-            Functions.Add("resourceid", (args, cxt) =>
-            {
-                var pars = args.EvaluateParameters(cxt);
-                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
-                var t = input.Template;
-                if (t.DeployLevel == DeployLevel.ResourceGroup)
-                    args.Result = ResourceId(input, pars);
-                else if (t.DeployLevel == DeployLevel.Subscription)
-                    args.Result = SubscriptionResourceId(input, pars);
-                else
-                    args.Result = TenantResourceId(pars);
+            // list* in Evaluate method
+            Functions.Add("pickzones",(args,cxt)=> {
+                // todo: pickZones
             });
-            Functions.Add("managementgroupresourceid", (args, cxt) =>
-            {
-                var pars = args.EvaluateParameters(cxt);
-                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
-                args.Result = ManagementResourceId(input, pars);
+            Functions.Add("providers",(args,cxt)=> {
+                // todo: providers
             });
-            Functions.Add("subscriptionresourceid", (args, cxt) =>
-            {
-                var pars = args.EvaluateParameters(cxt);
-                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
-                args.Result = SubscriptionResourceId(input, pars);
-            });
-            Functions.Add("tenantresourceid", (args, cxt) =>
-            {
-                args.Result = TenantResourceId(args.EvaluateParameters(cxt));
-            });
-
             Functions.Add("reference", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -808,7 +814,6 @@ namespace maskx.ARMOrchestration.Functions
                         args.Result = null;
                 }
             });
-
             Functions.Add("resourcegroup", (args, cxt) =>
             {
                 var context = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
@@ -826,10 +831,40 @@ namespace maskx.ARMOrchestration.Functions
                     args.Result = taskResult.Content;
                 }
             });
-
+            Functions.Add("resourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
+                var t = input.Template;
+                if (t.DeployLevel == DeployLevel.ResourceGroup)
+                    args.Result = ResourceId(input, pars);
+                else if (t.DeployLevel == DeployLevel.Subscription)
+                    args.Result = SubscriptionResourceId(input, pars);
+                else
+                    args.Result = TenantResourceId(pars);
+            });
+            Functions.Add("subscription",(args,cxt)=> {
+                // todo: subscription
+            });
+            Functions.Add("subscriptionresourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
+                args.Result = SubscriptionResourceId(input, pars);
+            });
+            Functions.Add("tenantresourceid", (args, cxt) =>
+            {
+                args.Result = TenantResourceId(args.EvaluateParameters(cxt));
+            });
+            Functions.Add("managementgroupresourceid", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
+                args.Result = ManagementResourceId(input, pars);
+            });
             #endregion Resource
         }
-        private FunctionArgs GetVariables(string name, Dictionary<string, object> cxt)
+        internal FunctionArgs GetVariables(string name, Dictionary<string, object> cxt)
         {
             FunctionArgs rtv = new FunctionArgs();
             if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
@@ -858,7 +893,7 @@ namespace maskx.ARMOrchestration.Functions
                 rtv.Result = Evaluate(s, cxt);
             return rtv;
         }
-        private FunctionArgs GetParameter(string name, Dictionary<string, object> cxt)
+        internal FunctionArgs GetParameter(string name, Dictionary<string, object> cxt)
         {
             if (!cxt.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
                 throw new Exception("cannot find context in parameters function");

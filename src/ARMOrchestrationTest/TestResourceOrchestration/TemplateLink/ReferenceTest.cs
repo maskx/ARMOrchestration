@@ -49,6 +49,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
+                    input.Deployment.IsRuntime = true;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -73,6 +74,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
+                    input.Deployment.IsRuntime = true;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -124,6 +126,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                     hasResource = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
+                    input.Deployment.IsRuntime = true;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded2020-3-11", c.GetString());
@@ -161,6 +164,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                     Assert.True(int.TryParse(r.Name, out int i));
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
+                    input.Deployment.IsRuntime = true;
                     using var p = JsonDocument.Parse(input.Resource.Properties);
                     var c = p.RootElement.GetProperty("comment");
                     Assert.Equal("Succeeded" + i, c.GetString());
@@ -189,6 +193,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
                     hasexamplevm = true;
                     var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
                     input.ServiceProvider = fixture.ServiceProvider;
+                    input.Deployment.IsRuntime = true;
                     var p = JsonDocument.Parse(input.Resource.Properties);
                     Assert.True(p.RootElement.TryGetProperty("storageProfile", out JsonElement storageProfile));
                     Assert.True(storageProfile.TryGetProperty("dataDisks", out JsonElement dataDisks));

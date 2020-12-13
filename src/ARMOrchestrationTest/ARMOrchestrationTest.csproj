@@ -9,6 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Mock\Response\Resource\**" />
+    <EmbeddedResource Remove="Mock\Response\Resource\**" />
+    <None Remove="Mock\Response\Resource\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="5.0.0" />
@@ -360,10 +366,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ARMOrchestration\ARMOrchestration.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Mock\Response\Resource\" />
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties mock_4response_4referenceexample_1json__JsonSchema="https://bucklescript.github.io/bucklescript/docson/build-schema.json" /></VisualStudio></ProjectExtensions>
