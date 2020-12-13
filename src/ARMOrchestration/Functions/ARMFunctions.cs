@@ -306,7 +306,36 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("datetimeadd", (args, cxt) =>
             {
-                // TODO: dateTimeAdd
+                var pars = args.EvaluateParameters(cxt);
+                if (!DateTime.TryParseExact(pars[0].ToString(), "yyyyMMdd'T'HHmmss'Z'", null, System.Globalization.DateTimeStyles.None, out DateTime dt))
+                    throw new Exception($"wrong format of datetime {pars[0]}");
+                var duration = pars[1].ToString();
+                bool negative = false;
+                bool isMonth = false;
+                int num = 0;
+                for (int i = 0; i < duration.Length; i++)
+                {
+                    switch (duration[i])
+                    {
+                        case '-': negative = true; break;
+                        case 'P': isMonth = true; break;
+                        case 'T': isMonth = false; break;
+                        case 'Y': dt.AddYears(num); break;
+                        case 'M':
+                            if (isMonth) dt.AddMonths(num);
+                            else dt.AddMinutes(num);
+                            break;
+                        case 'W': dt.AddDays(num * 7); break;
+                        case 'D': dt.AddDays(num); break;
+                        case 'H': dt.AddHours(num); break;
+                        case 'S': dt.AddSeconds(num); break;
+                        default:
+                            int.TryParse(duration[i].ToString(), out num);
+                            num = negative ? 0 - num : num;
+                            break;
+                    }
+                }
+                args.Result =dt.ToString("yyyyMMdd'T'HHmmss'Z'");
             });
             Functions.Add("utcnow", (args, cxt) =>
             {
@@ -496,7 +525,7 @@ namespace maskx.ARMOrchestration.Functions
                 MD5 md5 = new MD5CryptoServiceProvider();
                 byte[] bytes = md5.ComputeHash(Encoding.Unicode.GetBytes(string.Join('-', pars)));
                 args.Result = new Guid(bytes).ToString();
-            });           
+            });
             Functions.Add("indexof", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -562,7 +591,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 var par1 = args.Parameters[0].Evaluate(cxt);
                 args.Result = par1.ToString();
-            });            
+            });
             Functions.Add("substring", (args, cxt) =>
             {
                 var pars = args.EvaluateParameters(cxt);
@@ -585,7 +614,7 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("toupper", (args, cxt) =>
             {
                 args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToUpper();
-            });           
+            });
             Functions.Add("trim", (args, cxt) =>
             {
                 args.Result = args.Parameters[0].Evaluate(cxt).ToString().Trim();
@@ -735,7 +764,8 @@ namespace maskx.ARMOrchestration.Functions
                     args.Result = new JsonValue(par1.ToString());
             });
             // length in array function gruop
-            Functions.Add("null",(args,cxt)=> {
+            Functions.Add("null", (args, cxt) =>
+            {
                 args.Result = null;
             });
             // union in array function gruop
@@ -757,11 +787,15 @@ namespace maskx.ARMOrchestration.Functions
                 args.Result = $"{pars[0]}/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{pars[2]}/{nestr}";
             });
             // list* in Evaluate method
-            Functions.Add("pickzones",(args,cxt)=> {
+            Functions.Add("pickzones", (args, cxt) =>
+            {
                 // todo: pickZones
             });
-            Functions.Add("providers",(args,cxt)=> {
-                // todo: providers
+            Functions.Add("providers", (args, cxt) =>
+            {
+                var pars = args.EvaluateParameters(cxt);
+                var taskResult = this.infrastructure.Providers(pars[0].ToString(), pars[1].ToString());
+                args.Result = new JsonValue(taskResult.Content.ToString());
             });
             Functions.Add("reference", (args, cxt) =>
             {
@@ -779,8 +813,8 @@ namespace maskx.ARMOrchestration.Functions
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 // reference 'ResourceProvider/ServiceType/ResourceName' will create a implicit dependency
                 if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
-                || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
-                || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
+                        || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
+                        || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
                 {
                     List<string> dependsOn;
                     if (cxt.TryGetValue(ContextKeys.DEPENDSON, out object d))
@@ -843,7 +877,8 @@ namespace maskx.ARMOrchestration.Functions
                 else
                     args.Result = TenantResourceId(pars);
             });
-            Functions.Add("subscription",(args,cxt)=> {
+            Functions.Add("subscription", (args, cxt) =>
+            {
                 // todo: subscription
             });
             Functions.Add("subscriptionresourceid", (args, cxt) =>
