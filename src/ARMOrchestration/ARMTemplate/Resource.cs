@@ -464,8 +464,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         }
                         else if (zones.ValueKind == JsonValueKind.String)
                         {
-                            var arr = _Functions.Evaluate(zones.GetString(), FullContext) as JsonValue;
-                            if (arr == null || arr.ValueKind != JsonValueKind.Array)
+                            if (!(_Functions.Evaluate(zones.GetString(), FullContext) is JsonValue arr) || arr.ValueKind != JsonValueKind.Array)
                                 throw new Exception("wrong value of zones");
                             for (int i = 0; i < arr.Length; i++)
                             {
@@ -606,19 +605,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return _Resources;
             }
         }
-        public override string ToString()
-        {
-            return this.RootElement.GetRawText();
-        }
-
+       
         internal (bool, string) Validate()
         {
-            bool rtv = true;
-            string msg = string.Empty;
             try
             {
                 if (!RootElement.TryGetProperty("type", out JsonElement type))
                     return (false, "not find type in resource node");
+                string msg;
+                bool rtv;
                 if (this.Copy != null && !this.CopyIndex.HasValue)
                 {
                     foreach (var r in this.Copy.EnumerateResource())

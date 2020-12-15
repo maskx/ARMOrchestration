@@ -152,32 +152,32 @@ END", new { table = options.Database.WaitDependsOnTableName });
 IF(OBJECT_ID(@table) IS NULL)
 BEGIN
     create table {options.Database.DeploymentOperationsTableName}(
-        [InstanceId] [nvarchar](50) NOT NULL,
-	    [ExecutionId] [nvarchar](50) NOT NULL,
-        [GroupId] [nvarchar](50) NOT NULL,
+        [DeploymentId] [nvarchar](50) NOT NULL,
+        [InstanceId] [nvarchar](50) NOT NULL,       
+	    [RootId] [nvarchar](50) NOT NULL,
+        [CorrelationId] [nvarchar](50) NOT NULL,        
+	    [GroupId] [nvarchar](50) NOT NULL,
         [GroupType] [nvarchar](50) NOT NULL,
         [HierarchyId] [nvarchar](1024) NOT NULL,
-        [RootId] [nvarchar](50) NOT NULL,
-        [DeploymentId] [nvarchar](50) NOT NULL,
-        [CorrelationId] [nvarchar](50) NOT NULL,
         [ResourceId] [nvarchar](1024) NOT NULL,
-	    [Name] [nvarchar](1024) NOT NULL,
+        [Name] [nvarchar](1024) NOT NULL,
 	    [Type] [nvarchar](200) NOT NULL,
 	    [Stage] [int] NOT NULL,
 	    [CreateTimeUtc] [datetime2](7) NOT NULL,
 	    [UpdateTimeUtc] [datetime2](7) NOT NULL,
         [CreateByUserId] [nvarchar](50) NOT NULL,
         [LastRunUserId] [nvarchar](50) NOT NULL,
+        [ExecutionId] [nvarchar](50)  NULL,
+        [Comments] [nvarchar](256) NULL,
         [SubscriptionId] [nvarchar](50)  NULL,
         [ManagementGroupId] [nvarchar](50)  NULL,
         [ParentResourceId] [nvarchar](1024)  NULL,
         [Input] [nvarchar](max) NULL,
 	    [Result] [nvarchar](max) NULL,
-        [Comments] [nvarchar](max) NULL,
      CONSTRAINT [PK_{options.Database.SchemaName}_{options.Database.HubName}_{DatabaseConfig.DeploymentOperationsTable}] PRIMARY KEY CLUSTERED
     (
-	    [InstanceId] ASC,
-	    [ExecutionId] ASC
+	    [DeploymentId] ASC,
+	    [InstanceId] ASC
     )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
     ) ON [PRIMARY]
 END", new { table = options.Database.DeploymentOperationsTableName });

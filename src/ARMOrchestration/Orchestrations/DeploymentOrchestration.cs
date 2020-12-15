@@ -30,11 +30,11 @@ namespace maskx.ARMOrchestration.Orchestrations
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
-            var input = this.DataConverter.Deserialize<Deployment>(arg);
-            input.ServiceProvider = this._ServiceProvider;
-            input.IsRuntime = true;
+            Deployment input;
             if (!context.IsReplaying)
             {
+                input = this.DataConverter.Deserialize<Deployment>(arg);
+                input.ServiceProvider = this._ServiceProvider;
                 // for persistence variable, cos function like newGuid() should always return same value in variable
                 var _ = input.Template.Variables;
                 helper.SaveDeploymentOperation(new DeploymentOperation(input)
@@ -42,8 +42,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.StartProvisioning,
-                    Input = arg
+                    Input = DataConverter.Serialize(input)
                 });
+            }
+            else
+            {
+                input = helper.GetDeployment(context.OrchestrationInstance);
             }
 
             #region InjectBeforeDeployment
@@ -58,7 +62,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              new AsyncRequestActivityInput()
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
-                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                 DeploymentId = input.DeploymentId,
                                  ProvisioningStage = ProvisioningStage.InjectBeforeDeployment
                              });
                     if (injectBeforeDeploymenteResult.Code != 200)
@@ -115,7 +119,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
                         if (r.Code != 200)
                         {
-                            helper.SafeSaveDeploymentOperation(new DeploymentOperation(input) {
+                            helper.SafeSaveDeploymentOperation(new DeploymentOperation(input)
+                            {
                                 InstanceId = context.OrchestrationInstance.InstanceId,
                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
                                 Stage = ProvisioningStage.BeforeDeploymentFailed
@@ -144,14 +149,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.BeforeDeploymentFailed,
                         Result = DataConverter.Serialize(response)
-                    }) ;
+                    });
                     return new TaskResult()
                     {
                         Code = 500,
                         Content = response
                     };
                 }
-               
+
             }
 
             #endregion Before Deployment
@@ -271,7 +276,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
                         if (r.Code != 200)
                         {
-                            helper.SafeSaveDeploymentOperation(new DeploymentOperation(input) {
+                            helper.SafeSaveDeploymentOperation(new DeploymentOperation(input)
+                            {
                                 InstanceId = context.OrchestrationInstance.InstanceId,
                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
                                 Stage = ProvisioningStage.AfterDeploymentOrhcestrationFailed
@@ -323,7 +329,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              new AsyncRequestActivityInput()
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
-                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                 DeploymentId = input.DeploymentId,
                                  ProvisioningStage = ProvisioningStage.InjectAfterDeployment
                              });
                     if (injectAfterDeploymenteResult.Code != 200)

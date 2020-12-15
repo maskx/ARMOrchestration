@@ -12,9 +12,9 @@ using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class ResourceCollection : ICollection<Resource>, IChangeTracking, IDisposable
+    public class ResourceCollection : ICollection<Resource>, IChangeTracking
     {
-        private Deployment _Input;
+        private Deployment _Input { get { return _FullContext[ContextKeys.ARM_CONTEXT] as Deployment; } }
         private IServiceProvider _ServiceProvider => _Input.ServiceProvider;
 
         private long _OldVersion;
@@ -78,14 +78,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             this._NewVersion = DateTime.Now.Ticks;
         }
-
-        private void ExpandResource(JsonElement element, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
+        private readonly Dictionary<string, object> _FullContext;
+        private readonly string _ParentName;
+        private readonly string _ParentType;
+        private void ExpandResource(string content)
         {
-            _Input = fullContext[ContextKeys.ARM_CONTEXT] as Deployment;
-
-            foreach (var resource in element.EnumerateArray())
+            using var json = JsonDocument.Parse(content);
+            this._Resources.Clear();
+            this._Deployments?.Clear();
+            foreach (var resource in json.RootElement.EnumerateArray())
             {
-                var r = new Resource(resource.GetRawText(), fullContext, parentName, parentType)
+                var r = new Resource(resource.GetRawText(), _FullContext, _ParentName, _ParentType)
                 {
                     TrackingVersion = this.TrackingVersion
                 };
@@ -93,12 +96,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        internal JsonElement RootElement;
-
         public ResourceCollection(string rawString, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
-            this.RawString = rawString;
-            ExpandResource(this.RootElement, fullContext, parentName, parentType);
+            this._FullContext = fullContext;
+            this._ParentName = parentName;
+            this._ParentType = parentType;
+            ExpandResource(rawString);
         }
 
         public virtual string RawString
@@ -106,18 +109,27 @@ namespace maskx.ARMOrchestration.ARMTemplate
             get
             {
                 this.Accepet();
-                return RootElement.GetRawText();
+                using MemoryStream ms = new MemoryStream();
+                using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+                writer.WriteStartArray();
+                foreach (var item in _Resources.Values)
+                {
+                    foreach (var r in item)
+                    {
+                        r.Accepet(this.TrackingVersion);
+                        writer.WriteRawString(r.ToString());
+                    }
+                }
+                writer.WriteEndArray();
+                writer.Flush();
+                return Encoding.UTF8.GetString(ms.ToArray());
             }
             set
             {
-                if (json != null)
-                    json.Dispose();
-                json = JsonDocument.Parse(value);
-                RootElement = json.RootElement;
+                ExpandResource(value);
+                Change(null, null);
             }
         }
-
-        private JsonDocument json;
         private readonly ConcurrentDictionary<string, List<Resource>> _Resources = new ConcurrentDictionary<string, List<Resource>>();
         private List<Deployment> _Deployments = null;
 
@@ -128,7 +140,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 int index = name.LastIndexOf('/');
                 if (index > 0)
                 {
-                    string n = name.Substring(index + 1);
+                    string n = name[(index + 1)..];
                     if (!this._Resources.TryGetValue(n, out List<Resource> rs))
                         throw new KeyNotFoundException(name);
                     bool withServiceType = name.Contains('.');
@@ -163,7 +175,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             int index = name.LastIndexOf('/');
             if (index > 0)
             {
-                string n = name.Substring(index + 1);
+                string n = name[(index + 1)..];
                 if (!this._Resources.TryGetValue(n, out List<Resource> rs))
                     return false;
                 bool withServiceType = name.Contains('.');
@@ -193,7 +205,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return true;
             }
         }
-       
+
         public int Count
         {
             get
@@ -211,7 +223,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 name = item.Copy.Name;
             int index = name.LastIndexOf('/');
             if (index > 0)
-                name = name.Substring(index + 1);
+                name = name[(index + 1)..];
             if (!_Resources.TryGetValue(name, out List<Resource> rs))
             {
                 rs = new List<Resource>();
@@ -231,7 +243,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public void Clear()
         {
             this._Resources.Clear();
-            this._Deployments.Clear();
+            this._Deployments?.Clear();
             Change(null, null);
         }
 
@@ -240,7 +252,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             int index = name.LastIndexOf('/');
             if (index < 0)
                 return this._Resources.ContainsKey(name);
-            string n = name.Substring(index + 1);
+            string n = name[(index + 1)..];
             if (!this._Resources.TryGetValue(n, out List<Resource> rs))
                 return false;
             bool withServiceType = name.Contains('.');
@@ -294,7 +306,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             string name = item.Name;
             int index = name.LastIndexOf('/');
             if (index > 0)
-                name = name.Substring(index + 1);
+                name = name[(index + 1)..];
             if (!this._Resources.TryGetValue(name, out List<Resource> rs))
                 return false;
             if (rs.Count == 1)
@@ -326,27 +338,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public override string ToString()
         {
-            this.Accepet();
-            using MemoryStream ms = new MemoryStream();
-            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-            writer.WriteStartArray();
-            foreach (var item in _Resources.Values)
-            {
-                foreach (var r in item)
-                {
-                    r.Accepet(this.TrackingVersion);
-                    writer.WriteRawString(r.ToString());
-                }
-            }
-            writer.WriteEndArray();
-            writer.Flush();
-            return Encoding.UTF8.GetString(ms.ToArray());
-        }
-
-        public void Dispose()
-        {
-            if (json != null)
-                json.Dispose();
+            return this.RawString;
         }
 
         public IEnumerable<Deployment> EnumerateDeployments()

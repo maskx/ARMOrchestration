@@ -1,5 +1,4 @@
-﻿using maskx.ARMOrchestration.Orchestrations;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
     public class DependsOnCollection : IEnumerable<string>, IChangeTracking
     {
         [JsonProperty]
-        private List<string> _List = new List<string>();
+        private readonly List<string> _List = new List<string>();
 
         public string this[int index]
         {

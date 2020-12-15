@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Functions;
+﻿using DurableTask.Core.Settings;
+using maskx.ARMOrchestration.Functions;
 using System;
 using System.Collections.Generic;
 
@@ -29,6 +30,13 @@ namespace maskx.ARMOrchestration.Extensions
             public Func<IServiceProvider, IList<(string Name, string Version, Type Type)>> GetBuildInTaskActivities { get; set; }
             public Func<IServiceProvider, IList<(string Name, string Version, Type Type)>> GetBuildInOrchestrators { get; set; }
             public Func<IServiceProvider, IDictionary<Type, (string Version, object Instance)>> GetBuildInTaskActivitiesFromInterface { get; set; }
+            public bool JumpStartEnabled { get; set; }
+            public double SessionLockedSeconds { get; set; }
+            public double MessageLockedSeconds { get; set; }
+            public int IdleSleepMilliSeconds { get; set; }
+            public TaskOrchestrationDispatcherSettings TaskOrchestrationDispatcherSettings { get; set; }
+            public TaskActivityDispatcherSettings TaskActivityDispatcherSettings { get; set; }
+            public TrackingDispatcherSettings TrackingDispatcherSettings { get; set; }
         }
         public class CommunicationSetting
         {

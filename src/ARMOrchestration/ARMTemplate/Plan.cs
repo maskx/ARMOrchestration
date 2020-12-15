@@ -9,9 +9,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class Plan : ChangeTracking
     {
-        private Dictionary<string, object> FullContext;
+        private readonly Dictionary<string, object> FullContext;
 
-        private ARMFunctions _Functions;
+        private readonly ARMFunctions _Functions;
 
         public Plan(JsonElement element, Dictionary<string, object> fullContext)
         {

@@ -21,43 +21,26 @@ namespace maskx.ARMOrchestration
     {
         private readonly ARMOrchestrationOptions options;
         private readonly string _saveDeploymentOperationCommandString;
-        private readonly string _SaveDeploymentOperationInputCommandString;
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMFunctions _ARMFunctions;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
-        private readonly IInfrastructure _Infrastructure;
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions aRMFunctions,
-            IInfrastructure infrastructure,
             IServiceProvider serviceProvider)
         {
             this._ServiceProvider = serviceProvider;
             this.options = options?.Value;
             this._ARMFunctions = aRMFunctions;
-            this._Infrastructure = infrastructure;
             this._saveDeploymentOperationCommandString = string.Format(@"
 MERGE {0} with (serializable) [Target]
-USING (VALUES (@InstanceId,@ExecutionId)) as [Source](InstanceId,ExecutionId)
-ON [Target].InstanceId = [Source].InstanceId AND [Target].ExecutionId = [Source].ExecutionId
+USING (VALUES (@InstanceId,@DeploymentId)) as [Source](InstanceId,DeploymentId)
+ON [Target].InstanceId = [Source].InstanceId AND [Target].DeploymentId = [Source].DeploymentId
 WHEN NOT MATCHED THEN
 	INSERT
 	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
 	VALUES
 	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Result,@Comments,@CreateByUserId,@LastRunUserId)
-WHEN MATCHED THEN
-	UPDATE SET [Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
-", this.options.Database.DeploymentOperationsTableName);
-
-            this._SaveDeploymentOperationInputCommandString = string.Format(@"
-MERGE {0} with (serializable) [Target]
-USING (VALUES (@InstanceId,@ResourceId)) as [Source](InstanceId,ResourceId)
-ON [Target].ResourceId = [Source].ResourceId
-WHEN NOT MATCHED THEN
-	INSERT
-	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
-	VALUES
-	(@InstanceId,N'',@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Result,@Comments,@CreateByUserId,@LastRunUserId)
 WHEN MATCHED THEN
 	UPDATE SET [ExecutionId]=@ExecutionId,[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
 ", this.options.Database.DeploymentOperationsTableName);
@@ -76,13 +59,7 @@ WHEN MATCHED THEN
                 deploymentOperation.Stage.ToString());
 
             using var db = new SQLServerAccess(this.options.Database.ConnectionString);
-            if (!string.IsNullOrEmpty(deploymentOperation.Type) &&
-                deploymentOperation.Type.Equals(_Infrastructure.BuiltinServiceTypes.Deployments, StringComparison.InvariantCultureIgnoreCase))
-                db.AddStatement(this._SaveDeploymentOperationInputCommandString, deploymentOperation);
-            else if (!string.IsNullOrEmpty(deploymentOperation.ExecutionId))
-                db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
-            else
-                throw new Exception("SaveDeploymentOperation need executionId");
+            db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             db.ExecuteNonQueryAsync().Wait();
         }
         public void SafeSaveDeploymentOperation(DeploymentOperation deploymentOperation)
@@ -98,7 +75,7 @@ WHEN MATCHED THEN
             }
         }
         public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext)
-            where T:CommunicationJob,new()
+            where T : CommunicationJob, new()
         {
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
                                       ResourceOrchestration<T>.Name,
@@ -183,6 +160,24 @@ WHEN MATCHED THEN
             }
             return input;
         }
-       
+        public Deployment GetDeployment(OrchestrationInstance instance)
+        {
+            Deployment input = null;
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
+            {
+                db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where ExecutionId=@ExecutionId and InstanceId=@InstanceId",
+                    new
+                    {
+                        instance.ExecutionId,
+                        instance.InstanceId
+                    });
+                db.ExecuteReaderAsync((reader, index) =>
+                {
+                    input = _DataConverter.Deserialize<Deployment>(reader.GetString(0));
+                    input.ServiceProvider = this._ServiceProvider;
+                }).Wait();
+            }
+            return input;
+        }
     }
 }

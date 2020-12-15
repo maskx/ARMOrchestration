@@ -170,12 +170,12 @@ namespace maskx.ARMOrchestration
             return rs;
         }
 
-        public async Task<DeploymentOperation> GetDeploymentOperationAsync(string instanceId, string executionId)
+        public async Task<DeploymentOperation> GetDeploymentOperationAsync(string instanceId, string deploymentId)
         {
             DeploymentOperation deployment = null;
             using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
-                db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where InstanceId=@InstanceId and ExecutionId=@ExecutionId", new { InstanceId = instanceId, ExecutionId = executionId });
+                db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where InstanceId=@InstanceId and DeploymentId=@DeploymentId", new { InstanceId = instanceId, DeploymentId = deploymentId });
                 await db.ExecuteReaderAsync((reader, index) =>
                 {
                     deployment = new DeploymentOperation()

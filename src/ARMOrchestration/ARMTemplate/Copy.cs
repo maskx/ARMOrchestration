@@ -16,10 +16,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public const string ParallelMode = "parallel";
 
         public Deployment DeploymentOrchestrationInput { get; set; }
-        private Resource _Resource;
+        private readonly Resource _Resource;
         private IInfrastructure _Infrastructure { get { return DeploymentOrchestrationInput.ServiceProvider.GetService<IInfrastructure>(); } }
         private ARMFunctions _ARMFunctions { get { return DeploymentOrchestrationInput.ServiceProvider.GetService<ARMFunctions>(); } }
-        private Dictionary<string, object> _ParentContext;
+        private readonly Dictionary<string, object> _ParentContext;
 
         public string Id
         {

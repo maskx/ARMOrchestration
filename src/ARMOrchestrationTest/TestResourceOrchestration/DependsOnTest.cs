@@ -3,7 +3,6 @@ using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Runtime.InteropServices;
 using Xunit;
 
 namespace ARMOrchestrationTest.TestResourceOrchestration

@@ -43,7 +43,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation()
                 {
                     InstanceId = input.InstanceId,
-                    ExecutionId = input.ExecutionId,
+                    DeploymentId = input.DeploymentId,
                     Stage = (ProvisioningStage)(0 - input.ProvisioningStage),
                     Result = DataConverter.Serialize(response)
                 });
@@ -55,7 +55,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             templateHelper.SaveDeploymentOperation(new DeploymentOperation()
             {
                 InstanceId = input.InstanceId,
-                ExecutionId = input.ExecutionId,
+                DeploymentId = input.DeploymentId,
                 Stage = r.Code == 200 ? input.ProvisioningStage : (ProvisioningStage)(0 - input.ProvisioningStage),
                 Result = DataConverter.Serialize(waitHandler.Task.Result)
             });

@@ -62,7 +62,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         internal JsonElement RootElement;
 
-        private Dictionary<string, object> _ChangeTracking = new Dictionary<string, object>();
+        private readonly Dictionary<string, object> _ChangeTracking = new Dictionary<string, object>();
 
         private void SyncAllChanges()
         {

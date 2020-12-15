@@ -40,7 +40,15 @@ namespace maskx.ARMOrchestration.Extensions
                 {
                     ConnectionString = config.ConnectionString,
                     HubName = config.HubName,
-                    SchemaName = config.SchemaName
+                    SchemaName = config.SchemaName,
+                    IdleSleepMilliSeconds=config.OrchestrationSettings.IdleSleepMilliSeconds,
+                    JumpStartEnabled=config.OrchestrationSettings.JumpStartEnabled,
+                    MessageLockedSeconds=config.OrchestrationSettings.MessageLockedSeconds,
+                    SessionLockedSeconds=config.OrchestrationSettings.SessionLockedSeconds,
+                    // TODO: wait for upgrade of maskx.DurableTask.SQLServer
+                    //TaskActivityDispatcherSettings=config.OrchestrationSettings.TaskActivityDispatcherSettings,
+                    //TaskOrchestrationDispatcherSettings=config.OrchestrationSettings.TaskOrchestrationDispatcherSettings,
+                    //TrackingDispatcherSettings=config.OrchestrationSettings.TrackingDispatcherSettings
                 };
             });
             services.UsingOrchestrationWorker((sp) =>

@@ -86,12 +86,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (RootElement.TryGetProperty("parameters", out JsonElement parameters))
                     return parameters.GetRawText();
-                return string.Empty;
+                return "{}";
             }
         }
 
         public JsonValue _Variables = null;
 
+        // thread unsafed
         [DisplayName("variables")]
         public JsonValue Variables
         {
@@ -104,8 +105,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         // variable can refernce variable, so must set variables value before expand
                         _Variables = new JsonValue(variables.GetRawText());
                         using var doc = JsonDocument.Parse(_Variables.ToString());
-                        _Variables = new JsonValue(doc.RootElement.ExpandObject(new Dictionary<string, object>() {
-                            { ContextKeys.ARM_CONTEXT,Input} },
+                        _Variables = new JsonValue(doc.RootElement.ExpandObject(
+                            new Dictionary<string, object>() {{ ContextKeys.ARM_CONTEXT,Input} },
                             ServiceProvider.GetService<ARMFunctions>(),
                             ServiceProvider.GetService<IInfrastructure>()));
                         // 需要确保 newguid 一类的函数，每次获取变量都返回相同的值

@@ -27,7 +27,7 @@ namespace maskx.ARMOrchestration.Activities
             templateHelper.SaveDeploymentOperation(new DeploymentOperation()
             {
                 InstanceId = input.InstanceId,
-                ExecutionId = input.ExecutionId,
+                DeploymentId = input.DeploymentId,
                 Stage = input.ProvisioningStage
             });
             var request = (T)infrastructure.GetRequestInput(input);

@@ -39,7 +39,7 @@ namespace ARMOrchestrationTest.Mock
 
         public object GetRequestInput(AsyncRequestActivityInput input)
         {
-            var operation = this.serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().GetDeploymentOperationAsync(input.InstanceId, input.ExecutionId).Result;
+            var operation = this.serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().GetDeploymentOperationAsync(input.InstanceId, input.DeploymentId).Result;
             var r = new CustomCommunicationJob()
             {
                 EventName = operation.Stage.ToString(),

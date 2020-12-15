@@ -6,7 +6,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class ZoneCollection : IList<string>, IChangeTracking
     {
-        private List<string> _List = new List<string>();
+        private readonly List<string> _List = new List<string>();
 
         public string this[int index] { get { return _List[index]; } set { _List[index] = value; Change(null, null); } }
 

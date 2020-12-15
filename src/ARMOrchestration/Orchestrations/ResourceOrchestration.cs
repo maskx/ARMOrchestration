@@ -119,7 +119,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                                 new AsyncRequestActivityInput()
                                                 {
                                                     InstanceId = context.OrchestrationInstance.InstanceId,
-                                                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                                    DeploymentId = input.Deployment.DeploymentId,
                                                     ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning
                                                 });
                     if (injectBefroeProvisioningResult.Code != 200)
@@ -220,7 +220,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                      new AsyncRequestActivityInput()
                                      {
                                          InstanceId = context.OrchestrationInstance.InstanceId,
-                                         ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                         DeploymentId = input.Deployment.DeploymentId,
                                          ProvisioningStage = ProvisioningStage.ProvisioningResource
                                      });
                 if (createResourceResult.Code != 200)
@@ -319,7 +319,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              new AsyncRequestActivityInput()
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
-                                 ExecutionId = context.OrchestrationInstance.ExecutionId,
+                                 DeploymentId = input.Deployment.DeploymentId,
                                  ProvisioningStage = ProvisioningStage.InjectAfterProvisioning
                              });
                     if (injectAfterProvisioningResult.Code != 200)
