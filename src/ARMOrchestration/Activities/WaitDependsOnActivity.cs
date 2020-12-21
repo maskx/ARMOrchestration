@@ -2,6 +2,7 @@
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
+using Microsoft.SqlServer.Management.Sdk.Sfc;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
@@ -20,7 +21,7 @@ values
         private readonly ARMOrchestrationOptions options;
         private readonly ARMTemplateHelper templateHelper;
 
-        public WaitDependsOnActivity(IOptions<ARMOrchestrationOptions> options,ARMTemplateHelper templateHelper)
+        public WaitDependsOnActivity(IOptions<ARMOrchestrationOptions> options, ARMTemplateHelper templateHelper)
         {
             this.options = options?.Value;
             this.templateHelper = templateHelper;
@@ -29,7 +30,12 @@ values
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, WaitDependsOnActivityInput input)
         {
-            templateHelper.SaveDeploymentOperation(input.DeploymentOperation);
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation()
+            {
+                DeploymentId = input.DeploymentId,
+                InstanceId = input.InstanceId,
+                Stage=ProvisioningStage.DependsOnWaited
+            });
             using (var db = new DbAccess(this.options.Database.ConnectionString))
             {
                 foreach (var item in input.DependsOn)

@@ -55,13 +55,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DependsOn = input.Resource.DependsOn.ToList(),
                         DeploymentId = input.Deployment.DeploymentId,
                         RootId = input.Deployment.RootId,
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        DeploymentOperation = new DeploymentOperation(input.Resource)
-                        {
-                            InstanceId = context.OrchestrationInstance.InstanceId,
-                            ExecutionId = context.OrchestrationInstance.ExecutionId
-                        }
+                        InstanceId = context.OrchestrationInstance.InstanceId
                     });
                 }
                 catch (TaskFailedException ex)
