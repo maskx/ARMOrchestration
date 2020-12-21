@@ -150,7 +150,6 @@ namespace maskx.ARMOrchestration
             var deployInput = new Deployment()
             {
                 RootId = deploymentContext.RootId,
-                DeploymentId = Guid.NewGuid().ToString("N"),
                 ParentId = deploymentContext.ResourceId,
                 _Parent = deploymentContext,
                 GroupId = groupId,

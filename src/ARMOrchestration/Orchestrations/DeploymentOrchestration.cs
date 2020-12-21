@@ -14,10 +14,19 @@ namespace maskx.ARMOrchestration.Orchestrations
         where T : CommunicationJob, new()
     {
         public const string Name = "DeploymentOrchestration";
-        private readonly ARMTemplateHelper helper;
-        private readonly IInfrastructure infrastructure;
-        private readonly IServiceProvider _ServiceProvider;
-
+        protected readonly ARMTemplateHelper helper;
+        protected readonly IInfrastructure infrastructure;
+        protected readonly IServiceProvider _ServiceProvider;
+        private string _DeploymentId;
+        Deployment input
+        {
+            get
+            {
+                var r= helper.GetDeploymentById(_DeploymentId);
+                r.IsRuntime = true;
+                return r;
+            }
+        }
         public DeploymentOrchestration(
             ARMTemplateHelper helper,
             IInfrastructure infrastructure,
@@ -27,28 +36,13 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.helper = helper;
             this.infrastructure = infrastructure;
         }
-
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
-            Deployment input;
-            if (!context.IsReplaying)
-            {
-                input = this.DataConverter.Deserialize<Deployment>(arg);
-                input.ServiceProvider = this._ServiceProvider;
-                // for persistence variable, cos function like newGuid() should always return same value in variable
-                var _ = input.Template.Variables;
-                helper.SaveDeploymentOperation(new DeploymentOperation(input)
-                {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.StartProvisioning,
-                    Input = DataConverter.Serialize(input)
-                });
-            }
-            else
-            {
-                input = helper.GetDeployment(context.OrchestrationInstance);
-            }
+            return await InnerRunTask(context, arg);
+        }
+        protected async Task<TaskResult> InnerRunTask(OrchestrationContext context, string arg)
+        {
+            _DeploymentId = arg;
 
             #region InjectBeforeDeployment
 
@@ -62,7 +56,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                              new AsyncRequestActivityInput()
                              {
                                  InstanceId = context.OrchestrationInstance.InstanceId,
-                                 DeploymentId = input.DeploymentId,
+                                 DeploymentId = _DeploymentId,
                                  ProvisioningStage = ProvisioningStage.InjectBeforeDeployment
                              });
                     if (injectBeforeDeploymenteResult.Code != 200)
@@ -76,8 +70,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         });
                         return injectBeforeDeploymenteResult;
                     }
-                    input = helper.GetDeploymentByResourceId(input.ResourceId);
-                    input.IsRuntime = true;
                 }
                 catch (TaskFailedException ex)
                 {
@@ -128,8 +120,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             return r;
                         }
                     }
-                    input = helper.GetDeploymentByResourceId(input.ResourceId);
-                    input.IsRuntime = true;
                 }
                 catch (TaskFailedException ex)
                 {
@@ -246,9 +236,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                 else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 {
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        DeploymentOrchestration<T>.Name,
+                        SubDeploymentOrchestration<T>.Name,
                         "1.0",
-                        DataConverter.Serialize(Deployment.Parse(resource))));
+                       DataConverter.Serialize(Deployment.Parse(resource))));
                 }
                 else
                 {
@@ -263,6 +253,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
             #endregion Provisioning resources
+           
             string rtv = null;
 
             #region After Deployment
@@ -313,8 +304,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         };
                     }
                 }
-                input = helper.GetDeploymentByResourceId(input.ResourceId);
-                input.IsRuntime = true;
             }
 
             #endregion After Deployment
@@ -363,8 +352,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                         Content = response
                     };
                 }
-                input = helper.GetDeploymentByResourceId(input.ResourceId);
-                input.IsRuntime = true;
             }
             ErrorResponse errorResponse = null;
 

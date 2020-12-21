@@ -34,6 +34,7 @@ namespace maskx.ARMOrchestration.Workers
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
             orchestrationWorker.AddActivity(typeof(WaitDependsOnActivity), WaitDependsOnActivity.Name, "1.0");
             orchestrationWorker.AddActivity(typeof(AsyncRequestActivity<T>), AsyncRequestActivity<T>.Name, "1.0");
+            orchestrationWorker.AddOrchestration(typeof(SubDeploymentOrchestration<T>), SubDeploymentOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(DeploymentOrchestration<T>), DeploymentOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(ResourceOrchestration<T>), ResourceOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(RequestOrchestration<T>), RequestOrchestration<T>.Name, "1.0");
@@ -43,7 +44,7 @@ namespace maskx.ARMOrchestration.Workers
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             if (this.options.Database.AutoCreate)
-                await this.CreateIfNotExistsAsync(false);            
+                await this.CreateIfNotExistsAsync(false);
             await base.StartAsync(cancellationToken);
         }
 

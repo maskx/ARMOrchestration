@@ -48,17 +48,9 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 var r = input.Resource.Copy.GetResource(i);
                 if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
-                {
-                    var deploy = Deployment.Parse(r);
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        DeploymentOrchestration<T>.Name,
-                        "1.0",
-                        DataConverter.Serialize(deploy)));
-                }
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(SubDeploymentOrchestration<T>.Name, "1.0", DataConverter.Serialize(Deployment.Parse(r))));
                 else
-                {
                     helper.ProvisioningResource<T>(r, tasks, context);
-                }
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)
                 {
@@ -76,10 +68,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
             }
             await Task.WhenAll(tasks);
-            foreach (var item in tasks)
-            {
-                helper.ParseTaskResult(Name, errorResponses, item);
-            }
+            foreach (var item in tasks) helper.ParseTaskResult(Name, errorResponses, item);
             if (errorResponses.Count > 0)
             {
                 helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)

@@ -63,11 +63,14 @@ namespace maskx.ARMOrchestration
             if (string.IsNullOrEmpty(args.RootId)) args.RootId = args.DeploymentId;
             if (args.ServiceProvider == null)
                 args.ServiceProvider = _ServiceProvider;
+            // todo: 提前展开 VAriables和Parameters
+            var _ = args.Template.Variables;
             var deploymentOperation = new DeploymentOperation(args)
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
                 InstanceId = args.DeploymentId,
-                Stage = ProvisioningStage.Pending
+                Stage = ProvisioningStage.Pending,
+                Input=_DataConverter.Serialize( args)
             };
             this._Helper.SaveDeploymentOperation(deploymentOperation);
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
@@ -78,7 +81,7 @@ namespace maskx.ARMOrchestration
                     Name = DeploymentOrchestration<T>.Name,
                     Version = args.ApiVersion
                 },
-                Input = _DataConverter.Serialize(args)
+                Input = args.DeploymentId
             });
             deploymentOperation.ExecutionId = instance.ExecutionId;
             return deploymentOperation;
