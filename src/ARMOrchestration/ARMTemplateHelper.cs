@@ -42,7 +42,7 @@ WHEN NOT MATCHED THEN
 	VALUES
 	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,cast(@Input AS NVARCHAR(MAX)),@Result,@Comments,@CreateByUserId,@LastRunUserId)
 WHEN MATCHED THEN
-	UPDATE SET [ExecutionId]=@ExecutionId,[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
+	UPDATE SET [ExecutionId]=isnull(@ExecutionId,ExecutionId),[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
 ", this.options.Database.DeploymentOperationsTableName);
         }
 
@@ -160,7 +160,7 @@ WHEN MATCHED THEN
             }
             return input;
         }
-        public Deployment GetDeploymentById(string deploymentId)
+        public Deployment GetDeploymentById(string deploymentId,string instanceId)
         {
             Deployment input = null;
             using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
@@ -168,7 +168,7 @@ WHEN MATCHED THEN
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and InstanceId=@InstanceId",
                     new
                     {
-                        DeploymentId= deploymentId,
+                        DeploymentId= instanceId,
                         InstanceId= deploymentId
                     });
                 db.ExecuteReaderAsync((reader, index) =>

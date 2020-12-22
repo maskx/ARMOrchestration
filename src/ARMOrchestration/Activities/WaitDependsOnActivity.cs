@@ -34,6 +34,7 @@ values
             {
                 DeploymentId = input.DeploymentId,
                 InstanceId = input.InstanceId,
+                ExecutionId=input.ExecutionId,
                 Stage=ProvisioningStage.DependsOnWaited
             });
             using (var db = new DbAccess(this.options.Database.ConnectionString))

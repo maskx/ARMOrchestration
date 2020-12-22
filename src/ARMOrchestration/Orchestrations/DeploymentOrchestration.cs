@@ -18,11 +18,12 @@ namespace maskx.ARMOrchestration.Orchestrations
         protected readonly IInfrastructure infrastructure;
         protected readonly IServiceProvider _ServiceProvider;
         private string _DeploymentId;
+        private string _InstanceId;
         Deployment input
         {
             get
             {
-                var r= helper.GetDeploymentById(_DeploymentId);
+                var r= helper.GetDeploymentById(_DeploymentId,_InstanceId);
                 r.IsRuntime = true;
                 return r;
             }
@@ -43,6 +44,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         protected async Task<TaskResult> InnerRunTask(OrchestrationContext context, string arg)
         {
             _DeploymentId = arg;
+            _InstanceId = context.OrchestrationInstance.InstanceId;
 
             #region InjectBeforeDeployment
 
@@ -164,7 +166,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                                          DependsOn = input.DependsOn.ToList(),
                                          DeploymentId = input.DeploymentId,
                                          RootId = input.RootId,
-                                         InstanceId = context.OrchestrationInstance.InstanceId
+                                         InstanceId = context.OrchestrationInstance.InstanceId,
+                                         ExecutionId=context.OrchestrationInstance.ExecutionId
                                      });
                 }
                 catch (TaskFailedException ex)
