@@ -48,7 +48,16 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 var r = input.Resource.Copy.GetResource(i);
                 if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(SubDeploymentOrchestration<T>.Name, "1.0", DataConverter.Serialize(Deployment.Parse(r))));
+                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
+                        SubDeploymentOrchestration<T>.Name,
+                        "1.0", 
+                        DataConverter.Serialize(new ResourceOrchestrationInput()
+                        {
+                            DeploymentResourceId = r.Input.ResourceId,
+                            NameWithServiceType = r.NameWithServiceType,
+                            ServiceProvider = r.ServiceProvider,
+                            CopyIndex = r.CopyIndex ?? -1
+                        })));
                 else
                     helper.ProvisioningResource<T>(r, tasks, context);
 

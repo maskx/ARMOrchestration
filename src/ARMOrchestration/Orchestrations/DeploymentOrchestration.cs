@@ -23,7 +23,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             get
             {
-                var r= helper.GetDeploymentById(_DeploymentId,_InstanceId);
+                var r = helper.GetDeploymentById(_DeploymentId, _InstanceId);
                 r.IsRuntime = true;
                 return r;
             }
@@ -167,7 +167,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                          DeploymentId = input.DeploymentId,
                                          RootId = input.RootId,
                                          InstanceId = context.OrchestrationInstance.InstanceId,
-                                         ExecutionId=context.OrchestrationInstance.ExecutionId
+                                         ExecutionId = context.OrchestrationInstance.ExecutionId
                                      });
                 }
                 catch (TaskFailedException ex)
@@ -235,7 +235,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
                         SubDeploymentOrchestration<T>.Name,
                         "1.0",
-                       DataConverter.Serialize(Deployment.Parse(resource))));
+                       DataConverter.Serialize(new ResourceOrchestrationInput()
+                       {
+                           DeploymentResourceId = resource.Input.ResourceId,
+                           NameWithServiceType = resource.NameWithServiceType,
+                           ServiceProvider = resource.ServiceProvider,
+                           CopyIndex = resource.CopyIndex ?? -1
+                       })));
                 }
                 else
                 {
@@ -250,7 +256,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
             #endregion Provisioning resources
-           
+
             string rtv = null;
 
             #region After Deployment

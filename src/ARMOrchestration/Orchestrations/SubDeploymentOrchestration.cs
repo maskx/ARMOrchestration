@@ -18,8 +18,9 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             if (!context.IsReplaying)
             {
-                var dep = DataConverter.Deserialize<Deployment>(input);
-                dep.ServiceProvider = this._ServiceProvider;
+                var res = DataConverter.Deserialize<ResourceOrchestrationInput>(input);
+                res.ServiceProvider = this._ServiceProvider;
+                var dep = Deployment.Parse(res.Resource);
                 var _ = dep.Template.Variables;
                 dep.DeploymentId = context.OrchestrationInstance.InstanceId;
                 helper.SaveDeploymentOperation(new DeploymentOperation(dep)
