@@ -2,7 +2,6 @@
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
 using Microsoft.Extensions.Options;
-using Microsoft.SqlServer.Management.Sdk.Sfc;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Activities
@@ -30,12 +29,9 @@ values
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, WaitDependsOnActivityInput input)
         {
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation()
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
             {
-                DeploymentId = input.DeploymentId,
-                InstanceId = input.InstanceId,
-                ExecutionId=input.ExecutionId,
-                Stage=ProvisioningStage.DependsOnWaited
+                Stage = ProvisioningStage.DependsOnWaited
             });
             using (var db = new DbAccess(this.options.Database.ConnectionString))
             {

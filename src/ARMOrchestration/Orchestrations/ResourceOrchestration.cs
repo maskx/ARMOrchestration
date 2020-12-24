@@ -26,19 +26,24 @@ namespace maskx.ARMOrchestration.Orchestrations
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
         }
-
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
             input.Deployment.IsRuntime = true;
             if (!context.IsReplaying)
             {
-                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                if (input.IsRetry)
+                {
+                    if (ProvisioningStage.Successed == templateHelper.GetProvisioningStage(input.DeploymentOperationId).Result)
+                        return new TaskResult(200, null);
+                }
+                templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.StartProvisioning,
-                    Input = DataConverter.Serialize(input)
+                    Input = DataConverter.Serialize(input),
+                    LastRunUserId = input.LastRunUserId
                 });
             }
 
@@ -52,11 +57,10 @@ namespace maskx.ARMOrchestration.Orchestrations
                     await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
                     new WaitDependsOnActivityInput()
                     {
+                        DeploymentOperationId=input.DeploymentOperationId,
                         DependsOn = input.Resource.DependsOn.ToList(),
                         DeploymentId = input.Deployment.DeploymentId,
-                        RootId = input.Deployment.RootId,
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId=context.OrchestrationInstance.ExecutionId
+                        RootId = input.Deployment.RootId
                     });
                 }
                 catch (TaskFailedException ex)
@@ -71,10 +75,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                     };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                     {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.DependsOnWaitedFailed,
                         Result = DataConverter.Serialize(response)
                     });
@@ -89,10 +91,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
                 if (r.Code != 200)
                 {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                     {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.DependsOnWaitedFailed,
                         Result = DataConverter.Serialize(r)
                     });
@@ -113,16 +113,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                                                 "1.0",
                                                 new AsyncRequestActivityInput()
                                                 {
-                                                    InstanceId = context.OrchestrationInstance.InstanceId,
-                                                    DeploymentId = input.Deployment.DeploymentId,
+                                                    DeploymentOperationId = input.DeploymentOperationId,
                                                     ProvisioningStage = ProvisioningStage.InjectBefroeProvisioning
                                                 });
                     if (injectBefroeProvisioningResult.Code != 200)
                     {
-                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                        templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                         {
-                            InstanceId = context.OrchestrationInstance.InstanceId,
-                            ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.InjectBefroeProvisioningFailed,
                             Result = DataConverter.Serialize(injectBefroeProvisioningResult)
                         });
@@ -141,10 +138,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                     };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                     {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.InjectBefroeProvisioningFailed,
                         Result = DataConverter.Serialize(response)
                     });
@@ -165,10 +160,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                         if (r.Code != 200)
                         {
-                            templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                            templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                             {
-                                InstanceId = context.OrchestrationInstance.InstanceId,
-                                ExecutionId = context.OrchestrationInstance.ExecutionId,
                                 Stage = ProvisioningStage.BeforeResourceProvisioningFailed,
                                 Result = DataConverter.Serialize(r)
                             });
@@ -187,10 +180,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                         };
-                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                         {
-                            InstanceId = context.OrchestrationInstance.InstanceId,
-                            ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.BeforeResourceProvisioning,
                             Result = DataConverter.Serialize(response)
                         });
@@ -214,8 +205,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                      "1.0",
                                      new AsyncRequestActivityInput()
                                      {
-                                         InstanceId = context.OrchestrationInstance.InstanceId,
-                                         DeploymentId = input.Deployment.DeploymentId,
+                                         DeploymentOperationId = input.DeploymentOperationId,
                                          ProvisioningStage = ProvisioningStage.ProvisioningResource
                                      });
                 if (createResourceResult.Code != 200)
@@ -235,10 +225,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                 };
-                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                 {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.ProvisioningResource,
                     Result = DataConverter.Serialize(response)
                 });
@@ -263,10 +251,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                         var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input);
                         if (r.Code != 200)
                         {
-                            templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                            templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                             {
-                                InstanceId = context.OrchestrationInstance.InstanceId,
-                                ExecutionId = context.OrchestrationInstance.ExecutionId,
                                 Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
                                 Result = DataConverter.Serialize(r)
                             });
@@ -286,10 +272,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                                 }
                             }
                         };
-                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                         {
-                            InstanceId = context.OrchestrationInstance.InstanceId,
-                            ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.AfterResourceProvisioningOrchestationFailed,
                             Result = DataConverter.Serialize(response)
                         });
@@ -313,13 +297,12 @@ namespace maskx.ARMOrchestration.Orchestrations
                              "1.0",
                              new AsyncRequestActivityInput()
                              {
-                                 InstanceId = context.OrchestrationInstance.InstanceId,
-                                 DeploymentId = input.Deployment.DeploymentId,
+                                 DeploymentOperationId = input.DeploymentOperationId,
                                  ProvisioningStage = ProvisioningStage.InjectAfterProvisioning
                              });
                     if (injectAfterProvisioningResult.Code != 200)
                     {
-                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                        templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
@@ -341,10 +324,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                     };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                     {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.InjectAfterProvisioningFailed,
                         Result = DataConverter.Serialize(response)
                     });
@@ -359,10 +340,8 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             #region Ready Resource
 
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
             {
-                InstanceId = context.OrchestrationInstance.InstanceId,
-                ExecutionId = context.OrchestrationInstance.ExecutionId,
                 Stage = ProvisioningStage.Successed
             });
 

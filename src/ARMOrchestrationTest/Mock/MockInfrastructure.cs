@@ -20,7 +20,7 @@ namespace ARMOrchestrationTest.Mock
         private readonly DataConverter _DataConverter = new JsonDataConverter();
         private readonly IServiceProvider serviceProvider;
         private readonly IHttpClientFactory _HttpClientFactory;
-        static IMemoryCache _TemplateCache = new MemoryCache(Options.Create(new MemoryCacheOptions() { }));
+        static readonly IMemoryCache _TemplateCache = new MemoryCache(Options.Create(new MemoryCacheOptions() { }));
         public MockInfrastructure(IServiceProvider serviceProvider)
         {
             this.serviceProvider = serviceProvider;
@@ -39,7 +39,7 @@ namespace ARMOrchestrationTest.Mock
 
         public object GetRequestInput(AsyncRequestActivityInput input)
         {
-            var operation = this.serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().GetDeploymentOperationAsync(input.InstanceId, input.DeploymentId).Result;
+            var operation = this.serviceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>().GetDeploymentOperationAsync(input.DeploymentOperationId).Result;
             var r = new CustomCommunicationJob()
             {
                 EventName = operation.Stage.ToString(),

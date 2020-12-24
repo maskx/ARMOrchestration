@@ -34,15 +34,15 @@ namespace maskx.ARMOrchestration
             this._ARMFunctions = aRMFunctions;
             this._saveDeploymentOperationCommandString = string.Format(@"
 MERGE {0} with (serializable) [Target]
-USING (VALUES (@InstanceId,@DeploymentId)) as [Source](InstanceId,DeploymentId)
-ON [Target].InstanceId = [Source].InstanceId AND [Target].DeploymentId = [Source].DeploymentId
+USING (VALUES (@Id)) as [Source](Id)
+ON [Target].Id = [Source].Id
 WHEN NOT MATCHED THEN
 	INSERT
-	([InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
+	([Id],[InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
 	VALUES
-	(@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,cast(@Input AS NVARCHAR(MAX)),@Result,@Comments,@CreateByUserId,@LastRunUserId)
+	(@Id,@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,cast(@Input AS NVARCHAR(MAX)),@Result,@Comments,@CreateByUserId,@LastRunUserId)
 WHEN MATCHED THEN
-	UPDATE SET [ExecutionId]=isnull(@ExecutionId,ExecutionId),[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
+	UPDATE SET [InstanceId]=isnull(@InstanceId,InstanceId),[ExecutionId]=isnull(@ExecutionId,ExecutionId),[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
 ", this.options.Database.DeploymentOperationsTableName);
         }
 
@@ -74,7 +74,7 @@ WHEN MATCHED THEN
                 // Eat up any exception
             }
         }
-        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext)
+        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, bool isRetry,string lastRunUserId)
             where T : CommunicationJob, new()
         {
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
@@ -82,10 +82,13 @@ WHEN MATCHED THEN
                                       "1.0",
                                       new ResourceOrchestrationInput()
                                       {
-                                          DeploymentResourceId = resource.Input.ResourceId,
+                                          DeploymentOperationId=resource.DeploymentOperationId,
+                                          DeploymentId = resource.Input.DeploymentId,
                                           NameWithServiceType = resource.NameWithServiceType,
                                           ServiceProvider = resource.ServiceProvider,
-                                          CopyIndex = resource.CopyIndex ?? -1
+                                          CopyIndex = resource.CopyIndex ?? -1,
+                                          IsRetry = isRetry,
+                                          LastRunUserId= lastRunUserId
                                       }));
             foreach (var child in resource.FlatEnumerateChild())
             {
@@ -94,10 +97,13 @@ WHEN MATCHED THEN
                                                      "1.0",
                                                      new ResourceOrchestrationInput()
                                                      {
-                                                         DeploymentResourceId = child.Input.ResourceId,
+                                                         DeploymentOperationId=child.DeploymentOperationId,
+                                                         DeploymentId = child.Input.DeploymentId,
                                                          NameWithServiceType = child.NameWithServiceType,
                                                          ServiceProvider = child.ServiceProvider,
-                                                         CopyIndex = child.CopyIndex ?? -1
+                                                         CopyIndex = child.CopyIndex ?? -1,
+                                                         IsRetry = isRetry,
+                                                         LastRunUserId=lastRunUserId
                                                      }));
             }
         }
@@ -146,38 +152,64 @@ WHEN MATCHED THEN
                 templateLink.Uri = this._ARMFunctions.Evaluate(uri.GetString(), cxt).ToString();
             return templateLink;
         }
-        public Deployment GetDeploymentByResourceId(string resouceId)
+        public async Task<T> GetInputByDeploymentOperationId<T>(string deploymentOperationId)
         {
-            Deployment input = null;
+            T input = default;
             using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
-                db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where ResourceId=@ResourceId", new { ResourceId = resouceId });
-                db.ExecuteReaderAsync((reader, index) =>
+                db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where Id=@Id",
+                    new { Id = deploymentOperationId });
+                await db.ExecuteReaderAsync((reader, index) =>
                 {
-                    input = _DataConverter.Deserialize<Deployment>(reader.GetString(0));
-                    input.ServiceProvider = this._ServiceProvider;
-                }).Wait();
+                    input = _DataConverter.Deserialize<T>(reader.GetString(0));
+                });
             }
             return input;
         }
-        public Deployment GetDeploymentById(string deploymentId,string instanceId)
+        public async Task<ResourceOrchestrationInput> GetResourceOrchestrationInput(string deploymentOperationId)
         {
-            Deployment input = null;
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
-            {
-                db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and InstanceId=@InstanceId",
-                    new
-                    {
-                        DeploymentId= instanceId,
-                        InstanceId= deploymentId
-                    });
-                db.ExecuteReaderAsync((reader, index) =>
-                {
-                    input = _DataConverter.Deserialize<Deployment>(reader.GetString(0));
-                    input.ServiceProvider = this._ServiceProvider;
-                }).Wait();
-            }
+            ResourceOrchestrationInput input = await GetInputByDeploymentOperationId<ResourceOrchestrationInput>(deploymentOperationId);
+            input.ServiceProvider = this._ServiceProvider;
             return input;
+        }
+        public async Task<Deployment> GetDeploymentById(string deploymentId)
+        {
+            // deploymentId === deploymentOperationId when type=deployment
+            var deployment = await GetInputByDeploymentOperationId<Deployment>(deploymentId);
+            deployment.ServiceProvider = _ServiceProvider;
+            return deployment;
+        }
+        public async Task<ProvisioningStage> GetProvisioningStage(string deploymentOperationId)
+        {
+            ProvisioningStage stage = ProvisioningStage.Pending;
+            using (var db = new SQLServerAccess(options.Database.ConnectionString))
+            {
+                db.AddStatement($"select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
+                await db.ExecuteReaderAsync((reader, index) =>
+                {
+                    stage = (ProvisioningStage)(int)reader["Stage"];
+                });
+            }
+            return stage;
+        }
+        public bool PrepareRetry(string deploymentId, string instanceId, string newInstanceId, string userId, string input = null)
+        {
+            using var db = new SQLServerAccess(options.Database.ConnectionString);
+            db.AddStatement(@$"update {options.Database.DeploymentOperationsTableName}
+set InstanceId=@NewInstanceId,Stage=@Stage,LastRunUserId=@UserId,Input=isnull(@Input,Input)
+where InstanceId=@InstanceId and DeploymentId=@DeploymentId",
+new
+{
+InstanceId = instanceId,
+NewInstanceId = newInstanceId,
+DeploymentId = deploymentId,
+Input = input,
+UserId = userId,
+Stage = ProvisioningStage.StartProvisioning
+});
+            if (1 != db.ExecuteNonQueryAsync().Result)
+                return false;
+            return true;
         }
     }
 }

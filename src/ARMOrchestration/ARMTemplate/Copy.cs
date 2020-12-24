@@ -199,10 +199,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
         public Resource GetResource(int index)
         {
-            return new Resource(_Resource.RawString, _Resource.FullContext)
-            {
-                CopyIndex = index
-            };
+            return new Resource(_Resource.RawString, _Resource.FullContext, _Resource.DeploymentOperationId, index);
         }
     }
 }

@@ -20,14 +20,13 @@ namespace maskx.ARMOrchestration
     {
         // TODO: support retry
         public bool IsRetry;
-
         public (bool, string) Validate(IServiceProvider service = null)
         {
             if (service != null)
                 this.ServiceProvider = service;
             if (this.ServiceProvider == null)
                 throw new Exception("validate template need ServiceProvider");
-          
+
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-syntax#parameters
             using JsonDocument parDefine = JsonDocument.Parse(template.Parameters);
             if (parDefine.RootElement.EnumerateObject().Count() > 0)
@@ -150,7 +149,7 @@ namespace maskx.ARMOrchestration
             var deployInput = new Deployment()
             {
                 RootId = deploymentContext.RootId,
-                ParentId = deploymentContext.ResourceId,
+                ParentId = deploymentContext.DeploymentId,
                 _Parent = deploymentContext,
                 GroupId = groupId,
                 GroupType = groupType,
@@ -228,7 +227,7 @@ namespace maskx.ARMOrchestration
                 if (string.IsNullOrEmpty(ParentId))
                     return null;
                 if (_Parent == null)
-                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentByResourceId(this.ParentId);
+                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentById(this.ParentId).Result;
                 _Parent.IsRuntime = IsRuntime;
                 return _Parent;
             }

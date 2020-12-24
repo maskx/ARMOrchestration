@@ -1,13 +1,16 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
     public class ResourceOrchestrationInput
     {
-        public string DeploymentResourceId { get; set; }
+        public bool IsRetry { get; set; } = false;
+        public string DeploymentOperationId { get; set; }
+        public string LastRunUserId { get; set; }
+        public string DeploymentId { get; set; }
         public string NameWithServiceType { get; set; }
         public int CopyIndex { get; set; } = -1;
         private Deployment _Deployment;
@@ -18,7 +21,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (_Deployment == null)
                 {
-                    _Deployment = _ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentByResourceId(this.DeploymentResourceId);
+                    _Deployment = _ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentById(this.DeploymentId).Result;
                 }
                 return _Deployment;
             }
@@ -32,7 +35,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 if (_Resource == null)
                 {
                     _Resource = Deployment.GetFirstResource(NameWithServiceType);
-                    if (_Resource.Copy != null && CopyIndex!=-1)
+                    if (_Resource.Copy != null && CopyIndex != -1)
                     {
                         _Resource = _Resource.Copy.GetResource(CopyIndex);
                     }
@@ -51,5 +54,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             get { return _ServiceProvider; }
             set { _ServiceProvider = value; }
         }
+
     }
 }

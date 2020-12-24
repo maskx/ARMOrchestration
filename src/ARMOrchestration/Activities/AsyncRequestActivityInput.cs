@@ -2,8 +2,7 @@
 {
     public class AsyncRequestActivityInput
     {
-        public string InstanceId { get; set; }
-        public string DeploymentId { get; set; }
+        public string DeploymentOperationId { get; set; }
         public ProvisioningStage ProvisioningStage { get; set; }
     }
 }

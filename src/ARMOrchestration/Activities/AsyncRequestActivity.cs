@@ -24,10 +24,8 @@ namespace maskx.ARMOrchestration.Activities
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, AsyncRequestActivityInput input)
         {
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation()
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
             {
-                InstanceId = input.InstanceId,
-                DeploymentId = input.DeploymentId,
                 Stage = input.ProvisioningStage
             });
             var request = (T)infrastructure.GetRequestInput(input);

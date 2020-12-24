@@ -32,12 +32,18 @@ namespace maskx.ARMOrchestration.Orchestrations
                 return new TaskResult(500, new ErrorResponse() { Code = "CopyOrchestration-Fail", Message = "input is not Copy resource" });
             if (!context.IsReplaying)
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                //if (input.IsRetry)
+                //{
+                //    if (ProvisioningStage.Successed == helper.GetProvisioningStage(input.DeploymentOperationId).Result)
+                //        return new TaskResult(200, null);
+                //}
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId,input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,
                     ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.StartProvisioning,
-                    Input = DataConverter.Serialize(input)
+                    Input = DataConverter.Serialize(input),
+                    LastRunUserId=input.LastRunUserId
                 });
             }
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
@@ -49,17 +55,20 @@ namespace maskx.ARMOrchestration.Orchestrations
                 var r = input.Resource.Copy.GetResource(i);
                 if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
                     tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        SubDeploymentOrchestration<T>.Name,
+                        DeploymentOrchestration<T>.Name,
                         "1.0", 
                         DataConverter.Serialize(new ResourceOrchestrationInput()
                         {
-                            DeploymentResourceId = r.Input.ResourceId,
+                            DeploymentOperationId=r.DeploymentOperationId,
+                            DeploymentId = r.Input.DeploymentId,
                             NameWithServiceType = r.NameWithServiceType,
                             ServiceProvider = r.ServiceProvider,
-                            CopyIndex = r.CopyIndex ?? -1
+                            CopyIndex = r.CopyIndex ?? -1,
+                            IsRetry=input.IsRetry,
+                            LastRunUserId=input.LastRunUserId
                         })));
                 else
-                    helper.ProvisioningResource<T>(r, tasks, context);
+                    helper.ProvisioningResource<T>(r, tasks, context,input.IsRetry,input.LastRunUserId);
 
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)
                 {
@@ -80,10 +89,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             foreach (var item in tasks) helper.ParseTaskResult(Name, errorResponses, item);
             if (errorResponses.Count > 0)
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                 {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.Failed,
                     Result = DataConverter.Serialize(errorResponses)
                 });
@@ -91,10 +98,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
             else
             {
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.Resource)
+                helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                 {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
                     Stage = ProvisioningStage.Successed
                 });
                 return new TaskResult() { Code = 200 };

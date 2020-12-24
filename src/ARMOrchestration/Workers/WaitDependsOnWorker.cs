@@ -34,7 +34,6 @@ namespace maskx.ARMOrchestration.Workers
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
             orchestrationWorker.AddActivity(typeof(WaitDependsOnActivity), WaitDependsOnActivity.Name, "1.0");
             orchestrationWorker.AddActivity(typeof(AsyncRequestActivity<T>), AsyncRequestActivity<T>.Name, "1.0");
-            orchestrationWorker.AddOrchestration(typeof(SubDeploymentOrchestration<T>), SubDeploymentOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(DeploymentOrchestration<T>), DeploymentOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(ResourceOrchestration<T>), ResourceOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(RequestOrchestration<T>), RequestOrchestration<T>.Name, "1.0");
@@ -153,6 +152,7 @@ END", new { table = options.Database.WaitDependsOnTableName });
 IF(OBJECT_ID(@table) IS NULL)
 BEGIN
     create table {options.Database.DeploymentOperationsTableName}(
+        [Id] [nvarchar](50) NOT NULL,
         [DeploymentId] [nvarchar](50) NOT NULL,
         [InstanceId] [nvarchar](50) NOT NULL,       
 	    [RootId] [nvarchar](50) NOT NULL,
@@ -177,8 +177,7 @@ BEGIN
 	    [Result] [nvarchar](max) NULL,
      CONSTRAINT [PK_{options.Database.SchemaName}_{options.Database.HubName}_{DatabaseConfig.DeploymentOperationsTable}] PRIMARY KEY CLUSTERED
     (
-	    [DeploymentId] ASC,
-	    [InstanceId] ASC
+	    [Id] ASC
     )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
     ) ON [PRIMARY]
 END", new { table = options.Database.DeploymentOperationsTableName });

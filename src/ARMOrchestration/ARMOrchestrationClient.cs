@@ -61,16 +61,16 @@ namespace maskx.ARMOrchestration
             if (string.IsNullOrEmpty(args.CreateByUserId))
                 throw new ArgumentNullException("CreateByUserId");
             if (string.IsNullOrEmpty(args.RootId)) args.RootId = args.DeploymentId;
-            if (args.ServiceProvider == null)
-                args.ServiceProvider = _ServiceProvider;
-            // todo: 提前展开 VAriables和Parameters
+            if (string.IsNullOrEmpty(args.LastRunUserId)) args.LastRunUserId = args.CreateByUserId;
+            if (args.ServiceProvider == null) args.ServiceProvider = _ServiceProvider;
+            // todo: 提前展开 Variables和Parameters
             var _ = args.Template.Variables;
-            var deploymentOperation = new DeploymentOperation(args)
+            var deploymentOperation = new DeploymentOperation(args.DeploymentId, args)
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
                 InstanceId = args.DeploymentId,
                 Stage = ProvisioningStage.Pending,
-                Input=_DataConverter.Serialize( args)
+                Input = _DataConverter.Serialize(args)
             };
             this._Helper.SaveDeploymentOperation(deploymentOperation);
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
@@ -86,6 +86,44 @@ namespace maskx.ARMOrchestration
             deploymentOperation.ExecutionId = instance.ExecutionId;
             return deploymentOperation;
         }
+
+        //public async Task RetryResource(string deploymentOperationId, string apiVersion, string userId)
+        //{
+        //    var input = _Helper.GetResourceOrchestrationInput(deploymentOperationId).Result;
+        //    input.IsRetry = true;
+        //    input.LastRunUserId = userId;
+        //    await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+        //    {
+        //        Orchestration = new OrchestrationSetting()
+        //        {
+        //            Name = ResourceOrchestration<T>.Name,
+        //            Version = apiVersion
+        //        },
+        //        Input = input
+        //    });
+        //}
+        //public async Task RetryDeployment(string deploymentOperationId, string apiVersion, string userId)
+        //{
+        //    var op = await GetDeploymentOperationAsync(deploymentOperationId);
+
+        //    if (op.Stage == ProvisioningStage.Successed)
+        //        return;
+        //    var dep = _DataConverter.Deserialize<Deployment>(op.Input);
+        //    dep.IsRetry = true;
+        //    op.Input = _DataConverter.Serialize(dep);
+        //    op.LastRunUserId = userId;
+        //    _Helper.SaveDeploymentOperation(op);
+        //    await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+        //    {
+        //        InstanceId = deploymentOperationId,
+        //        Input = deploymentOperationId,
+        //        Orchestration = new OrchestrationSetting()
+        //        {
+        //            Name = DeploymentOrchestration<T>.Name,
+        //            Version = apiVersion
+        //        }
+        //    });
+        //}
 
         /// <summary>
         /// get the resources provisioned in this deployment, not include the nest deployment
@@ -103,7 +141,7 @@ namespace maskx.ARMOrchestration
                     });
                 await db.ExecuteReaderAsync((reader, index) =>
                 {
-                    rs.Add(new DeploymentOperation()
+                    rs.Add(new DeploymentOperation(reader["Id"].ToString())
                     {
                         InstanceId = reader["InstanceId"].ToString(),
                         ExecutionId = reader["ExecutionId"].ToString(),
@@ -146,7 +184,7 @@ namespace maskx.ARMOrchestration
                     });
                 await db.ExecuteReaderAsync((reader, index) =>
                 {
-                    rs.Add(new DeploymentOperation()
+                    rs.Add(new DeploymentOperation(reader["Id"].ToString())
                     {
                         InstanceId = reader["InstanceId"].ToString(),
                         ExecutionId = reader["ExecutionId"].ToString(),
@@ -173,15 +211,15 @@ namespace maskx.ARMOrchestration
             return rs;
         }
 
-        public async Task<DeploymentOperation> GetDeploymentOperationAsync(string instanceId, string deploymentId)
+        public async Task<DeploymentOperation> GetDeploymentOperationAsync(string deploymentOperationId)
         {
             DeploymentOperation deployment = null;
             using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
-                db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where InstanceId=@InstanceId and DeploymentId=@DeploymentId", new { InstanceId = instanceId, DeploymentId = deploymentId });
+                db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>
                 {
-                    deployment = new DeploymentOperation()
+                    deployment = new DeploymentOperation(reader["Id"].ToString())
                     {
                         InstanceId = reader["InstanceId"].ToString(),
                         ExecutionId = reader["ExecutionId"].ToString(),
@@ -207,5 +245,6 @@ namespace maskx.ARMOrchestration
             }
             return deployment;
         }
+
     }
 }

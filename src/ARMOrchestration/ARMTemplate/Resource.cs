@@ -74,6 +74,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public Deployment Input { get; set; }
 
+        [DisplayName("$DeploymentOperationId")]
+        public string DeploymentOperationId { get; private set; }
+
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
         internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
@@ -82,6 +85,21 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
         }
 
+        public Resource(string rawString, Dictionary<string, object> fullContext, string deploymentOperationId, int index)
+        {
+            Deployment input = fullContext[ContextKeys.ARM_CONTEXT] as Deployment;
+            this.RawString = rawString;
+            this.Input = input;
+            this.ParentContext = new Dictionary<string, object>();
+            foreach (var item in fullContext)
+            {
+                if (item.Key == ContextKeys.ARM_CONTEXT) continue;
+                ParentContext.Add(item.Key, item.Value);
+            }
+            this.CopyIndex = index;
+            this.DeploymentOperationId = $"{deploymentOperationId}:{index}";
+            base.Change(this.DeploymentOperationId, "$DeploymentOperationId");
+        }
         public Resource(string rawString, Dictionary<string, object> fullContext, string parentName = null, string parentType = null)
         {
             Deployment input = fullContext[ContextKeys.ARM_CONTEXT] as Deployment;
@@ -94,6 +112,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (item.Key == ContextKeys.ARM_CONTEXT) continue;
                 ParentContext.Add(item.Key, item.Value);
+            }
+            if (this.RootElement.TryGetProperty("$DeploymentOperationId", out JsonElement operationId))
+            {
+                this.DeploymentOperationId = operationId.GetString();
+            }
+            else
+            {
+                this.DeploymentOperationId = Guid.NewGuid().ToString("N");
+                this.Change(this.DeploymentOperationId, "$DeploymentOperationId");
             }
         }
 
@@ -605,7 +632,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return _Resources;
             }
         }
-       
+
         internal (bool, string) Validate()
         {
             try
@@ -673,7 +700,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public override void Change(object value, string name)
         {
-            if(this.CopyIndex.HasValue)
+            if (this.CopyIndex.HasValue)
             {
                 this.Input.Template.ChangedCopyResoures.Add(this);
             }

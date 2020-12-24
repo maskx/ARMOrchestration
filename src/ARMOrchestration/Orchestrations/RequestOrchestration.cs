@@ -40,10 +40,8 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Info=ex
                         } }
                 };
-                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation()
+                templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                 {
-                    InstanceId = input.InstanceId,
-                    DeploymentId = input.DeploymentId,
                     Stage = (ProvisioningStage)(0 - input.ProvisioningStage),
                     Result = DataConverter.Serialize(response)
                 });
@@ -52,10 +50,9 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             await waitHandler.Task;
             var r = waitHandler.Task.Result;
-            templateHelper.SaveDeploymentOperation(new DeploymentOperation()
+            templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
             {
-                InstanceId = input.InstanceId,
-                DeploymentId = input.DeploymentId,
+
                 Stage = r.Code == 200 ? input.ProvisioningStage : (ProvisioningStage)(0 - input.ProvisioningStage),
                 Result = DataConverter.Serialize(waitHandler.Task.Result)
             });
