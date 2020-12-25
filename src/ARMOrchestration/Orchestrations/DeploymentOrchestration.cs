@@ -22,7 +22,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             get
             {
-                var r = helper.GetDeploymentById(_DeploymentOperationId).Result;
+                var r = helper.GetDeploymentAsync(_DeploymentOperationId).Result;
                 r.IsRuntime = true;
                 return r;
             }
@@ -74,8 +74,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.StartProvisioning,
-                        Input = DataConverter.Serialize(input)
+                        Stage = ProvisioningStage.StartProvisioning
                     });
                 }
             }
@@ -140,7 +139,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     foreach (var t in infrastructure.BeforeDeploymentOrchestration)
                     {
-                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
+                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, _DeploymentOperationId);
                         if (r.Code != 200)
                         {
                             helper.SafeSaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId)
@@ -299,7 +298,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     try
                     {
-                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, input.ResourceId);
+                        var r = await context.CreateSubOrchestrationInstance<TaskResult>(t.Name, t.Version, _DeploymentOperationId);
                         if (r.Code != 200)
                         {
                             helper.SafeSaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId)

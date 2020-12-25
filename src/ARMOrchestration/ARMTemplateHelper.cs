@@ -152,7 +152,7 @@ WHEN MATCHED THEN
                 templateLink.Uri = this._ARMFunctions.Evaluate(uri.GetString(), cxt).ToString();
             return templateLink;
         }
-        public async Task<T> GetInputByDeploymentOperationId<T>(string deploymentOperationId)
+        public async Task<T> GetInputAsync<T>(string deploymentOperationId)
         {
             T input = default;
             using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
@@ -166,20 +166,20 @@ WHEN MATCHED THEN
             }
             return input;
         }
-        public async Task<ResourceOrchestrationInput> GetResourceOrchestrationInput(string deploymentOperationId)
+        public async Task<ResourceOrchestrationInput> GetResourceOrchestrationInputAsync(string deploymentOperationId)
         {
-            ResourceOrchestrationInput input = await GetInputByDeploymentOperationId<ResourceOrchestrationInput>(deploymentOperationId);
+            ResourceOrchestrationInput input = await GetInputAsync<ResourceOrchestrationInput>(deploymentOperationId);
             input.ServiceProvider = this._ServiceProvider;
             return input;
         }
-        public async Task<Deployment> GetDeploymentById(string deploymentId)
+        public async Task<Deployment> GetDeploymentAsync(string deploymentId)
         {
             // deploymentId === deploymentOperationId when type=deployment
-            var deployment = await GetInputByDeploymentOperationId<Deployment>(deploymentId);
+            var deployment = await GetInputAsync<Deployment>(deploymentId);
             deployment.ServiceProvider = _ServiceProvider;
             return deployment;
         }
-        public async Task<ProvisioningStage> GetProvisioningStage(string deploymentOperationId)
+        public async Task<ProvisioningStage> GetProvisioningStageAsync(string deploymentOperationId)
         {
             ProvisioningStage stage = ProvisioningStage.Pending;
             using (var db = new SQLServerAccess(options.Database.ConnectionString))

@@ -34,7 +34,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (input.IsRetry)
                 {
-                    if (ProvisioningStage.Successed == templateHelper.GetProvisioningStage(input.DeploymentOperationId).Result)
+                    if (ProvisioningStage.Successed == templateHelper.GetProvisioningStageAsync(input.DeploymentOperationId).Result)
                         return new TaskResult(200, null);
                 }
                 templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)

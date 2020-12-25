@@ -1,6 +1,8 @@
 ﻿using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.ARMTemplate;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace maskx.ARMOrchestration
 {
@@ -48,6 +50,7 @@ namespace maskx.ARMOrchestration
                 this.LastRunUserId = deployment.LastRunUserId;
 
         }
+        [Key]
         public string Id { get; set; }
         /// <summary>
         /// Orchestration InstanceId
@@ -109,5 +112,7 @@ namespace maskx.ARMOrchestration
         /// the user Id of last run this deployment
         /// </summary>
         public string LastRunUserId { get; set; }
+        public DateTime CreatedTimeUtc { get; set; }
+        public DateTime UpdatedTimeUtc { get; set; }
     }
 }

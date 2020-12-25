@@ -227,7 +227,7 @@ namespace maskx.ARMOrchestration
                 if (string.IsNullOrEmpty(ParentId))
                     return null;
                 if (_Parent == null)
-                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentById(this.ParentId).Result;
+                    _Parent = this.ServiceProvider.GetService<ARMTemplateHelper>().GetDeploymentAsync(this.ParentId).Result;
                 _Parent.IsRuntime = IsRuntime;
                 return _Parent;
             }
