@@ -74,7 +74,7 @@ WHEN MATCHED THEN
                 // Eat up any exception
             }
         }
-        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, bool isRetry,string lastRunUserId)
+        public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, bool isRetry, string lastRunUserId)
             where T : CommunicationJob, new()
         {
             tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
@@ -82,13 +82,13 @@ WHEN MATCHED THEN
                                       "1.0",
                                       new ResourceOrchestrationInput()
                                       {
-                                          DeploymentOperationId=resource.DeploymentOperationId,
+                                          DeploymentOperationId = resource.DeploymentOperationId,
                                           DeploymentId = resource.Input.DeploymentId,
                                           NameWithServiceType = resource.NameWithServiceType,
                                           ServiceProvider = resource.ServiceProvider,
                                           CopyIndex = resource.CopyIndex ?? -1,
                                           IsRetry = isRetry,
-                                          LastRunUserId= lastRunUserId
+                                          LastRunUserId = lastRunUserId
                                       }));
             foreach (var child in resource.FlatEnumerateChild())
             {
@@ -97,13 +97,13 @@ WHEN MATCHED THEN
                                                      "1.0",
                                                      new ResourceOrchestrationInput()
                                                      {
-                                                         DeploymentOperationId=child.DeploymentOperationId,
+                                                         DeploymentOperationId = child.DeploymentOperationId,
                                                          DeploymentId = child.Input.DeploymentId,
                                                          NameWithServiceType = child.NameWithServiceType,
                                                          ServiceProvider = child.ServiceProvider,
                                                          CopyIndex = child.CopyIndex ?? -1,
                                                          IsRetry = isRetry,
-                                                         LastRunUserId=lastRunUserId
+                                                         LastRunUserId = lastRunUserId
                                                      }));
             }
         }
@@ -172,10 +172,9 @@ WHEN MATCHED THEN
             input.ServiceProvider = this._ServiceProvider;
             return input;
         }
-        public async Task<Deployment> GetDeploymentAsync(string deploymentId)
+        public async Task<Deployment> GetDeploymentAsync(string deploymentOperationId)
         {
-            // deploymentId === deploymentOperationId when type=deployment
-            var deployment = await GetInputAsync<Deployment>(deploymentId);
+            var deployment = await GetInputAsync<Deployment>(deploymentOperationId);
             deployment.ServiceProvider = _ServiceProvider;
             return deployment;
         }
@@ -192,21 +191,19 @@ WHEN MATCHED THEN
             }
             return stage;
         }
-        public bool PrepareRetry(string deploymentId, string instanceId, string newInstanceId, string userId, string input = null)
+        public bool PrepareRetry(string id, string newInstanceId, string newExecutionId, string userId, string input = null)
         {
             using var db = new SQLServerAccess(options.Database.ConnectionString);
-            db.AddStatement(@$"update {options.Database.DeploymentOperationsTableName}
-set InstanceId=@NewInstanceId,Stage=@Stage,LastRunUserId=@UserId,Input=isnull(@Input,Input)
-where InstanceId=@InstanceId and DeploymentId=@DeploymentId",
-new
-{
-InstanceId = instanceId,
-NewInstanceId = newInstanceId,
-DeploymentId = deploymentId,
-Input = input,
-UserId = userId,
-Stage = ProvisioningStage.StartProvisioning
-});
+            db.AddStatement(@$"update {options.Database.DeploymentOperationsTableName} set InstanceId=@InstanceId,ExecutionId=@ExecutionId,Stage=@Stage,LastRunUserId=@UserId,Input=isnull(@Input,Input) where Id=@Id",
+                new
+                {
+                    Id=id,
+                    InstanceId = newInstanceId,
+                    ExecutionId = newExecutionId,
+                    Input = input,
+                    UserId = userId,
+                    Stage = ProvisioningStage.StartProvisioning
+                });
             if (1 != db.ExecuteNonQueryAsync().Result)
                 return false;
             return true;

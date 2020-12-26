@@ -32,11 +32,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                 return new TaskResult(500, new ErrorResponse() { Code = "CopyOrchestration-Fail", Message = "input is not Copy resource" });
             if (!context.IsReplaying)
             {
-                //if (input.IsRetry)
-                //{
-                //    if (ProvisioningStage.Successed == helper.GetProvisioningStage(input.DeploymentOperationId).Result)
-                //        return new TaskResult(200, null);
-                //}
+                if (input.IsRetry)
+                {
+                    if (ProvisioningStage.Successed == helper.GetProvisioningStageAsync(input.DeploymentOperationId).Result)
+                        return new TaskResult(200, null);
+                }
                 helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId,input.Resource)
                 {
                     InstanceId = context.OrchestrationInstance.InstanceId,

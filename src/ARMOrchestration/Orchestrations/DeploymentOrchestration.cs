@@ -42,20 +42,21 @@ namespace maskx.ARMOrchestration.Orchestrations
         }
         protected async Task<TaskResult> InnerRunTask(OrchestrationContext context, string arg)
         {
-            _DeploymentOperationId = context.OrchestrationInstance.InstanceId;
-            if (!context.IsReplaying)
+            if (arg.StartsWith('{'))
             {
-                if (arg.StartsWith('{'))
+                ResourceOrchestrationInput res = DataConverter.Deserialize<ResourceOrchestrationInput>(arg);
+                res.ServiceProvider = this._ServiceProvider;
+                _DeploymentOperationId = res.DeploymentOperationId;
+                if (!context.IsReplaying)
                 {
-                    var res = DataConverter.Deserialize<ResourceOrchestrationInput>(arg);
-                    res.ServiceProvider = this._ServiceProvider;
                     var dep = Deployment.Parse(res.Resource);
                     var _ = dep.Template.Variables;
                     dep.DeploymentId = context.OrchestrationInstance.InstanceId;
                     dep.IsRetry = res.IsRetry;
                     if (res.IsRetry)
                     {
-                     //   helper.PrepareRetry(dep.DeploymentId, dep.InstanceId, context.OrchestrationInstance.InstanceId, res.LastRunUserId, DataConverter.Serialize(dep));
+
+                        helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
                     }
                     else
                     {
@@ -68,7 +69,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                         });
                     }
                 }
-                else
+            }
+            else
+            {
+                _DeploymentOperationId = arg;
+                if (!context.IsReplaying)
                 {
                     helper.SaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, input)
                     {
@@ -189,7 +194,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
                                      new WaitDependsOnActivityInput()
                                      {
-                                         DeploymentOperationId=_DeploymentOperationId,
+                                         DeploymentOperationId = _DeploymentOperationId,
                                          DependsOn = input.DependsOn.ToList(),
                                          DeploymentId = input.DeploymentId,
                                          RootId = input.RootId
@@ -251,7 +256,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         "1.0",
                         new ResourceOrchestrationInput()
                         {
-                            DeploymentOperationId=resource.DeploymentOperationId,
+                            DeploymentOperationId = resource.DeploymentOperationId,
                             DeploymentId = input.DeploymentId,
                             NameWithServiceType = resource.Copy.NameWithServiceType,
                             IsRetry = input.IsRetry,
@@ -265,7 +270,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         "1.0",
                         DataConverter.Serialize(new ResourceOrchestrationInput()
                         {
-                            DeploymentOperationId=resource.DeploymentOperationId,
+                            DeploymentOperationId = resource.DeploymentOperationId,
                             DeploymentId = resource.Input.DeploymentId,
                             NameWithServiceType = resource.NameWithServiceType,
                             ServiceProvider = resource.ServiceProvider,
@@ -276,7 +281,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    helper.ProvisioningResource<T>(resource, tasks, context, input.IsRetry,input.LastRunUserId);
+                    helper.ProvisioningResource<T>(resource, tasks, context, input.IsRetry, input.LastRunUserId);
                 }
             }
 

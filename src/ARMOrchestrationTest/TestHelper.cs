@@ -1,11 +1,14 @@
 ﻿using ARMOrchestrationTest.Mock;
 using DurableTask.Core;
 using DurableTask.Core.Serializing;
+using Dynamitey;
 using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -325,6 +328,13 @@ namespace ARMOrchestrationTest
                 }
             }
             return (instance, result);
+        }
+
+        public static async Task ChangeOperationStage(string id, ProvisioningStage stage=ProvisioningStage.Failed,string table= "ARM_DeploymentOperations")
+        {
+            using var db = new SQLServerAccess(ConnectionString);
+            db.AddStatement($"update {table} set Stage=@Stage where Id=@Id", new { Id = id, Stage = stage });
+            await db.ExecuteNonQueryAsync();
         }
     }
 }

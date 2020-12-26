@@ -102,28 +102,30 @@ namespace maskx.ARMOrchestration
         //        Input = input
         //    });
         //}
-        //public async Task RetryDeployment(string deploymentOperationId, string apiVersion, string userId)
-        //{
-        //    var op = await GetDeploymentOperationAsync(deploymentOperationId);
+        public async Task RetryDeployment(string deploymentOperationId, string apiVersion, string userId)
+        {
+            var op = await GetDeploymentOperationAsync(deploymentOperationId);
 
-        //    if (op.Stage == ProvisioningStage.Successed)
-        //        return;
-        //    var dep = _DataConverter.Deserialize<Deployment>(op.Input);
-        //    dep.IsRetry = true;
-        //    op.Input = _DataConverter.Serialize(dep);
-        //    op.LastRunUserId = userId;
-        //    _Helper.SaveDeploymentOperation(op);
-        //    await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
-        //    {
-        //        InstanceId = deploymentOperationId,
-        //        Input = deploymentOperationId,
-        //        Orchestration = new OrchestrationSetting()
-        //        {
-        //            Name = DeploymentOrchestration<T>.Name,
-        //            Version = apiVersion
-        //        }
-        //    });
-        //}
+            if (op.Stage == ProvisioningStage.Successed)
+                return;
+            var dep = _DataConverter.Deserialize<Deployment>(op.Input);
+            dep.ServiceProvider = this._ServiceProvider;
+            dep.IsRetry = true;
+            dep.LastRunUserId = userId;
+            op.Input = _DataConverter.Serialize(dep);
+            op.LastRunUserId = userId;
+            _Helper.SaveDeploymentOperation(op);
+            await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+            {
+                InstanceId = Guid.NewGuid().ToString("N"),
+                Input = deploymentOperationId,
+                Orchestration = new OrchestrationSetting()
+                {
+                    Name = DeploymentOrchestration<T>.Name,
+                    Version = apiVersion
+                }
+            });
+        }
 
         /// <summary>
         /// get the resources provisioned in this deployment, not include the nest deployment
