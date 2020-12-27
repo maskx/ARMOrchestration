@@ -87,21 +87,24 @@ namespace maskx.ARMOrchestration
             return deploymentOperation;
         }
 
-        //public async Task RetryResource(string deploymentOperationId, string apiVersion, string userId)
-        //{
-        //    var input = _Helper.GetResourceOrchestrationInput(deploymentOperationId).Result;
-        //    input.IsRetry = true;
-        //    input.LastRunUserId = userId;
-        //    await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
-        //    {
-        //        Orchestration = new OrchestrationSetting()
-        //        {
-        //            Name = ResourceOrchestration<T>.Name,
-        //            Version = apiVersion
-        //        },
-        //        Input = input
-        //    });
-        //}
+        public async Task RetryResource(string deploymentOperationId, string apiVersion, string userId)
+        {
+            var op = await GetDeploymentOperationAsync(deploymentOperationId);
+            if (op.Stage == ProvisioningStage.Successed)
+                return;
+            var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
+            input.IsRetry = true;
+            input.LastRunUserId = userId;
+            await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+            {
+                Orchestration = new OrchestrationSetting()
+                {
+                    Name = ResourceOrchestration<T>.Name,
+                    Version = apiVersion
+                },
+                Input = input
+            });
+        }
         public async Task RetryDeployment(string deploymentOperationId, string apiVersion, string userId)
         {
             var op = await GetDeploymentOperationAsync(deploymentOperationId);

@@ -25,22 +25,44 @@ namespace ARMOrchestrationTest
         [Fact(DisplayName = "RetryResource")]
         public async Task RetryResource()
         {
-            //var instance = TestHelper.OrchestrationTest(_Fixture,
-            //      "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
-            // await _Client.RetryResource("6234eb2914ba482a94a84ca63513e8dd", "1.0", "RetryUser1");
-            // wait resourceOrchestration update the stage
-            await Task.Delay(100000000);
-
+            var instance = TestHelper.OrchestrationTest(_Fixture,
+                  "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
             DeploymentOperation op;
+            string opId = string.Empty;
+            var rs = await _Client.GetAllResourceListAsync(instance.InstanceId);
+            foreach (var r in rs)
+            {
+                if (r.Name == "0storage")
+                    opId = r.Id;
+            }
+            #region not re-run
+            await _Client.RetryResource(opId, "1.0", "RetryUser1");
             do
             {
                 await Task.Delay(5000);
-                op = await _Client.GetDeploymentOperationAsync("1200ca5a8fe84d8888f4d75c7a03a7e3");
-                //if (op.Stage < 0)
-                //    break;
+                op = await _Client.GetDeploymentOperationAsync(opId);
+                if (op.Stage < 0)
+                    break;
+            } while (op.Stage != ProvisioningStage.Successed);
+            Assert.Equal(ProvisioningStage.Successed, op.Stage);
+            Assert.Equal(TestHelper.CreateByUserId, op.LastRunUserId);
+            #endregion
+
+            #region 
+            await TestHelper.ChangeOperationStage(opId);
+            await _Client.RetryResource(opId, "1.0", "RetryUser1");
+            do
+            {
+                await Task.Delay(5000);
+                op = await _Client.GetDeploymentOperationAsync(opId);
+                if (op.Stage < 0)
+                    break;
             } while (op.Stage != ProvisioningStage.Successed);
             Assert.Equal(ProvisioningStage.Successed, op.Stage);
             Assert.Equal("RetryUser1", op.LastRunUserId);
+            #endregion
+
+            await TestHelper.ChangeOperationStage(opId);
         }
         [Fact(DisplayName = "RetryDeployment")]
         public async Task RetryDeployment()
@@ -123,7 +145,7 @@ namespace ARMOrchestrationTest
             {
                 if (r.Type == $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}")
                     await TestHelper.ChangeOperationStage(r.Id);
-                else if(r.Name== "0storage")
+                else if (r.Name == "0storage")
                     await TestHelper.ChangeOperationStage(r.Id);
             }
 
