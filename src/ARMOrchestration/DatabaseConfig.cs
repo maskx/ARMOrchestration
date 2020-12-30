@@ -3,8 +3,9 @@
     public class DatabaseConfig
     {
         public bool AutoCreate { get; set; } = false;
-        internal const string WaitDependsOnTable = "_WaitDependsOn";
-        internal const string DeploymentOperationsTable = "_DeploymentOperations";
+        private const string WaitDependsOnTable = "WaitDependsOn";
+        internal const string DeploymentOperationsTable = "DeploymentOperations";
+        private const string DeploymentOperationHistoryTable = "DeploymentOperationHistory";
 
         public string ConnectionString { get; set; }
 
@@ -18,7 +19,9 @@
         /// </summary>
         public string SchemaName { get; set; } = "dbo";
 
-        public string WaitDependsOnTableName => $"[{SchemaName}].[{HubName}{WaitDependsOnTable}]";
-        public string DeploymentOperationsTableName => $"[{SchemaName}].[{HubName}{DeploymentOperationsTable}]";
+        public string WaitDependsOnTableName => $"[{SchemaName}].[{HubName}_{WaitDependsOnTable}]";
+        public string DeploymentOperationsTableName => $"[{SchemaName}].[{HubName}_{DeploymentOperationsTable}]";
+        public string DeploymentOperationHistoryTableName => $"[{SchemaName}].[{HubName}_{DeploymentOperationHistoryTable}]";
+        internal string RetrySPName => $"[{SchemaName}].[{HubName}_PrepareRetry]";
     }
 }

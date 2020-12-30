@@ -191,22 +191,20 @@ WHEN MATCHED THEN
             }
             return stage;
         }
-        public bool PrepareRetry(string id, string newInstanceId, string newExecutionId, string userId, string input = null)
+        public ProvisioningStage? PrepareRetry(string id, string newInstanceId, string newExecutionId, string lastRunUserId, string input = null)
         {
             using var db = new SQLServerAccess(options.Database.ConnectionString);
-            db.AddStatement(@$"update {options.Database.DeploymentOperationsTableName} set InstanceId=@InstanceId,ExecutionId=@ExecutionId,Stage=@Stage,LastRunUserId=@UserId,Input=isnull(@Input,Input) where Id=@Id",
-                new
-                {
-                    Id=id,
-                    InstanceId = newInstanceId,
-                    ExecutionId = newExecutionId,
-                    Input = input,
-                    UserId = userId,
-                    Stage = ProvisioningStage.StartProvisioning
-                });
-            if (1 != db.ExecuteNonQueryAsync().Result)
-                return false;
-            return true;
+            var r = db.ExecuteScalarAsync(options.Database.RetrySPName, new
+            {
+                Id = id,
+                NewInstanceId = newInstanceId,
+                NewExecutionId = newExecutionId,
+                LastRunUserId = lastRunUserId,
+                Input = input
+            }).Result;
+            if (r == null || r == DBNull.Value)
+                return null;
+            return (ProvisioningStage)(int)r;
         }
     }
 }

@@ -34,8 +34,11 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (input.IsRetry)
                 {
-                    if (ProvisioningStage.Successed == templateHelper.GetProvisioningStageAsync(input.DeploymentOperationId).Result)
+                    var r = templateHelper.PrepareRetry(input.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId, DataConverter.Serialize(input));
+                    if (r == null)
                         return new TaskResult(200, null);
+                    if (r.Value != ProvisioningStage.Failed)
+                        return new TaskResult(400, $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], cannot retry");
                 }
                 templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                 {
@@ -57,7 +60,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
                     new WaitDependsOnActivityInput()
                     {
-                        DeploymentOperationId=input.DeploymentOperationId,
+                        DeploymentOperationId = input.DeploymentOperationId,
                         DependsOn = input.Resource.DependsOn.ToList(),
                         DeploymentId = input.Deployment.DeploymentId,
                         RootId = input.Deployment.RootId

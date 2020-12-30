@@ -128,14 +128,15 @@ namespace maskx.ARMOrchestration.Workers
         public async Task CreateIfNotExistsAsync(bool recreate)
         {
             if (recreate) await DeleteARMOrchestrationTableAsync();
-            using var db = new DbAccess(options.Database.ConnectionString);
-            db.AddStatement($@"IF(SCHEMA_ID(@schema) IS NULL)
+            using (var db = new DbAccess(options.Database.ConnectionString))
+            {
+                db.AddStatement($@"IF(SCHEMA_ID('{options.Database.SchemaName}') IS NULL)
                     BEGIN
-                        EXEC sp_executesql N'CREATE SCHEMA [{options.Database.SchemaName}]'
-                    END", new { schema = options.Database.SchemaName });
+                       EXEC('CREATE SCHEMA [{options.Database.SchemaName}]')
+                    END");
 
-            db.AddStatement($@"
-IF(OBJECT_ID(@table) IS NULL)
+                db.AddStatement($@"
+IF(OBJECT_ID('{options.Database.WaitDependsOnTableName}') IS NULL)
 BEGIN
     CREATE TABLE {options.Database.WaitDependsOnTableName} (
         [RootId] [nvarchar](50) NOT NULL,
@@ -147,9 +148,9 @@ BEGIN
 	    [CompletedTime] [datetime2](7) NULL,
 	    [CreateTime] [datetime2](7) NULL
     )
-END", new { table = options.Database.WaitDependsOnTableName });
-            db.AddStatement($@"
-IF(OBJECT_ID(@table) IS NULL)
+END");
+                db.AddStatement($@"
+IF(OBJECT_ID('{options.Database.DeploymentOperationsTableName}') IS NULL)
 BEGIN
     create table {options.Database.DeploymentOperationsTableName}(
         [Id] [nvarchar](50) NOT NULL,
@@ -181,8 +182,66 @@ BEGIN
 	    [Id] ASC
     )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
     ) ON [PRIMARY]
-END", new { table = options.Database.DeploymentOperationsTableName });
-            await db.ExecuteNonQueryAsync();
+END");
+
+                db.AddStatement($@"
+IF(OBJECT_ID('{options.Database.DeploymentOperationHistoryTableName}') IS NULL)
+BEGIN
+    CREATE TABLE {options.Database.DeploymentOperationHistoryTableName}(
+	    [DeploymentOPerationId] [nvarchar](50) NOT NULL,
+	    [InstanceId] [nvarchar](50) NOT NULL,
+	    [ExecutionId] [nvarchar](50) NOT NULL,
+        [LastRunUserId] [nvarchar](50) NOT NULL,
+        [UpdateTimeUtc] [datetime2](7) NOT NULL,
+     CONSTRAINT [PK_DeploymentOperationHistory] PRIMARY KEY CLUSTERED 
+    (
+	    [DeploymentOPerationId] ASC,
+	    [InstanceId] ASC,
+	    [ExecutionId] ASC
+    )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+    ) ON [PRIMARY]
+END");
+
+                await db.ExecuteNonQueryAsync();
+            }
+#pragma warning disable IDE0063 // Use simple 'using' statement
+            using (var db2 = new DbAccess(options.Database.ConnectionString))
+#pragma warning restore IDE0063 // Use simple 'using' statement
+            {
+                db2.AddStatement($@"
+CREATE OR ALTER PROCEDURE {options.Database.RetrySPName} 
+	@Id nvarchar(50),
+	@NewInstanceId nvarchar(50),
+	@NewExecutionId nvarchar(50),
+	@LastRunUserId nvarchar(50),
+	@Input nvarchar(max) =null
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	declare @InstanceId nvarchar(50)=null
+	declare @ExecutionId nvarchar(50)=null
+    declare @UpdateTimeUtc [datetime2](7)
+    declare @RunUserId nvarchar(50)
+	declare @CurrentStage int
+	update {options.Database.DeploymentOperationsTableName}
+	set	InstanceId=@NewInstanceId,
+		ExecutionId=@NewExecutionId,
+		Stage={(int)ProvisioningStage.StartProvisioning},
+		LastRunUserId=@LastRunUserId,
+		Input=isnull(@Input,Input),
+		@InstanceId=InstanceId, 
+		@ExecutionId=ExecutionId,
+        @UpdateTimeUtc=UpdateTimeUtc,
+        @RunUserId=LastRunUserId,
+		@CurrentStage=Stage
+	where Id=@Id and Stage={(int)ProvisioningStage.Failed}
+	if @@ROWCOUNT=1	insert into {options.Database.DeploymentOperationHistoryTableName} values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
+	select @CurrentStage        
+END
+");
+                await db2.ExecuteNonQueryAsync();
+            }
         }
 
         private readonly string removeCommandString;

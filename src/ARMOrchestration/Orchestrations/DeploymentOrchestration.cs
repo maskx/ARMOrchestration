@@ -55,8 +55,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                     dep.IsRetry = res.IsRetry;
                     if (res.IsRetry)
                     {
-
-                        helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
+                        var r = helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
+                        if (r == null)
+                            return new TaskResult(200,null);
+                        if (r.Value != ProvisioningStage.Failed)
+                            return new TaskResult(400,$"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], cannot retry");
                     }
                     else
                     {
