@@ -36,6 +36,7 @@ namespace maskx.ARMOrchestration
         }
         private void BuildDeploymentInformation(string id, Deployment deployment)
         {
+            this.ApiVersion = deployment.ApiVersion;
             this.Id = id;
             this.GroupType = deployment.GroupType;
             this.GroupId = deployment.GroupId;
@@ -114,5 +115,6 @@ namespace maskx.ARMOrchestration
         public string LastRunUserId { get; set; }
         public DateTime CreatedTimeUtc { get; set; }
         public DateTime UpdatedTimeUtc { get; set; }
+        public string ApiVersion { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration.Activities;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.SQL;
@@ -20,13 +21,16 @@ namespace maskx.ARMOrchestration
         private readonly ARMOrchestrationOptions _Options;
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMTemplateHelper _Helper;
+        private readonly IInfrastructure _Infrastructure;
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
             IServiceProvider serviceProvider,
-            ARMTemplateHelper helper)
+            ARMTemplateHelper helper,
+            IInfrastructure infrastructure)
         {
             this._ServiceProvider = serviceProvider;
+            this._Infrastructure = infrastructure;
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
             this._Options = options?.Value;
             this._Helper = helper;
@@ -86,12 +90,35 @@ namespace maskx.ARMOrchestration
             deploymentOperation.ExecutionId = instance.ExecutionId;
             return deploymentOperation;
         }
-
-        public async Task RetryResource(string deploymentOperationId, string apiVersion, string userId)
+        public async Task Retry(string deploymentOperationId, string userId)
         {
             var op = await GetDeploymentOperationAsync(deploymentOperationId);
             if (op.Stage == ProvisioningStage.Successed)
                 return;
+            if (op.Type == _Infrastructure.BuiltinServiceTypes.Deployments)
+                await RetryDeployment(op, userId);
+            else if (op.Type == $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}")
+                await RetryCopy(op, userId);
+            else
+                await RetryResource(op, userId);
+        }
+        private async Task RetryCopy(DeploymentOperation op, string userId)
+        {
+            var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
+            input.IsRetry = true;
+            input.LastRunUserId = userId;
+            await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
+            {
+                Orchestration = new OrchestrationSetting()
+                {
+                    Name = CopyOrchestration<T>.Name,
+                    Version = op.ApiVersion
+                },
+                Input = input
+            });
+        }
+        private async Task RetryResource(DeploymentOperation op, string userId)
+        {
             var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
             input.IsRetry = true;
             input.LastRunUserId = userId;
@@ -100,17 +127,13 @@ namespace maskx.ARMOrchestration
                 Orchestration = new OrchestrationSetting()
                 {
                     Name = ResourceOrchestration<T>.Name,
-                    Version = apiVersion
+                    Version = op.ApiVersion
                 },
                 Input = input
             });
         }
-        public async Task RetryDeployment(string deploymentOperationId, string apiVersion, string userId)
+        private async Task RetryDeployment(DeploymentOperation op, string userId)
         {
-            var op = await GetDeploymentOperationAsync(deploymentOperationId);
-
-            if (op.Stage == ProvisioningStage.Successed)
-                return;
             var dep = _DataConverter.Deserialize<Deployment>(op.Input);
             dep.ServiceProvider = this._ServiceProvider;
             dep.IsRetry = true;
@@ -121,11 +144,11 @@ namespace maskx.ARMOrchestration
             await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = Guid.NewGuid().ToString("N"),
-                Input = deploymentOperationId,
+                Input = op.Id,
                 Orchestration = new OrchestrationSetting()
                 {
                     Name = DeploymentOrchestration<T>.Name,
-                    Version = apiVersion
+                    Version = op.ApiVersion
                 }
             });
         }
@@ -244,7 +267,8 @@ namespace maskx.ARMOrchestration
                         Input = reader["Input"].ToString(),
                         Result = reader["Result"]?.ToString(),
                         CreateByUserId = reader["CreateByUserId"].ToString(),
-                        LastRunUserId = reader["LastRunUserId"].ToString()
+                        LastRunUserId = reader["LastRunUserId"].ToString(),
+                        ApiVersion = reader["ApiVersion"].ToString()
                     };
                 });
             }
