@@ -3,9 +3,9 @@
     public class DatabaseConfig
     {
         public bool AutoCreate { get; set; } = false;
-        private const string WaitDependsOnTable = "WaitDependsOn";
+        internal const string WaitDependsOnTable = "WaitDependsOn";
         internal const string DeploymentOperationsTable = "DeploymentOperations";
-        private const string DeploymentOperationHistoryTable = "DeploymentOperationHistory";
+        internal const string DeploymentOperationHistoryTable = "DeploymentOperationHistory";
 
         public string ConnectionString { get; set; }
 

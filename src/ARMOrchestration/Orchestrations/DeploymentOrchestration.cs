@@ -18,13 +18,17 @@ namespace maskx.ARMOrchestration.Orchestrations
         protected readonly IInfrastructure infrastructure;
         protected readonly IServiceProvider _ServiceProvider;
         private string _DeploymentOperationId;
+        Deployment _Deployment;
         Deployment input
         {
             get
             {
-                var r = helper.GetDeploymentAsync(_DeploymentOperationId).Result;
-                r.IsRuntime = true;
-                return r;
+                if(_Deployment==null)
+                {
+                    _Deployment = helper.GetDeploymentAsync(_DeploymentOperationId).Result;
+                    _Deployment.IsRuntime = true;
+                }                
+                return _Deployment;
             }
         }
         public DeploymentOrchestration(
@@ -57,9 +61,11 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var r = helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
                         if (r == null)
-                            return new TaskResult(200,null);
-                        if (r.Value != ProvisioningStage.Failed)
-                            return new TaskResult(400,$"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], cannot retry");
+                            return new TaskResult(400,$"cannot find DeploymentOperation with Id:{res.DeploymentOperationId}");
+                        if (r.Value == ProvisioningStage.Successed)
+                            return new TaskResult(200, "");
+                        if (r.Value != ProvisioningStage.StartProvisioning)
+                            return new TaskResult(400,$"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry");
                     }
                     else
                     {
@@ -78,12 +84,25 @@ namespace maskx.ARMOrchestration.Orchestrations
                 _DeploymentOperationId = arg;
                 if (!context.IsReplaying)
                 {
-                    helper.SaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, input)
+                    if (input.IsRetry)
                     {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.StartProvisioning
-                    });
+                        var r = helper.PrepareRetry(_DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId);
+                        if (r == null)
+                            return new TaskResult(400, $"cannot find DeploymentOperation with Id:{_DeploymentOperationId}");
+                        if (r.Value == ProvisioningStage.Successed)
+                            return new TaskResult(200,"");
+                        if (r.Value != ProvisioningStage.StartProvisioning)
+                            return new TaskResult(400, $"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry");
+                    }
+                    else
+                    {
+                        helper.SaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, input)
+                        {
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.StartProvisioning
+                        });
+                    }
                 }
             }
 

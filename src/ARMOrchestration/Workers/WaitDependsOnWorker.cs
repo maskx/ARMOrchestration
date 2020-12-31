@@ -2,8 +2,8 @@
 using DurableTask.Core.Serializing;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Orchestrations;
-using maskx.DurableTask.SQLServer.SQL;
 using maskx.OrchestrationService;
+using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -50,7 +50,7 @@ namespace maskx.ARMOrchestration.Workers
         private async Task<List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>> GetResolvedDependsOn()
         {
             List<(string InstanceId, string ExecutionId, string EventName, int FailCount)> rtv = new List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>();
-            using (var db = new DbAccess(this.options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement(this.fetchCommandString);
                 await db.ExecuteReaderAsync((reader, index) =>
@@ -106,7 +106,7 @@ namespace maskx.ARMOrchestration.Workers
                                            eventName,
                                            dataConverter.Serialize(failCount > 0 ? new TaskResult(500, "One of dependsOn resources has failed") : new TaskResult(200, null))
                                            );
-            using var db = new DbAccess(this.options.Database.ConnectionString);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
             db.AddStatement(this.removeCommandString,
                new
                {
@@ -119,7 +119,7 @@ namespace maskx.ARMOrchestration.Workers
 
         public async Task DeleteARMOrchestrationTableAsync()
         {
-            using var db = new DbAccess(options.Database.ConnectionString);
+            using var db = new SQLServerAccess(options.Database.ConnectionString);
             db.AddStatement($"DROP TABLE IF EXISTS {options.Database.WaitDependsOnTableName}");
             db.AddStatement($"DROP TABLE IF EXISTS {options.Database.DeploymentOperationsTableName}");
             await db.ExecuteNonQueryAsync();
@@ -128,7 +128,7 @@ namespace maskx.ARMOrchestration.Workers
         public async Task CreateIfNotExistsAsync(bool recreate)
         {
             if (recreate) await DeleteARMOrchestrationTableAsync();
-            using (var db = new DbAccess(options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(options.Database.ConnectionString))
             {
                 db.AddStatement($@"IF(SCHEMA_ID('{options.Database.SchemaName}') IS NULL)
                     BEGIN
@@ -188,12 +188,12 @@ END");
 IF(OBJECT_ID('{options.Database.DeploymentOperationHistoryTableName}') IS NULL)
 BEGIN
     CREATE TABLE {options.Database.DeploymentOperationHistoryTableName}(
-	    [DeploymentOPerationId] [nvarchar](50) NOT NULL,
+	    [DeploymentOperationId] [nvarchar](50) NOT NULL,
 	    [InstanceId] [nvarchar](50) NOT NULL,
 	    [ExecutionId] [nvarchar](50) NOT NULL,
         [LastRunUserId] [nvarchar](50) NOT NULL,
         [UpdateTimeUtc] [datetime2](7) NOT NULL,
-     CONSTRAINT [PK_DeploymentOperationHistory] PRIMARY KEY CLUSTERED 
+     CONSTRAINT [PK_{options.Database.SchemaName}_{options.Database.HubName}_{DatabaseConfig.DeploymentOperationHistoryTable}] PRIMARY KEY CLUSTERED 
     (
 	    [DeploymentOPerationId] ASC,
 	    [InstanceId] ASC,
@@ -205,7 +205,7 @@ END");
                 await db.ExecuteNonQueryAsync();
             }
 #pragma warning disable IDE0063 // Use simple 'using' statement
-            using (var db2 = new DbAccess(options.Database.ConnectionString))
+            using (var db2 = new SQLServerAccess(options.Database.ConnectionString))
 #pragma warning restore IDE0063 // Use simple 'using' statement
             {
                 db2.AddStatement($@"
@@ -223,7 +223,7 @@ BEGIN
 	declare @ExecutionId nvarchar(50)=null
     declare @UpdateTimeUtc [datetime2](7)
     declare @RunUserId nvarchar(50)
-	declare @CurrentStage int
+	
 	update {options.Database.DeploymentOperationsTableName}
 	set	InstanceId=@NewInstanceId,
 		ExecutionId=@NewExecutionId,
@@ -233,11 +233,10 @@ BEGIN
 		@InstanceId=InstanceId, 
 		@ExecutionId=ExecutionId,
         @UpdateTimeUtc=UpdateTimeUtc,
-        @RunUserId=LastRunUserId,
-		@CurrentStage=Stage
+        @RunUserId=LastRunUserId
 	where Id=@Id and Stage={(int)ProvisioningStage.Failed}
-	if @@ROWCOUNT=1	insert into {options.Database.DeploymentOperationHistoryTableName} values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
-	select @CurrentStage        
+	if @@ROWCOUNT=1	  insert into {options.Database.DeploymentOperationHistoryTableName} values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
+    select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id
 END
 ");
                 await db2.ExecuteNonQueryAsync();

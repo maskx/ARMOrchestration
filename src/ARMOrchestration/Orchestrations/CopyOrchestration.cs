@@ -36,18 +36,23 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var r = helper.PrepareRetry(input.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId, DataConverter.Serialize(input));
                     if (r == null)
-                        return new TaskResult(200, null);
-                    if (r.Value != ProvisioningStage.Failed)
+                        return new TaskResult(400, $"cannot find DeploymentOperation with Id:{input.DeploymentOperationId}");
+                    if (r.Value == ProvisioningStage.Successed)
+                        return new TaskResult(200, "");
+                    if (r.Value != ProvisioningStage.StartProvisioning)
                         return new TaskResult(400, $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], cannot retry");
                 }
-                helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId,input.Resource)
+                else
                 {
-                    InstanceId = context.OrchestrationInstance.InstanceId,
-                    ExecutionId = context.OrchestrationInstance.ExecutionId,
-                    Stage = ProvisioningStage.StartProvisioning,
-                    Input = DataConverter.Serialize(input),
-                    LastRunUserId=input.LastRunUserId
-                });
+                    helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                    {
+                        InstanceId = context.OrchestrationInstance.InstanceId,
+                        ExecutionId = context.OrchestrationInstance.ExecutionId,
+                        Stage = ProvisioningStage.StartProvisioning,
+                        Input = DataConverter.Serialize(input),
+                        LastRunUserId = input.LastRunUserId
+                    });
+                }               
             }
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
             List<ErrorResponse> errorResponses = new List<ErrorResponse>();
