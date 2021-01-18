@@ -812,7 +812,9 @@ namespace maskx.ARMOrchestration.Functions
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 // reference 'ResourceProvider/ServiceType/ResourceName' will create a implicit dependency
-                if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
+                if (!(resourceName.StartsWith("/"+infrastructure.BuiltinPathSegment.ManagementGroup)
+                        || resourceName.StartsWith("/"+infrastructure.BuiltinPathSegment.Subscription)
+                        || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
                         || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
                         || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
                 {

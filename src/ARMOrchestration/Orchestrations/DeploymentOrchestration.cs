@@ -42,10 +42,6 @@ namespace maskx.ARMOrchestration.Orchestrations
         }
         public override async Task<TaskResult> RunTask(OrchestrationContext context, string arg)
         {
-            return await InnerRunTask(context, arg);
-        }
-        protected async Task<TaskResult> InnerRunTask(OrchestrationContext context, string arg)
-        {
             if (arg.StartsWith('{'))
             {
                 ResourceOrchestrationInput res = DataConverter.Deserialize<ResourceOrchestrationInput>(arg);

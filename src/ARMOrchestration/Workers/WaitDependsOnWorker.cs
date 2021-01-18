@@ -19,13 +19,16 @@ namespace maskx.ARMOrchestration.Workers
         private readonly ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
         private readonly DataConverter dataConverter = new JsonDataConverter();
+        private readonly IInfrastructure _Infrastructure;
 
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
             IOptions<ARMOrchestrationOptions> options,
-            OrchestrationWorker orchestrationWorker)
+            OrchestrationWorker orchestrationWorker,
+            IInfrastructure infrastructure)
         {
             this.options = options?.Value;
+            this._Infrastructure = infrastructure;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
             this.fetchCommandString = string.Format(fetchCommandTemplate,
                 this.options.Database.WaitDependsOnTableName,
@@ -223,7 +226,9 @@ BEGIN
 	declare @ExecutionId nvarchar(50)=null
     declare @UpdateTimeUtc [datetime2](7)
     declare @RunUserId nvarchar(50)
-	
+	declare @Type nvarchar(50)
+	declare @DeploymentId nvarchar(50)
+
 	update {options.Database.DeploymentOperationsTableName}
 	set	InstanceId=@NewInstanceId,
 		ExecutionId=@NewExecutionId,
@@ -233,10 +238,21 @@ BEGIN
 		@InstanceId=InstanceId, 
 		@ExecutionId=ExecutionId,
         @UpdateTimeUtc=UpdateTimeUtc,
-        @RunUserId=LastRunUserId
-	where Id=@Id and Stage={(int)ProvisioningStage.Failed}
-	if @@ROWCOUNT=1	  insert into {options.Database.DeploymentOperationHistoryTableName} values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
-    select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id
+        @RunUserId=LastRunUserId,
+        @Type=[Type],
+		@DeploymentId=DeploymentId
+	where Id=@Id and (Stage={(int)ProvisioningStage.Failed} or Stage={(int)ProvisioningStage.Pending})
+	if @@ROWCOUNT=1
+    BEGIN
+        insert into {options.Database.DeploymentOperationHistoryTableName} values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
+        if @Type=N'{_Infrastructure.BuiltinServiceTypes.Deployments}'
+		begin
+			update {options.Database.DeploymentOperationsTableName} 
+			set Stage={(int)ProvisioningStage.Pending}
+			where  DeploymentId=@DeploymentId and Stage={(int)ProvisioningStage.Failed}
+		end
+    END
+select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id
 END
 ");
                 await db2.ExecuteNonQueryAsync();
