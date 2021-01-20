@@ -6,6 +6,7 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -20,13 +21,16 @@ namespace maskx.ARMOrchestration.Workers
         private readonly TaskHubClient taskHubClient;
         private readonly DataConverter dataConverter = new JsonDataConverter();
         private readonly IInfrastructure _Infrastructure;
+        private readonly ILoggerFactory _LoggerFactory;
 
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
             IOptions<ARMOrchestrationOptions> options,
             OrchestrationWorker orchestrationWorker,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            ILoggerFactory loggerFactory)
         {
+            this._LoggerFactory = loggerFactory;
             this.options = options?.Value;
             this._Infrastructure = infrastructure;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
@@ -53,7 +57,7 @@ namespace maskx.ARMOrchestration.Workers
         private async Task<List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>> GetResolvedDependsOn()
         {
             List<(string InstanceId, string ExecutionId, string EventName, int FailCount)> rtv = new List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>();
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement(this.fetchCommandString);
                 await db.ExecuteReaderAsync((reader, index) =>
@@ -85,9 +89,7 @@ namespace maskx.ARMOrchestration.Workers
                 }
                 catch (Exception ex)
                 {
-                    var d = ex;
-                    //todo: make sure loop does not stop by any exception 
-                    //logging
+                    _LoggerFactory.CreateLogger<WaitDependsOnWorker<T>>().LogError($"WaitDependsOnWorker execute error:{ex.Message};{ex.StackTrace}");
                 }
             }
         }
@@ -109,7 +111,7 @@ namespace maskx.ARMOrchestration.Workers
                                            eventName,
                                            dataConverter.Serialize(failCount > 0 ? new TaskResult(500, "One of dependsOn resources has failed") : new TaskResult(200, null))
                                            );
-            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString,_LoggerFactory);
             db.AddStatement(this.removeCommandString,
                new
                {
@@ -122,7 +124,7 @@ namespace maskx.ARMOrchestration.Workers
 
         public async Task DeleteARMOrchestrationTableAsync()
         {
-            using var db = new SQLServerAccess(options.Database.ConnectionString);
+            using var db = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory);
             db.AddStatement($"DROP TABLE IF EXISTS {options.Database.WaitDependsOnTableName}");
             db.AddStatement($"DROP TABLE IF EXISTS {options.Database.DeploymentOperationsTableName}");
             await db.ExecuteNonQueryAsync();
@@ -131,7 +133,7 @@ namespace maskx.ARMOrchestration.Workers
         public async Task CreateIfNotExistsAsync(bool recreate)
         {
             if (recreate) await DeleteARMOrchestrationTableAsync();
-            using (var db = new SQLServerAccess(options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement($@"IF(SCHEMA_ID('{options.Database.SchemaName}') IS NULL)
                     BEGIN
@@ -208,7 +210,7 @@ END");
                 await db.ExecuteNonQueryAsync();
             }
 #pragma warning disable IDE0063 // Use simple 'using' statement
-            using (var db2 = new SQLServerAccess(options.Database.ConnectionString))
+            using (var db2 = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory))
 #pragma warning restore IDE0063 // Use simple 'using' statement
             {
                 db2.AddStatement($@"
@@ -227,7 +229,7 @@ BEGIN
     declare @UpdateTimeUtc [datetime2](7)
     declare @RunUserId nvarchar(50)
 	declare @Type nvarchar(50)
-	declare @DeploymentId nvarchar(50)
+	declare @ParentResourceId nvarchar(1024)
 
 	update {options.Database.DeploymentOperationsTableName}
 	set	InstanceId=@NewInstanceId,
@@ -240,7 +242,7 @@ BEGIN
         @UpdateTimeUtc=UpdateTimeUtc,
         @RunUserId=LastRunUserId,
         @Type=[Type],
-		@DeploymentId=DeploymentId
+		@ParentResourceId=ParentResourceId
 	where Id=@Id and (Stage={(int)ProvisioningStage.Failed} or Stage={(int)ProvisioningStage.Pending})
 	if @@ROWCOUNT=1
     BEGIN
@@ -249,7 +251,7 @@ BEGIN
 		begin
 			update {options.Database.DeploymentOperationsTableName} 
 			set Stage={(int)ProvisioningStage.Pending}
-			where  DeploymentId=@DeploymentId and Stage={(int)ProvisioningStage.Failed}
+			where  [ParentResourceId]=@ParentResourceId and Stage={(int)ProvisioningStage.Failed}
 		end
     END
 select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id

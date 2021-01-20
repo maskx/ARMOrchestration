@@ -5,6 +5,7 @@ using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -22,13 +23,16 @@ namespace maskx.ARMOrchestration
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMTemplateHelper _Helper;
         private readonly IInfrastructure _Infrastructure;
+        private readonly ILoggerFactory _LoggerFactory;
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
             IServiceProvider serviceProvider,
             ARMTemplateHelper helper,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            ILoggerFactory loggerFactory)
         {
+            this._LoggerFactory = loggerFactory;
             this._ServiceProvider = serviceProvider;
             this._Infrastructure = infrastructure;
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
@@ -161,7 +165,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement(this._GetResourceListCommandString,
                     new Dictionary<string, object>() {
@@ -204,7 +208,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetAllResourceListAsync(string rootId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement(this._GetAllResourceListCommandString,
                     new Dictionary<string, object>() {
@@ -242,7 +246,7 @@ namespace maskx.ARMOrchestration
         public async Task<DeploymentOperation> GetDeploymentOperationAsync(string deploymentOperationId)
         {
             DeploymentOperation deployment = null;
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>

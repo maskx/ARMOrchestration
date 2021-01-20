@@ -8,6 +8,7 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -24,11 +25,14 @@ namespace maskx.ARMOrchestration
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMFunctions _ARMFunctions;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
+        private readonly ILoggerFactory _LoggerFactory;
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions aRMFunctions,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            ILoggerFactory loggerFactory)
         {
+            this._LoggerFactory = loggerFactory;
             this._ServiceProvider = serviceProvider;
             this.options = options?.Value;
             this._ARMFunctions = aRMFunctions;
@@ -58,7 +62,7 @@ WHEN MATCHED THEN
                 deploymentOperation.Input,
                 deploymentOperation.Stage.ToString());
 
-            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString,_LoggerFactory);
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             db.ExecuteNonQueryAsync().Wait();
         }
@@ -155,7 +159,7 @@ WHEN MATCHED THEN
         public async Task<T> GetInputAsync<T>(string deploymentOperationId)
         {
             T input = default;
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where Id=@Id",
                     new { Id = deploymentOperationId });
@@ -181,7 +185,7 @@ WHEN MATCHED THEN
         public async Task<ProvisioningStage> GetProvisioningStageAsync(string deploymentOperationId)
         {
             ProvisioningStage stage = ProvisioningStage.Pending;
-            using (var db = new SQLServerAccess(options.Database.ConnectionString))
+            using (var db = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory))
             {
                 db.AddStatement($"select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>
@@ -193,7 +197,7 @@ WHEN MATCHED THEN
         }
         public ProvisioningStage? PrepareRetry(string id, string newInstanceId, string newExecutionId, string lastRunUserId, string input = null)
         {
-            using var db = new SQLServerAccess(options.Database.ConnectionString);
+            using var db = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory);
             var r = db.ExecuteScalarAsync(options.Database.RetrySPName, new
             {
                 Id = id,

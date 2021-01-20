@@ -18,8 +18,8 @@ namespace maskx.ARMOrchestration
     [JsonObject(MemberSerialization.OptOut)]
     public class Deployment
     {
-        // TODO: support retry
-        public bool IsRetry;
+        public bool IsRetry { get; set; }
+        public bool Condition { get; set; }
         public (bool, string) Validate(IServiceProvider service = null)
         {
             if (service != null)
@@ -146,8 +146,9 @@ namespace maskx.ARMOrchestration
             }
             var (groupId, groupType, hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
             context.Remove(ContextKeys.ARM_CONTEXT);
-            var deployInput = new Deployment()
+            return new Deployment()
             {
+                Condition = resource.Condition,
                 RootId = deploymentContext.RootId,
                 ParentId = deploymentContext.DeploymentId,
                 _Parent = deploymentContext,
@@ -174,8 +175,6 @@ namespace maskx.ARMOrchestration
                 ServiceProvider = resource.ServiceProvider,
                 ExpressionEvaluationOptions = expressionEvaluationOptions
             };
-
-            return deployInput;
         }
 
         private IServiceProvider _ServiceProvider;

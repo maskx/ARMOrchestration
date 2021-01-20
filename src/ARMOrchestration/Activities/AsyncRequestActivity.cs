@@ -1,6 +1,7 @@
 ﻿using DurableTask.Core;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Threading.Tasks;
 
@@ -15,11 +16,12 @@ namespace maskx.ARMOrchestration.Activities
 
         public AsyncRequestActivity(IOptions<CommunicationWorkerOptions> options,
             ARMTemplateHelper templateHelper,
-            IInfrastructure infrastructure)
+            IInfrastructure infrastructure,
+            ILoggerFactory loggerFactory)
         {
             this.infrastructure = infrastructure;
             this.templateHelper = templateHelper;
-            asyncRequestActivity = new OrchestrationService.Activity.AsyncRequestActivity<T>(options);
+            asyncRequestActivity = new OrchestrationService.Activity.AsyncRequestActivity<T>(options,loggerFactory);
         }
 
         protected override async Task<TaskResult> ExecuteAsync(TaskContext context, AsyncRequestActivityInput input)
