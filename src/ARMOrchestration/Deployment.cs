@@ -336,8 +336,8 @@ namespace maskx.ARMOrchestration
 
                     foreach (var item in r.Copy.EnumerateResource())
                     {
-                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) return r; }
-                        else if (item.FullName.EndsWith(name)) return r;
+                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) return item; }
+                        else if (item.FullName.EndsWith(name)) return item;
                     }
                 }
                 else
@@ -347,8 +347,8 @@ namespace maskx.ARMOrchestration
                 }
                 foreach (var child in r.FlatEnumerateChild())
                 {
-                    if (withServiceType) { if (child.ResourceId.EndsWith(name)) return r; }
-                    else if (child.FullName.EndsWith(name)) return r;
+                    if (withServiceType) { if (child.ResourceId.EndsWith(name)) return child; }
+                    else if (child.FullName.EndsWith(name)) return child;
                 }
             }
             if (includeNestDeployment)
@@ -375,8 +375,8 @@ namespace maskx.ARMOrchestration
 
                     foreach (var item in r.Copy.EnumerateResource())
                     {
-                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) resources.Add(r); }
-                        else if (item.FullName.EndsWith(name)) resources.Add(r);
+                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) resources.Add(item); }
+                        else if (item.FullName.EndsWith(name)) resources.Add(item);
                     }
                 }
                 else

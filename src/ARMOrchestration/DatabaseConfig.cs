@@ -23,5 +23,6 @@
         public string DeploymentOperationsTableName => $"[{SchemaName}].[{HubName}_{DeploymentOperationsTable}]";
         public string DeploymentOperationHistoryTableName => $"[{SchemaName}].[{HubName}_{DeploymentOperationHistoryTable}]";
         internal string RetrySPName => $"[{SchemaName}].[{HubName}_PrepareRetry]";
+        internal string CreateDeploymentOperationSPName=> $"[{SchemaName}].[{HubName}_CreateDeploymentOperation]";
     }
 }

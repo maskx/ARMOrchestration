@@ -73,14 +73,13 @@ namespace maskx.ARMOrchestration
             if (args.ServiceProvider == null) args.ServiceProvider = _ServiceProvider;
             // todo: 提前展开 Variables和Parameters
             var _ = args.Template.Variables;
-            var deploymentOperation = new DeploymentOperation(args.DeploymentId, args)
+            var deploymentOperation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(args.DeploymentId, args)
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
                 InstanceId = args.DeploymentId,
                 Stage = ProvisioningStage.Pending,
                 Input = _DataConverter.Serialize(args)
-            };
-            this._Helper.SaveDeploymentOperation(deploymentOperation);
+            });
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
@@ -165,7 +164,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString,_LoggerFactory))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
             {
                 db.AddStatement(this._GetResourceListCommandString,
                     new Dictionary<string, object>() {
@@ -193,7 +192,11 @@ namespace maskx.ARMOrchestration
                         Input = reader["Input"].ToString(),
                         Result = reader["Result"]?.ToString(),
                         CreateByUserId = reader["CreateByUserId"].ToString(),
-                        LastRunUserId = reader["LastRunUserId"].ToString()
+                        LastRunUserId = reader["LastRunUserId"].ToString(),
+                        CreateTimeUtc = (DateTime)reader["CreateTimeUtc"],
+                        UpdateTimeUtc = (DateTime)reader["UpdateTimeUtc"],
+                        ApiVersion = reader["ApiVersion"].ToString(),
+                        Comments = reader["Comments"].ToString()
                     });
                 });
             }
@@ -208,7 +211,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetAllResourceListAsync(string rootId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString,_LoggerFactory))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
             {
                 db.AddStatement(this._GetAllResourceListCommandString,
                     new Dictionary<string, object>() {
@@ -246,7 +249,7 @@ namespace maskx.ARMOrchestration
         public async Task<DeploymentOperation> GetDeploymentOperationAsync(string deploymentOperationId)
         {
             DeploymentOperation deployment = null;
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString,_LoggerFactory))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
             {
                 db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>

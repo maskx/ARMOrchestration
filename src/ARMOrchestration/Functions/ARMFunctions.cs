@@ -837,11 +837,13 @@ namespace maskx.ARMOrchestration.Functions
                 else
                 {
                     string id = resourceName;
-                    if (!(resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
-                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
-                    || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
+                    if (!(resourceName.StartsWith("/" + infrastructure.BuiltinPathSegment.ManagementGroup)
+                        || resourceName.StartsWith("/" + infrastructure.BuiltinPathSegment.Subscription)
+                        || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
+                        || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
+                        || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
                     {
-                        id = context.Template.Resources[resourceName].ResourceId;
+                        id = context.GetFirstResource(resourceName).ResourceId;
                     }
                     var taskResult = this.infrastructure.Reference(context, id, apiVersion, full);
                     if (taskResult.Code == 200)

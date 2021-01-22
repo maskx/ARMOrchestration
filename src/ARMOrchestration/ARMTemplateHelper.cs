@@ -26,30 +26,85 @@ namespace maskx.ARMOrchestration
         private readonly ARMFunctions _ARMFunctions;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
         private readonly ILoggerFactory _LoggerFactory;
+        private readonly IInfrastructure _Infrastructure;
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions aRMFunctions,
             IServiceProvider serviceProvider,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            IInfrastructure infrastructure)
         {
+            this._Infrastructure = infrastructure;
             this._LoggerFactory = loggerFactory;
             this._ServiceProvider = serviceProvider;
             this.options = options?.Value;
             this._ARMFunctions = aRMFunctions;
-            this._saveDeploymentOperationCommandString = string.Format(@"
-MERGE {0} with (serializable) [Target]
-USING (VALUES (@Id)) as [Source](Id)
-ON [Target].Id = [Source].Id
-WHEN NOT MATCHED THEN
-	INSERT
-	([ApiVersion],[Id],[InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Result],[Comments],[CreateByUserId],[LastRunUserId])
-	VALUES
-	(@ApiVersion,@Id,@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,cast(@Input AS NVARCHAR(MAX)),@Result,@Comments,@CreateByUserId,@LastRunUserId)
-WHEN MATCHED THEN
-	UPDATE SET [InstanceId]=isnull(@InstanceId,InstanceId),[ExecutionId]=isnull(@ExecutionId,ExecutionId),[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input]);
-", this.options.Database.DeploymentOperationsTableName);
+            this._saveDeploymentOperationCommandString = string.Format(
+                @"UPDATE {0} 
+SET [InstanceId]=isnull(@InstanceId,InstanceId),[ExecutionId]=isnull(@ExecutionId,ExecutionId),[Stage]=@Stage,[UpdateTimeUtc]=GETUTCDATE(),[Result]=isnull(cast(@Result AS NVARCHAR(MAX)),[Result]),[Comments]=isnull(@Comments,Comments),[LastRunUserId]=isnull(@LastRunUserId,LastRunUserId),[Input]=isnull(cast(@Input AS NVARCHAR(MAX)),[Input])
+where Id=@Id
+;"
+                , this.options.Database.DeploymentOperationsTableName);
         }
-
+        public async Task<DeploymentOperation> CreatDeploymentOperation(DeploymentOperation deploymentOperation)
+        {
+            DeploymentOperation rtv = null;
+            using var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory);
+            await db.ExecuteStoredProcedureASync(options.Database.CreateDeploymentOperationSPName,
+                (reader, index) =>
+                {
+                    rtv = new DeploymentOperation(reader["Id"].ToString())
+                    {
+                        InstanceId = reader["InstanceId"].ToString(),
+                        ExecutionId = reader["ExecutionId"].ToString(),
+                        GroupId = reader["GroupId"].ToString(),
+                        GroupType = reader["GroupType"].ToString(),
+                        HierarchyId = reader["HierarchyId"].ToString(),
+                        RootId = reader["RootId"].ToString(),
+                        DeploymentId = reader["DeploymentId"].ToString(),
+                        CorrelationId = reader["CorrelationId"].ToString(),
+                        ResourceId = reader["ResourceId"].ToString(),
+                        Name = reader["Name"].ToString(),
+                        Type = reader["Type"].ToString(),
+                        Stage = (ProvisioningStage)(int)reader["Stage"],
+                        SubscriptionId = reader["SubscriptionId"]?.ToString(),
+                        ManagementGroupId = reader["ManagementGroupId"].ToString(),
+                        ParentResourceId = reader["ParentResourceId"]?.ToString(),
+                        Input = reader["Input"].ToString(),
+                        Result = reader["Result"]?.ToString(),
+                        CreateByUserId = reader["CreateByUserId"].ToString(),
+                        LastRunUserId = reader["LastRunUserId"].ToString(),
+                        CreateTimeUtc = (DateTime)reader["CreateTimeUtc"],
+                        UpdateTimeUtc = (DateTime)reader["UpdateTimeUtc"],
+                        ApiVersion = reader["ApiVersion"].ToString(),
+                        Comments = reader["Comments"].ToString()
+                    };
+                },
+                new
+                {
+                    deploymentOperation.Id,
+                    deploymentOperation.DeploymentId,
+                    deploymentOperation.InstanceId,
+                    deploymentOperation.RootId,
+                    deploymentOperation.CorrelationId,
+                    deploymentOperation.GroupId,
+                    deploymentOperation.GroupType,
+                    deploymentOperation.HierarchyId,
+                    deploymentOperation.ResourceId,
+                    deploymentOperation.Name,
+                    deploymentOperation.Type,
+                    deploymentOperation.CreateByUserId,
+                    deploymentOperation.ApiVersion,
+                    deploymentOperation.ExecutionId,
+                    deploymentOperation.Comments,
+                    deploymentOperation.SubscriptionId,
+                    deploymentOperation.ManagementGroupId,
+                    deploymentOperation.ParentResourceId,
+                    deploymentOperation.Input,
+                    deploymentOperation.Stage
+                });
+            return rtv;
+        }
         // TODO: when this is a async task, in orchestration await this will make orchestration cannot be completed, need investigation
         public void SaveDeploymentOperation(DeploymentOperation deploymentOperation)
         {
@@ -62,9 +117,12 @@ WHEN MATCHED THEN
                 deploymentOperation.Input,
                 deploymentOperation.Stage.ToString());
 
-            using var db = new SQLServerAccess(this.options.Database.ConnectionString,_LoggerFactory);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory);
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
-            db.ExecuteNonQueryAsync().Wait();
+            if (db.ExecuteNonQueryAsync().Result != 1)
+            {
+                throw new Exception($"cannot find DeploymentOperation with Id[{deploymentOperation.Id}]");
+            }
         }
         public void SafeSaveDeploymentOperation(DeploymentOperation deploymentOperation)
         {
@@ -107,6 +165,7 @@ WHEN MATCHED THEN
                                                          ServiceProvider = child.ServiceProvider,
                                                          CopyIndex = child.CopyIndex ?? -1,
                                                          IsRetry = isRetry,
+                                                         CreateByUserId=
                                                          LastRunUserId = lastRunUserId
                                                      }));
             }
@@ -159,7 +218,7 @@ WHEN MATCHED THEN
         public async Task<T> GetInputAsync<T>(string deploymentOperationId)
         {
             T input = default;
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString,_LoggerFactory))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory))
             {
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where Id=@Id",
                     new { Id = deploymentOperationId });
@@ -170,22 +229,25 @@ WHEN MATCHED THEN
             }
             return input;
         }
-        public async Task<ResourceOrchestrationInput> GetResourceOrchestrationInputAsync(string deploymentOperationId)
+        public async Task<Deployment> GetDeploymentAsync(string deploymentId)
         {
-            ResourceOrchestrationInput input = await GetInputAsync<ResourceOrchestrationInput>(deploymentOperationId);
-            input.ServiceProvider = this._ServiceProvider;
+            Deployment input = null;
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory))
+            {
+                db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and [Type]=N'{_Infrastructure.BuiltinServiceTypes.Deployments}'",
+                    new { DeploymentId = deploymentId });
+                await db.ExecuteReaderAsync((reader, index) =>
+                {
+                    input = _DataConverter.Deserialize<Deployment>(reader.GetString(0));
+                    input.ServiceProvider = _ServiceProvider;
+                });
+            }
             return input;
-        }
-        public async Task<Deployment> GetDeploymentAsync(string deploymentOperationId)
-        {
-            var deployment = await GetInputAsync<Deployment>(deploymentOperationId);
-            deployment.ServiceProvider = _ServiceProvider;
-            return deployment;
         }
         public async Task<ProvisioningStage> GetProvisioningStageAsync(string deploymentOperationId)
         {
             ProvisioningStage stage = ProvisioningStage.Pending;
-            using (var db = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory))
+            using (var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory))
             {
                 db.AddStatement($"select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>
@@ -197,7 +259,7 @@ WHEN MATCHED THEN
         }
         public ProvisioningStage? PrepareRetry(string id, string newInstanceId, string newExecutionId, string lastRunUserId, string input = null)
         {
-            using var db = new SQLServerAccess(options.Database.ConnectionString,_LoggerFactory);
+            using var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory);
             var r = db.ExecuteScalarAsync(options.Database.RetrySPName, new
             {
                 Id = id,

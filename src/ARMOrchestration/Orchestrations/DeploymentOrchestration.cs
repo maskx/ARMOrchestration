@@ -25,7 +25,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if(_Deployment==null)
                 {
-                    _Deployment = helper.GetDeploymentAsync(_DeploymentOperationId).Result;
+                    _Deployment = helper.GetInputAsync<Deployment>(_DeploymentOperationId).Result;
+                    _Deployment.ServiceProvider = _ServiceProvider;
                     _Deployment.IsRuntime = true;
                 }                
                 return _Deployment;
@@ -65,13 +66,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                     else
                     {
-                        helper.SaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
+                        helper.CreatDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.StartProvisioning,
                             Input = DataConverter.Serialize(dep)
-                        });
+                        }).Wait();
                     }
                 }
             }

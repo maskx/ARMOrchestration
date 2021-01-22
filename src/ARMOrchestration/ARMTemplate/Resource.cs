@@ -134,7 +134,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (!_Condition.HasValue)
                 {
                     _Condition = true;
-                    if (RootElement.TryGetProperty("condition", out JsonElement condition))
+                    if (!string.IsNullOrEmpty(_ParentName))
+                    {
+                        var r = Input.GetFirstResource(_ParentName);
+                        _Condition = r.Condition;
+                    }
+                    else if (RootElement.TryGetProperty("condition", out JsonElement condition))
                     {
                         if (condition.ValueKind == JsonValueKind.False)
                             _Condition = false;
@@ -145,6 +150,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         else
                             _Condition = true;
                     }
+
                 }
                 return _Condition.Value;
             }
@@ -339,6 +345,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
 
         private bool _PropertiesNeedReload = false;
+
+        // todo: when switch IsRuntime property of deployment, this maybe need be call to refresh the property
+        // 考虑当 IsRuntime属性发生变化时自动刷新
+        public void Refresh()
+        {
+            _PropertiesNeedReload = true;
+        }
         public ChangeTracking _RawProperties;
 
         [DisplayName("properties")]
@@ -627,7 +640,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (_Resources == null)
                 {
                     if (this.RootElement.TryGetProperty("resources", out JsonElement resourcesE))
-                        _Resources = new ResourceCollection(resourcesE.GetRawText(), this.FullContext, this.Name, this.Type);
+                    {
+                        _Resources = new ResourceCollection(resourcesE.GetRawText(), this.FullContext, this.FullName, this.FullType);
+                    }
+                    else
+                    {
+                        _Resources = new ResourceCollection("[]", this.FullContext, this.FullName, this.FullType);
+                    }
                 }
                 return _Resources;
             }

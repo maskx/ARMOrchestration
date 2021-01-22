@@ -44,14 +44,14 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                    templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.StartProvisioning,
                         Input = DataConverter.Serialize(input),
                         LastRunUserId = input.LastRunUserId
-                    });
+                    }).Wait();
                 }                
             }
 

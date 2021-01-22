@@ -19,7 +19,7 @@ namespace maskx.ARMOrchestration
             this.ResourceId = deployment.ResourceId;
             this.Type = infrastructure.BuiltinServiceTypes.Deployments;
             this.Name = deployment.Name;
-            this.ParentResourceId = deployment.ParentId;
+            this.ParentResourceId = deployment.Parent?.ResourceId;
             this.SubscriptionId = deployment.SubscriptionId;
             this.ManagementGroupId = deployment.ManagementGroupId;
         }
@@ -90,7 +90,7 @@ namespace maskx.ARMOrchestration
         /// </summary>
         public string Type { get; set; }
 
-        public ProvisioningStage Stage { get; set; }
+        public ProvisioningStage Stage { get; set; } = ProvisioningStage.Pending;
 
         /// <summary>
         /// the input to provisioning the resource
@@ -113,8 +113,8 @@ namespace maskx.ARMOrchestration
         /// the user Id of last run this deployment
         /// </summary>
         public string LastRunUserId { get; set; }
-        public DateTime CreatedTimeUtc { get; set; }
-        public DateTime UpdatedTimeUtc { get; set; }
+        public DateTime CreateTimeUtc { get; set; }
+        public DateTime UpdateTimeUtc { get; set; }
         public string ApiVersion { get; set; }
     }
 }

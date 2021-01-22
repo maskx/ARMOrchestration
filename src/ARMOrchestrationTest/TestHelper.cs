@@ -332,7 +332,7 @@ namespace ARMOrchestrationTest
 
         public static async Task ChangeOperationStage(string id, ProvisioningStage stage=ProvisioningStage.Failed,string table= "ARM_DeploymentOperations")
         {
-            using var db = new SQLServerAccess(ConnectionString);
+            using var db = new SQLServerAccess(ConnectionString,null);
             db.AddStatement($"update {table} set Stage=@Stage where Id=@Id", new { Id = id, Stage = stage });
             await db.ExecuteNonQueryAsync();
         }
