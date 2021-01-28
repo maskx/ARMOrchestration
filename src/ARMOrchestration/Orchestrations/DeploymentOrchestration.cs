@@ -23,12 +23,12 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             get
             {
-                if(_Deployment==null)
+                if (_Deployment == null)
                 {
                     _Deployment = helper.GetInputAsync<Deployment>(_DeploymentOperationId).Result;
                     _Deployment.ServiceProvider = _ServiceProvider;
                     _Deployment.IsRuntime = true;
-                }                
+                }
                 return _Deployment;
             }
         }
@@ -58,21 +58,38 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var r = helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
                         if (r == null)
-                            return new TaskResult(400,$"cannot find DeploymentOperation with Id:{res.DeploymentOperationId}");
+                            return new TaskResult(400, new ErrorResponse() {
+                                Code=$"{Name}:PrepareRetry",
+                                Message= $"cannot find DeploymentOperation with Id:{res.DeploymentOperationId}"
+                            } );
                         if (r.Value == ProvisioningStage.Successed)
                             return new TaskResult(200, "");
                         if (r.Value != ProvisioningStage.StartProvisioning)
-                            return new TaskResult(400,$"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry");
+                            return new TaskResult(400,new ErrorResponse() {
+                                Code= $"{Name}:PrepareRetry",
+                                Message= $"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
+                            } );
                     }
                     else
                     {
-                        helper.CreatDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
+                        var operation = helper.CreatDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,
                             Stage = ProvisioningStage.StartProvisioning,
                             Input = DataConverter.Serialize(dep)
-                        }).Wait();
+                        }).Result;
+                        if (operation == null)
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:CreatDeploymentOperation",
+                                Message = "CorrelationId duplicated"
+                            });
+                        if (operation.Id != _DeploymentOperationId)
+                            return new TaskResult(400,new ErrorResponse() { 
+                                Code = $"{Name}:CreatDeploymentOperation",
+                                Message =$"{operation.ResourceId} already exists"
+                            });
                     }
                 }
             }
@@ -85,11 +102,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var r = helper.PrepareRetry(_DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId);
                         if (r == null)
-                            return new TaskResult(400, $"cannot find DeploymentOperation with Id:{_DeploymentOperationId}");
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:PrepareRetry",
+                                Message = $"cannot find DeploymentOperation with Id:{_DeploymentOperationId}"
+                            });
                         if (r.Value == ProvisioningStage.Successed)
-                            return new TaskResult(200,"");
+                            return new TaskResult(200, "");
                         if (r.Value != ProvisioningStage.StartProvisioning)
-                            return new TaskResult(400, $"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry");
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:PrepareRetry",
+                                Message = $"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
+                            });
                     }
                     else
                     {
@@ -263,45 +288,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             List<ErrorResponse> errorResponses = new List<ErrorResponse>();
             foreach (var resource in input.Template.Resources)
             {
-                if (!resource.Condition)
-                    continue;
-
-                // copy should be executed before BuiltinServiceTypes.Deployments
-                // because BuiltinServiceTypes.Deployments can be a copy resource
-                if (resource.Copy != null)
-                {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        CopyOrchestration<T>.Name,
-                        "1.0",
-                        new ResourceOrchestrationInput()
-                        {
-                            DeploymentOperationId = resource.DeploymentOperationId,
-                            DeploymentId = input.DeploymentId,
-                            NameWithServiceType = resource.Copy.NameWithServiceType,
-                            IsRetry = input.IsRetry,
-                            LastRunUserId = input.LastRunUserId
-                        }));
-                }
-                else if (resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
-                {
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        DeploymentOrchestration<T>.Name,
-                        "1.0",
-                        DataConverter.Serialize(new ResourceOrchestrationInput()
-                        {
-                            DeploymentOperationId = resource.DeploymentOperationId,
-                            DeploymentId = resource.Input.DeploymentId,
-                            NameWithServiceType = resource.NameWithServiceType,
-                            ServiceProvider = resource.ServiceProvider,
-                            CopyIndex = resource.CopyIndex ?? -1,
-                            IsRetry = input.IsRetry,
-                            LastRunUserId = input.LastRunUserId
-                        })));
-                }
-                else
-                {
-                    helper.ProvisioningResource<T>(resource, tasks, context, input.IsRetry, input.LastRunUserId);
-                }
+                helper.ProvisioningResource<T>(resource, tasks, context, input.IsRetry, input.LastRunUserId);
             }
 
             await Task.WhenAll(tasks.ToArray());

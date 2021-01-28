@@ -105,54 +105,29 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public int IndexOf(string item)
         {
-            string n_name = string.Empty;
-            string n_fullName = string.Empty;
-            string n_nameWithServiceType = string.Empty;
-
             var n_s = item.Split('/');
-            n_name = n_s[^1];
-            if (n_s[0].IndexOf('.') > 0)
-            {
-                n_nameWithServiceType = item;
-                n_fullName = n_s[2];
-                for (int i = 4; i < n_s.Length;)
-                {
-                    n_fullName += "/" + n_s[i];
-                    i += 2;
-                }
-            }
-            else
-                n_fullName = item;
-
             return _List.FindIndex((str) =>
             {
-                string c_name = string.Empty;
-                string c_fullName = string.Empty;
-                string c_nameWithServiceType = string.Empty;
-
+                if (item.Length == str.Length)
+                    return item == str;
                 var c_s = str.Split('/');
-                c_name = c_s[^1];
-                if (c_name != n_name)
-                    return false;
-                if (c_s[0].IndexOf('.') > 0)
+                int c = c_s.Length - 1;
+                int n = n_s.Length - 1;
+                while (n >= 0 && c >= 0)
                 {
-                    c_nameWithServiceType = str;
-                    c_fullName = c_s[2];
-                    for (int i = 4; i < c_s.Length;)
+                    if (c_s[c] != n_s[n]) return false;
+                    if (c_s.Length > n_s.Length)
                     {
-                        c_fullName += "/" + c_s[i];
-                        i += 2;
+                        c -= 2;
+                        n -= 1;
+                    }
+                    else
+                    {
+                        c -= 1;
+                        n -= 2;
                     }
                 }
-                else
-                    c_fullName = str;
-                if (c_fullName != n_fullName)
-                    return false;
-                if (string.IsNullOrEmpty(c_nameWithServiceType) || string.IsNullOrEmpty(n_nameWithServiceType))
-                    return true;
-                if (c_nameWithServiceType == n_nameWithServiceType)
-                    return true;
-                return false;
+                return true;
             });
         }
 

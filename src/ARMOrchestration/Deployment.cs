@@ -326,29 +326,23 @@ namespace maskx.ARMOrchestration
         }
         public Resource GetFirstResource(string name, bool includeNestDeployment = false)
         {
-            bool withServiceType = name.Contains('.');
             foreach (var r in Template.Resources)
             {
                 if (r.Copy != null)
                 {
-                    if (withServiceType) { if (r.Copy.Id.EndsWith(name)) return r; }
-                    else if (r.Copy.Name.EndsWith(name)) return r;
-
+                    if (r.Copy.Id.EndsWith(name) || r.Copy.FullName.EndsWith(name)) return r;
                     foreach (var item in r.Copy.EnumerateResource())
                     {
-                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) return item; }
-                        else if (item.FullName.EndsWith(name)) return item;
+                        if (item.ResourceId.EndsWith(name) || item.FullName.EndsWith(name)) return item;
                     }
                 }
                 else
                 {
-                    if (withServiceType) { if (r.ResourceId.EndsWith(name)) return r; }
-                    else if (r.FullName.EndsWith(name)) return r;
+                    if (r.ResourceId.EndsWith(name) || r.FullName.EndsWith(name)) return r;
                 }
                 foreach (var child in r.FlatEnumerateChild())
                 {
-                    if (withServiceType) { if (child.ResourceId.EndsWith(name)) return child; }
-                    else if (child.FullName.EndsWith(name)) return child;
+                    if (child.ResourceId.EndsWith(name) || child.FullName.EndsWith(name)) return child;
                 }
             }
             if (includeNestDeployment)
@@ -365,29 +359,23 @@ namespace maskx.ARMOrchestration
         public List<Resource> GetResources(string name, bool includeNestDeployment = false)
         {
             List<Resource> resources = new List<Resource>();
-            bool withServiceType = name.Contains('.');
             foreach (var r in Template.Resources)
             {
                 if (r.Copy != null)
                 {
-                    if (withServiceType) { if (r.Copy.Id.EndsWith(name)) resources.Add(r); }
-                    else if (r.Copy.Name.EndsWith(name)) resources.Add(r);
-
+                    if (r.Copy.Id.EndsWith(name) || r.Copy.FullName.EndsWith(name)) resources.Add(r);
                     foreach (var item in r.Copy.EnumerateResource())
                     {
-                        if (withServiceType) { if (item.ResourceId.EndsWith(name)) resources.Add(item); }
-                        else if (item.FullName.EndsWith(name)) resources.Add(item);
+                        if (item.ResourceId.EndsWith(name) || item.FullName.EndsWith(name)) resources.Add(item);
                     }
                 }
                 else
                 {
-                    if (withServiceType) { if (r.ResourceId.EndsWith(name)) resources.Add(r); }
-                    else if (r.FullName.EndsWith(name)) resources.Add(r);
+                    if (r.ResourceId.EndsWith(name) || r.FullName.EndsWith(name)) resources.Add(r);
                 }
                 foreach (var child in r.FlatEnumerateChild())
                 {
-                    if (withServiceType) { if (child.ResourceId.EndsWith(name)) resources.Add(child); }
-                    else if (child.FullName.EndsWith(name)) resources.Add(child);
+                    if (child.ResourceId.EndsWith(name) || child.FullName.EndsWith(name)) resources.Add(child);
                 }
             }
             if (includeNestDeployment)

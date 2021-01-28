@@ -29,30 +29,51 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
-            input.Deployment.IsRuntime = true;
+
             if (!context.IsReplaying)
             {
                 if (input.IsRetry)
                 {
                     var r = templateHelper.PrepareRetry(input.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId, DataConverter.Serialize(input));
                     if (r == null)
-                        return new TaskResult(400, $"cannot find DeploymentOperation with Id:{input.DeploymentOperationId}");
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:PrepareRetry",
+                            Message = $"cannot find DeploymentOperation with Id:{input.DeploymentOperationId}"
+                        });
                     if (r.Value == ProvisioningStage.Successed)
                         return new TaskResult(200, "");
                     if (r.Value != ProvisioningStage.StartProvisioning)
-                        return new TaskResult(400, $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], cannot retry");
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:PrepareRetry",
+                            Message = $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
+                        });
+                    // todo: 重置 ChildResource stage，避免 ChildResource 之间依赖影响 Retry
                 }
                 else
                 {
-                    templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                    var operation = templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.StartProvisioning,
                         Input = DataConverter.Serialize(input),
                         LastRunUserId = input.LastRunUserId
-                    }).Wait();
-                }                
+                    }).Result;
+                    if (operation == null)
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:CreatDeploymentOperation",
+                            Message = "CorrelationId duplicated"
+                        });
+                    if (operation.Id != input.DeploymentOperationId)
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:CreatDeploymentOperation",
+                            Message = $"{operation.ResourceId} already exists"
+                        });
+                }
             }
 
             #region DependsOn
@@ -109,6 +130,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
             #endregion DependsOn
+
+            input.Deployment.IsRuntime = true;
 
             #region plug-in
 

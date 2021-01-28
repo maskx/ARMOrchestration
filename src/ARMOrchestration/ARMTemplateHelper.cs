@@ -56,7 +56,7 @@ where Id=@Id
                     rtv = new DeploymentOperation(reader["Id"].ToString())
                     {
                         InstanceId = reader["InstanceId"].ToString(),
-                        ExecutionId = reader["ExecutionId"].ToString(),
+                        ExecutionId = reader["ExecutionId"]?.ToString(),
                         GroupId = reader["GroupId"].ToString(),
                         GroupType = reader["GroupType"].ToString(),
                         HierarchyId = reader["HierarchyId"].ToString(),
@@ -68,7 +68,7 @@ where Id=@Id
                         Type = reader["Type"].ToString(),
                         Stage = (ProvisioningStage)(int)reader["Stage"],
                         SubscriptionId = reader["SubscriptionId"]?.ToString(),
-                        ManagementGroupId = reader["ManagementGroupId"].ToString(),
+                        ManagementGroupId = reader["ManagementGroupId"]?.ToString(),
                         ParentResourceId = reader["ParentResourceId"]?.ToString(),
                         Input = reader["Input"].ToString(),
                         Result = reader["Result"]?.ToString(),
@@ -77,7 +77,7 @@ where Id=@Id
                         CreateTimeUtc = (DateTime)reader["CreateTimeUtc"],
                         UpdateTimeUtc = (DateTime)reader["UpdateTimeUtc"],
                         ApiVersion = reader["ApiVersion"].ToString(),
-                        Comments = reader["Comments"].ToString()
+                        Comments = reader["Comments"]?.ToString()
                     };
                 },
                 new
@@ -105,7 +105,7 @@ where Id=@Id
                 });
             return rtv;
         }
-        // TODO: when this is a async task, in orchestration await this will make orchestration cannot be completed, need investigation
+       
         public void SaveDeploymentOperation(DeploymentOperation deploymentOperation)
         {
             TraceActivityEventSource.Log.TraceEvent(
@@ -139,35 +139,59 @@ where Id=@Id
         public void ProvisioningResource<T>(Resource resource, List<Task<TaskResult>> tasks, OrchestrationContext orchestrationContext, bool isRetry, string lastRunUserId)
             where T : CommunicationJob, new()
         {
-            tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
-                                      ResourceOrchestration<T>.Name,
-                                      "1.0",
-                                      new ResourceOrchestrationInput()
-                                      {
-                                          DeploymentOperationId = resource.DeploymentOperationId,
-                                          DeploymentId = resource.Input.DeploymentId,
-                                          NameWithServiceType = resource.NameWithServiceType,
-                                          ServiceProvider = resource.ServiceProvider,
-                                          CopyIndex = resource.CopyIndex ?? -1,
-                                          IsRetry = isRetry,
-                                          LastRunUserId = lastRunUserId
-                                      }));
-            foreach (var child in resource.FlatEnumerateChild())
+            if (!resource.Condition)
+                return;
+            // copy should be executed before BuiltinServiceTypes.Deployments
+            // because BuiltinServiceTypes.Deployments can be a copy resource
+            if (resource.Copy != null && !resource.CopyIndex.HasValue)
             {
                 tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
-                                                     ResourceOrchestration<T>.Name,
-                                                     "1.0",
-                                                     new ResourceOrchestrationInput()
-                                                     {
-                                                         DeploymentOperationId = child.DeploymentOperationId,
-                                                         DeploymentId = child.Input.DeploymentId,
-                                                         NameWithServiceType = child.NameWithServiceType,
-                                                         ServiceProvider = child.ServiceProvider,
-                                                         CopyIndex = child.CopyIndex ?? -1,
-                                                         IsRetry = isRetry,
-                                                         CreateByUserId=
-                                                         LastRunUserId = lastRunUserId
-                                                     }));
+                    CopyOrchestration<T>.Name,
+                    "1.0",
+                    new ResourceOrchestrationInput()
+                    {
+                        DeploymentOperationId = resource.DeploymentOperationId,
+                        DeploymentId = resource.Input.DeploymentId,
+                        NameWithServiceType = resource.Copy.NameWithServiceType,
+                        IsRetry = isRetry,
+                        LastRunUserId = lastRunUserId
+                    }));
+            }
+            else if (resource.Type == _Infrastructure.BuiltinServiceTypes.Deployments)
+            {
+                tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
+                    DeploymentOrchestration<T>.Name,
+                    "1.0",
+                    _DataConverter.Serialize(new ResourceOrchestrationInput()
+                    {
+                        DeploymentOperationId = resource.DeploymentOperationId,
+                        DeploymentId = resource.Input.DeploymentId,
+                        NameWithServiceType = resource.NameWithServiceType,
+                        ServiceProvider = resource.ServiceProvider,
+                        CopyIndex = resource.CopyIndex ?? -1,
+                        IsRetry = isRetry,
+                        LastRunUserId = lastRunUserId
+                    })));
+            }
+            else
+            {
+                tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
+                                     ResourceOrchestration<T>.Name,
+                                     "1.0",
+                                     new ResourceOrchestrationInput()
+                                     {
+                                         DeploymentOperationId = resource.DeploymentOperationId,
+                                         DeploymentId = resource.Input.DeploymentId,
+                                         NameWithServiceType = resource.NameWithServiceType,
+                                         ServiceProvider = resource.ServiceProvider,
+                                         CopyIndex = resource.CopyIndex ?? -1,
+                                         IsRetry = isRetry,
+                                         LastRunUserId = lastRunUserId
+                                     }));
+            }
+            foreach (var child in resource.FlatEnumerateChild())
+            {
+                ProvisioningResource<T>(child, tasks, orchestrationContext, isRetry, lastRunUserId);
             }
         }
         public void ParseTaskResult(string orchestrationName, List<ErrorResponse> errorResponses, Task<TaskResult> item)

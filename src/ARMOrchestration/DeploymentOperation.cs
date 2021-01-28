@@ -75,6 +75,7 @@ namespace maskx.ARMOrchestration
 
         /// <summary>
         /// child of copy, the ParentId copy's path, like /Microsoft.Resources/deployments/{deploymentName}copy/{copyname}
+        /// todo: this should be ParentDeploymentOperationId
         /// </summary>
         public string ParentResourceId { get; set; }
 

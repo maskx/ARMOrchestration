@@ -72,6 +72,20 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE [{0}].[{1}_InitRetry]
+	@Id nvarchar(50),
+	@CorrelationId nvarchar(50),
+	@LastRunUserId nvarchar(50),
+	@Input nvarchar(max)=null
+AS
+BEGIN
+	UPDATE [{0}].[{1}_DeploymentOperations]
+	SET Stage=0,CorrelationId=@CorrelationId,LastRunUserId=@LastRunUserId,Input=ISNULL(@Input,Input)
+	where Id=@Id and Stage=-1400
+	select @@ROWCOUNT as Effected,Stage,CorrelationId,LastRunUserId from [{0}].[{1}_DeploymentOperations] where Id=@Id
+END
+GO
+
 CREATE OR ALTER PROCEDURE [{0}].[{1}_PrepareRetry]
 	@Id nvarchar(50),
 	@NewInstanceId nvarchar(50),
@@ -107,6 +121,7 @@ BEGIN
         insert into [{0}].[{1}_DeploymentOperationHistory] values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
         if @Type=N'{2}'
 		begin
+		-- 需要将部署任务内全部资源状态重置，使得有依赖的资源不会因为依赖的资源状态为失败而直接失败
 			update [{0}].[{1}_DeploymentOperations]
 			set Stage=0
 			where  [ParentResourceId]=@ParentResourceId and Stage=-1400
@@ -140,13 +155,27 @@ CREATE OR ALTER PROCEDURE [{0}].[{1}_CreateDeploymentOperation]
 AS
 BEGIN
 	SET NOCOUNT ON;
-	IF	NOt EXISTS (select 0 from [{0}].[{1}_DeploymentOperations] where CorrelationId=@CorrelationId and ResourceId=@ResourceId)
+
+	DECLARE @resId nvarchar(1024)
+	SELECT @resId=ResourceId from [{0}].[{1}_DeploymentOperations] where CorrelationId=@CorrelationId and ParentResourceId is null
+	IF @resId IS NULL OR @ParentResourceId IS NOT NULL
 	BEGIN
-		INSERT [{0}].[{1}_DeploymentOperations]
-		([ApiVersion],[Id],[InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Comments],[CreateByUserId],[LastRunUserId])
-		VALUES
-		(@ApiVersion,@Id,@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Comments,@CreateByUserId,@CreateByUserId)
+		IF NOt EXISTS (select 0 from [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId)
+		BEGIN
+			INSERT INTO [{0}].[{1}_DeploymentOperations]
+			([ApiVersion],[Id],[InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Comments],[CreateByUserId],[LastRunUserId])
+			OUTPUT INSERTED.*
+			VALUES
+			(@ApiVersion,@Id,@InstanceId,@ExecutionId,@GroupId,@GroupType,@HierarchyId,@RootId,@DeploymentId,@CorrelationId,@ParentResourceId,@ResourceId,@Name,@Type,@Stage,GETUTCDATE(),GETUTCDATE(),@SubscriptionId,@ManagementGroupId,@Input,@Comments,@CreateByUserId,@CreateByUserId)
+		END
+		ELSE
+		BEGIN
+			SELECT * FROM [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId
+		END
 	END
-	select * from [{0}].[{1}_DeploymentOperations] where CorrelationId=@CorrelationId and ResourceId=@ResourceId
+	ELSE
+	BEGIN
+		SELECT * FROM [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId
+	END
 END
 GO

@@ -246,18 +246,22 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return string.IsNullOrEmpty(this._ParentName) ? this.Name : $"{this._ParentName}/{this.Name}";
             }
         }
+        private string GetNameWithServiceType(string type, string name)
+        {
+            var ns = name.Split('/');
+            var ts = type.Split('/');
+            string nestr = string.Empty;
+            for (int i = 1; i < ns.Length; i++)
+            {
+                nestr += $"/{ts[i + 1]}/{ns[i]}";
+            }
+            return $"{ts[0]}/{ts[1]}/{ns[0]}{nestr}";
+        }
         public string NameWithServiceType
         {
             get
             {
-                var ns = FullName.Split('/');
-                var ts = FullType.Split('/');
-                string nestr = string.Empty;
-                for (int i = 1; i < ns.Length; i++)
-                {
-                    nestr += $"/{ts[i + 1]}/{ns[i]}";
-                }
-                return $"{ts[0]}/{ts[1]}/{ns[0]}{nestr}";
+                return GetNameWithServiceType(FullType, FullName);
             }
         }
 
@@ -380,25 +384,23 @@ namespace maskx.ARMOrchestration.ARMTemplate
         private void LazyLoadDependsOnAnProperties()
         {
             _PropertiesNeedReload = false;
-            if (_DependsOn == null)
+            _DependsOn = new DependsOnCollection();
+            if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
             {
-                _DependsOn = new DependsOnCollection();
-                if (RootElement.TryGetProperty("dependsOn", out JsonElement dependsOn))
+                string dep;
+                if (dependsOn.ValueKind == JsonValueKind.String)
+                    dep = _Functions.Evaluate(dependsOn.GetString(), FullContext).ToString();
+                else if (dependsOn.ValueKind == JsonValueKind.Array)
+                    dep = dependsOn.GetRawText();
+                else
+                    throw new Exception("dependsON should be an arrary");
+                using var dd = JsonDocument.Parse(dep);
+                foreach (var item in dd.RootElement.EnumerateArray())
                 {
-                    string dep;
-                    if (dependsOn.ValueKind == JsonValueKind.String)
-                        dep = _Functions.Evaluate(dependsOn.GetString(), FullContext).ToString();
-                    else if (dependsOn.ValueKind == JsonValueKind.Array)
-                        dep = dependsOn.GetRawText();
-                    else
-                        throw new Exception("dependsON should be an arrary");
-                    using var dd = JsonDocument.Parse(dep);
-                    foreach (var item in dd.RootElement.EnumerateArray())
-                    {
-                        _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);
-                    }
+                    _DependsOn.Add(_Functions.Evaluate(item.GetString(), FullContext).ToString(), Input);
                 }
             }
+
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
             if (this.Type == infrastructure.BuiltinServiceTypes.Deployments)
                 _Properties = RawProperties.RawString;
@@ -417,6 +419,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     _DependsOn.AddRange(conditionDep as List<string>, Input);
                     FullContext.Remove(ContextKeys.DEPENDSON);
                 }
+            }
+            if (!string.IsNullOrEmpty(this._ParentName))
+            {
+                _DependsOn.Add(GetNameWithServiceType(_ParentType, _ParentName), Input);
             }
         }
 

@@ -25,6 +25,7 @@ namespace ARMOrchestrationTest
         [Fact(DisplayName = "RetryCopy")]
         public async Task RetryCopy()
         {
+            string correlationId = Guid.NewGuid().ToString("N");
             var instance = TestHelper.OrchestrationTest(_Fixture,
                   "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
             DeploymentOperation op;
@@ -39,7 +40,7 @@ namespace ARMOrchestrationTest
                     resId = r.Id;
             }
             #region not re-run
-            await _Client.Retry(copyId, "RetryUser1");
+            await _Client.Retry(copyId, correlationId, "RetryUser1");
             do
             {
                 await Task.Delay(5000);
@@ -53,7 +54,7 @@ namespace ARMOrchestrationTest
 
             #region only run copy
             await TestHelper.ChangeOperationStage(copyId);
-            await _Client.Retry(copyId, "RetryUser2");
+            await _Client.Retry(copyId, correlationId, "RetryUser2");
             do
             {
                 await Task.Delay(5000);
@@ -69,14 +70,14 @@ namespace ARMOrchestrationTest
                 if (r.Type == $"{infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}")
                     Assert.Equal("RetryUser2", r.LastRunUserId);
                 else
-                    Assert.Equal(TestHelper.CreateByUserId,r.LastRunUserId);
+                    Assert.Equal(TestHelper.CreateByUserId, r.LastRunUserId);
             }
             #endregion
 
             #region re-run copy and one resource
             await TestHelper.ChangeOperationStage(copyId);
             await TestHelper.ChangeOperationStage(resId);
-            await _Client.Retry(copyId, "RetryUser3");
+            await _Client.Retry(copyId, correlationId, "RetryUser3");
             do
             {
                 await Task.Delay(5000);
@@ -102,6 +103,7 @@ namespace ARMOrchestrationTest
         [Fact(DisplayName = "RetryResource")]
         public async Task RetryResource()
         {
+            var correlationId = Guid.NewGuid().ToString("N");
             var instance = TestHelper.OrchestrationTest(_Fixture,
                   "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
             DeploymentOperation op;
@@ -113,7 +115,7 @@ namespace ARMOrchestrationTest
                     opId = r.Id;
             }
             #region not re-run
-            await _Client.Retry(opId, "RetryUser1");
+            await _Client.Retry(opId, correlationId, "RetryUser1");
             do
             {
                 await Task.Delay(5000);
@@ -127,7 +129,7 @@ namespace ARMOrchestrationTest
 
             #region 
             await TestHelper.ChangeOperationStage(opId);
-            await _Client.Retry(opId, "RetryUser1");
+            await _Client.Retry(opId, correlationId, "RetryUser1");
             do
             {
                 await Task.Delay(5000);
@@ -142,11 +144,12 @@ namespace ARMOrchestrationTest
         [Fact(DisplayName = "RetryDeployment")]
         public async Task RetryDeployment()
         {
+            var correlationId = Guid.NewGuid().ToString("N");
             var instance = TestHelper.OrchestrationTest(_Fixture,
                   "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
 
             #region Deployment success, will not re-run anyone
-            await _Client.Retry(instance.InstanceId, "RetryUser2");
+            await _Client.Retry(instance.InstanceId, correlationId, "RetryUser2");
             DeploymentOperation op;
             do
             {
@@ -162,7 +165,7 @@ namespace ARMOrchestrationTest
 
             #region Only re-run deployment
             await TestHelper.ChangeOperationStage(instance.InstanceId);
-            await _Client.Retry(instance.InstanceId, "Retry1");
+            await _Client.Retry(instance.InstanceId, correlationId, "Retry1");
             do
             {
                 await Task.Delay(5000);
@@ -192,7 +195,7 @@ namespace ARMOrchestrationTest
                     await TestHelper.ChangeOperationStage(r.Id);
             }
 
-            await _Client.Retry(instance.InstanceId, "Retry2");
+            await _Client.Retry(instance.InstanceId, correlationId, "Retry2");
             do
             {
                 await Task.Delay(5000);
@@ -224,7 +227,7 @@ namespace ARMOrchestrationTest
                     await TestHelper.ChangeOperationStage(r.Id);
             }
 
-            await _Client.Retry(instance.InstanceId, "Retry3");
+            await _Client.Retry(instance.InstanceId, correlationId, "Retry3");
             do
             {
                 await Task.Delay(5000);
@@ -247,6 +250,41 @@ namespace ARMOrchestrationTest
                     Assert.Equal(TestHelper.CreateByUserId, r.LastRunUserId);
             }
             #endregion
+        }
+        [Fact(DisplayName = "SameUser_SameCorrelationId")]
+        public async Task SameUser_SameCorrelationId()
+        {
+            var correlationId = Guid.NewGuid().ToString("N");
+            var instance = TestHelper.OrchestrationTest(_Fixture,
+                "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
+
+            #region SameUser SameCorrelationId
+            await TestHelper.ChangeOperationStage(instance.InstanceId);
+            var op = await _Client.GetDeploymentOperationAsync(instance.InstanceId);
+            var r1 = await _Client.RetryDeployment(op, correlationId, "Retry1");
+            var r2 = await _Client.RetryDeployment(op, correlationId, "Retry1");
+            Assert.Equal(201, r1.Result);
+            Assert.Equal(202, r2.Result);
+            #endregion
+
+
+        }
+        [Fact(DisplayName = "SameUser_DifferentCorrelationId")]
+        public async Task SameUser_DifferentCorrelationId()
+        {
+            var correlationId = Guid.NewGuid().ToString("N");
+            var instance = TestHelper.OrchestrationTest(_Fixture,
+                "CopyIndex/ResourceIteration_BatchSize", subscriptionId: Guid.NewGuid().ToString());
+
+            #region Same UserId ,different correlationId
+            await TestHelper.ChangeOperationStage(instance.InstanceId);
+            var op = await _Client.GetDeploymentOperationAsync(instance.InstanceId);
+            var r1 = await _Client.RetryDeployment(op, correlationId, "Retry1");
+            var r2 = await _Client.RetryDeployment(op, Guid.NewGuid().ToString("N"), "Retry1");
+            Assert.Equal(201, r1.Result);
+            Assert.Equal(400, r2.Result);
+            #endregion
+
         }
     }
 }

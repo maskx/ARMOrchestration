@@ -17,8 +17,6 @@ namespace maskx.ARMOrchestration
     {
         private readonly OrchestrationWorkerClient _OrchestrationWorkerClient;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
-        private readonly string _GetResourceListCommandString;
-        private readonly string _GetAllResourceListCommandString;
         private readonly ARMOrchestrationOptions _Options;
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMTemplateHelper _Helper;
@@ -38,10 +36,6 @@ namespace maskx.ARMOrchestration
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
             this._Options = options?.Value;
             this._Helper = helper;
-            this._GetResourceListCommandString = string.Format("select * from {0} where deploymentId=@deploymentId",
-                this._Options.Database.DeploymentOperationsTableName);
-            this._GetAllResourceListCommandString = string.Format("select * from {0} where RootId=@RootId",
-                this._Options.Database.DeploymentOperationsTableName);
         }
 
         public async Task<DeploymentOperation> Run(Deployment args)
@@ -93,23 +87,65 @@ namespace maskx.ARMOrchestration
             deploymentOperation.ExecutionId = instance.ExecutionId;
             return deploymentOperation;
         }
-        public async Task Retry(string deploymentOperationId, string userId)
+        public async Task<(int Result, string Message)> Retry(string deploymentOperationId,string correlationId, string userId)
         {
             var op = await GetDeploymentOperationAsync(deploymentOperationId);
-            if (op.Stage == ProvisioningStage.Successed)
-                return;
+            if (op.Stage != ProvisioningStage.Failed)
+                return (400, $"stage[{op.Stage}] cannot be retry");
             if (op.Type == _Infrastructure.BuiltinServiceTypes.Deployments)
-                await RetryDeployment(op, userId);
-            else if (op.Type == $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}")
-                await RetryCopy(op, userId);
-            else
-                await RetryResource(op, userId);
+                return await RetryDeployment(op, correlationId, userId);
+            if (op.Type == $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}")
+                return await RetryCopy(op, correlationId, userId);
+            return await RetryResource(op, correlationId, userId);
         }
-        private async Task RetryCopy(DeploymentOperation op, string userId)
+        private async Task<(int Result, string Message)> InitRetry(string deploymentOPerationId, string correlationId, string lastRunUserId, string input )
+        {
+            int result = 400;
+            string message = $"cannot find DeploymentOperation with Id:{deploymentOPerationId}";
+            using var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory);
+            await db.ExecuteStoredProcedureASync(this._Options.Database.InitRetrySPName,
+                (reader, index) =>
+                {
+                    var effected = reader.GetInt32(0);
+                    var stage = (ProvisioningStage)(int)reader["Stage"];
+                    var correlation = reader["CorrelationId"].ToString();
+                    var userId = reader["LastRunUserId"].ToString();
+                    if (effected == 1)
+                    {
+                        result = 201;
+                        message = "Successed";
+                    }
+                    else
+                    {
+                        if (userId == lastRunUserId && correlation == correlationId)
+                        {
+                            result = 202;
+                            message = $"DeploymentOperation[{deploymentOPerationId}] already in {stage} stage";
+                        }
+                        else
+                        {
+                            result = 400;
+                            message = $"DeploymentOperation[{ deploymentOPerationId}] already in { stage}stage;Last Run User is [{userId}]";
+                        }
+                    }
+                },
+                new
+                {
+                    Id = deploymentOPerationId,
+                    CorrelationId = correlationId,
+                    LastRunUserId = lastRunUserId,
+                    Input = input
+                });
+            return (result, message);
+        }
+        public async Task<(int Result, string Message)> RetryCopy(DeploymentOperation op, string correlationId, string userId)
         {
             var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
             input.IsRetry = true;
             input.LastRunUserId = userId;
+            var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(input));
+            if (r.Result != 201)
+                return r;
             await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 Orchestration = new OrchestrationSetting()
@@ -119,12 +155,16 @@ namespace maskx.ARMOrchestration
                 },
                 Input = input
             });
+            return r;
         }
-        private async Task RetryResource(DeploymentOperation op, string userId)
+        public async Task<(int Result, string Message)> RetryResource(DeploymentOperation op,string correlationId, string userId)
         {
             var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
             input.IsRetry = true;
             input.LastRunUserId = userId;
+            var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(input));
+            if (r.Result != 201)
+                return r;
             await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 Orchestration = new OrchestrationSetting()
@@ -134,16 +174,17 @@ namespace maskx.ARMOrchestration
                 },
                 Input = input
             });
+            return r;
         }
-        private async Task RetryDeployment(DeploymentOperation op, string userId)
+        public async Task<(int Result, string Message)> RetryDeployment(DeploymentOperation op, string correlationId, string userId)
         {
             var dep = _DataConverter.Deserialize<Deployment>(op.Input);
             dep.ServiceProvider = this._ServiceProvider;
             dep.IsRetry = true;
             dep.LastRunUserId = userId;
-            op.Input = _DataConverter.Serialize(dep);
-            op.LastRunUserId = userId;
-            _Helper.SaveDeploymentOperation(op);
+            var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(dep));
+            if (r.Result != 201)
+                return r;
             await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = Guid.NewGuid().ToString("N"),
@@ -154,6 +195,7 @@ namespace maskx.ARMOrchestration
                     Version = op.ApiVersion
                 }
             });
+            return r;
         }
 
         /// <summary>
@@ -166,7 +208,7 @@ namespace maskx.ARMOrchestration
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
             using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
             {
-                db.AddStatement(this._GetResourceListCommandString,
+                db.AddStatement($"select * from { this._Options.Database.DeploymentOperationsTableName} where deploymentId=@deploymentId",
                     new Dictionary<string, object>() {
                         { "deploymentId",deploymentId}
                     });
@@ -213,7 +255,7 @@ namespace maskx.ARMOrchestration
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
             using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
             {
-                db.AddStatement(this._GetAllResourceListCommandString,
+                db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where RootId=@RootId",
                     new Dictionary<string, object>() {
                         { "RootId",rootId}
                     });

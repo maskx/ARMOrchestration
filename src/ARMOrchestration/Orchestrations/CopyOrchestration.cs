@@ -26,7 +26,6 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
-            input.Deployment.IsRuntime = true;
             var copy = input.Resource.Copy;
             if (copy == null)
                 return new TaskResult(500, new ErrorResponse() { Code = "CopyOrchestration-Fail", Message = "input is not Copy resource" });
@@ -36,23 +35,43 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var r = helper.PrepareRetry(input.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId, DataConverter.Serialize(input));
                     if (r == null)
-                        return new TaskResult(400, $"cannot find DeploymentOperation with Id:{input.DeploymentOperationId}");
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:PrepareRetry",
+                            Message = $"cannot find DeploymentOperation with Id:{input.DeploymentOperationId}"
+                        });
                     if (r.Value == ProvisioningStage.Successed)
                         return new TaskResult(200, "");
                     if (r.Value != ProvisioningStage.StartProvisioning)
-                        return new TaskResult(400, $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], cannot retry");
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:PrepareRetry",
+                            Message = $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
+                        });
                 }
                 else
                 {
-                    helper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                    var operation = helper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.StartProvisioning,
                         Input = DataConverter.Serialize(input),
                         LastRunUserId = input.LastRunUserId
-                    }).Wait();
-                }               
+                    }).Result;
+                    if (operation == null)
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:CreatDeploymentOperation",
+                            Message = "CorrelationId duplicated"
+                        });
+                    if (operation.Id != input.DeploymentOperationId)
+                        return new TaskResult(400, new ErrorResponse()
+                        {
+                            Code = $"{Name}:CreatDeploymentOperation",
+                            Message = $"{operation.ResourceId} already exists"
+                        });
+                }
             }
             List<Task<TaskResult>> tasks = new List<Task<TaskResult>>();
             List<ErrorResponse> errorResponses = new List<ErrorResponse>();
@@ -60,24 +79,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             // You can't use a copy loop for a child resource.
             for (int i = 0; i < copy.Count; i++)
             {
-                var r = input.Resource.Copy.GetResource(i);
-                if (input.Resource.Type == infrastructure.BuiltinServiceTypes.Deployments)
-                    tasks.Add(context.CreateSubOrchestrationInstance<TaskResult>(
-                        DeploymentOrchestration<T>.Name,
-                        "1.0", 
-                        DataConverter.Serialize(new ResourceOrchestrationInput()
-                        {
-                            DeploymentOperationId=r.DeploymentOperationId,
-                            DeploymentId = r.Input.DeploymentId,
-                            NameWithServiceType = r.NameWithServiceType,
-                            ServiceProvider = r.ServiceProvider,
-                            CopyIndex = r.CopyIndex ?? -1,
-                            IsRetry=input.IsRetry,
-                            LastRunUserId=input.LastRunUserId
-                        })));
-                else
-                    helper.ProvisioningResource<T>(r, tasks, context,input.IsRetry,input.LastRunUserId);
-
+                helper.ProvisioningResource<T>(input.Resource.Copy.GetResource(i), tasks, context, input.IsRetry, input.LastRunUserId);
                 if (copy.BatchSize > 0 && tasks.Count >= copy.BatchSize)
                 {
                     await Task.WhenAny(tasks);
