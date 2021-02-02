@@ -16,6 +16,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
     [JsonObject(MemberSerialization.OptIn)]
     public class Resource : ChangeTracking
     {
+        public string ParentResourceId
+        {
+            get
+            {
+                return CopyIndex.HasValue ? Copy.Id : string.IsNullOrEmpty(_ParentName) ? Input.ResourceId : Input.GetFirstResource(GetNameWithServiceType(_ParentType, _ParentName)).ResourceId;
+            }
+        }
         [JsonProperty]
         protected readonly string _ParentName;
 
@@ -428,7 +435,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private SKU _SKU;
 
-        // todo: support modify
         [DisplayName("sku")]
         public SKU SKU
         {
@@ -436,10 +442,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_SKU == null)
                 {
-                    if (RootElement.TryGetProperty("sku", out JsonElement sku))
-                        _SKU = SKU.Parse(sku, _Functions, FullContext);
-                    else
-                        _SKU = new SKU() { Name = SKU.Default };
+                    _SKU = new SKU(this);
                 }
                 return _SKU;
             }

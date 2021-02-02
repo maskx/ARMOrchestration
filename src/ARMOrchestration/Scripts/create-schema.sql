@@ -79,10 +79,28 @@ CREATE OR ALTER PROCEDURE [{0}].[{1}_InitRetry]
 	@Input nvarchar(max)=null
 AS
 BEGIN
+	declare @ParentResourceId nvarchar(1024)
 	UPDATE [{0}].[{1}_DeploymentOperations]
-	SET Stage=0,CorrelationId=@CorrelationId,LastRunUserId=@LastRunUserId,Input=ISNULL(@Input,Input)
+	SET Stage=0,CorrelationId=@CorrelationId,LastRunUserId=@LastRunUserId,Input=ISNULL(@Input,Input),@ParentResourceId=ResourceId
 	where Id=@Id and Stage=-1400
-	select @@ROWCOUNT as Effected,Stage,CorrelationId,LastRunUserId from [{0}].[{1}_DeploymentOperations] where Id=@Id
+
+	if @ParentResourceId is not null
+	begin
+		declare @deploymentOperationId nvarchar(50)
+		declare deployment_cursor CURSOR LOCAL  FORWARD_ONLY FOR SELECT Id FROM [{0}].[{1}_DeploymentOperations] where Stage=-1400  and ParentResourceId=@ParentResourceId;
+
+		open deployment_cursor
+		FETCH NEXT FROM deployment_cursor INTO @deploymentOPerationId
+		while @@FETCH_STATUS=0
+		BEGIN
+			EXEC [dbo].[ARM_InitRetry] @deploymentOPerationId,@CorrelationId,@LastRunUserId
+			FETCH NEXT FROM deployment_cursor INTO @deploymentOperationId
+		END
+		close deployment_cursor
+		deallocate deployment_cursor
+	end
+
+	select case @ParentResourceId when NULL then 0 else 1 end  as Effected,Stage,CorrelationId,LastRunUserId from [{0}].[{1}_DeploymentOperations] where Id=@Id
 END
 GO
 
@@ -100,34 +118,23 @@ BEGIN
 	declare @ExecutionId nvarchar(50)=null
     declare @UpdateTimeUtc [datetime2](7)
     declare @RunUserId nvarchar(50)
-	declare @Type nvarchar(50)
-	declare @ParentResourceId nvarchar(1024)
 
 	update [{0}].[{1}_DeploymentOperations]
-	set	InstanceId=@NewInstanceId,
+	set InstanceId=@NewInstanceId,
 		ExecutionId=@NewExecutionId,
 		Stage=100,
 		LastRunUserId=@LastRunUserId,
 		Input=isnull(@Input,Input),
 		@InstanceId=InstanceId, 
 		@ExecutionId=ExecutionId,
-        @UpdateTimeUtc=UpdateTimeUtc,
-        @RunUserId=LastRunUserId,
-        @Type=[Type],
-		@ParentResourceId=ResourceId
-	where Id=@Id and (Stage=0 OR Stage=-1400)
+		@UpdateTimeUtc=UpdateTimeUtc,
+		@RunUserId=LastRunUserId
+	where Id=@Id and Stage=0 
 	if @@ROWCOUNT=1
-    BEGIN
-        insert into [{0}].[{1}_DeploymentOperationHistory] values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
-        if @Type=N'{2}'
-		begin
-		-- 需要将部署任务内全部资源状态重置，使得有依赖的资源不会因为依赖的资源状态为失败而直接失败
-			update [{0}].[{1}_DeploymentOperations]
-			set Stage=0
-			where  [ParentResourceId]=@ParentResourceId and Stage=-1400
-		end
-    END
-    select Stage from [{0}].[{1}_DeploymentOperations] where Id=@Id
+	   BEGIN
+	       insert into [{0}].[{1}_DeploymentOperationHistory] values(@Id,@InstanceId,@ExecutionId,@RunUserId,@UpdateTimeUtc)
+	   END
+	   select Stage from [{0}].[{1}_DeploymentOperations] where Id=@Id
 END
 GO
 

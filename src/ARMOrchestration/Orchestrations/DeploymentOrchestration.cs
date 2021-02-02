@@ -52,7 +52,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                 {
                     var dep = Deployment.Parse(res.Resource);
                     var _ = dep.Template.Variables;
-                    dep.DeploymentId = context.OrchestrationInstance.InstanceId;
                     dep.IsRetry = res.IsRetry;
                     if (res.IsRetry)
                     {
@@ -72,6 +71,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                     else
                     {
+                        dep.DeploymentId = context.OrchestrationInstance.InstanceId;
                         var operation = helper.CreatDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,

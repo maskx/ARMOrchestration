@@ -105,7 +105,7 @@ where Id=@Id
                 });
             return rtv;
         }
-       
+
         public void SaveDeploymentOperation(DeploymentOperation deploymentOperation)
         {
             TraceActivityEventSource.Log.TraceEvent(
@@ -193,6 +193,7 @@ where Id=@Id
             {
                 ProvisioningResource<T>(child, tasks, orchestrationContext, isRetry, lastRunUserId);
             }
+
         }
         public void ParseTaskResult(string orchestrationName, List<ErrorResponse> errorResponses, Task<TaskResult> item)
         {
@@ -295,6 +296,27 @@ where Id=@Id
             if (r == null || r == DBNull.Value)
                 return null;
             return (ProvisioningStage)(int)r;
+        }
+        public async Task<List<string>> GetAllRetryResource(string deploymentOperationId, bool deepSearch = true)
+        {
+            List<string> rtv = new List<string>();
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory);
+            db.AddStatement(@$"
+select op.Id,op.ResourceId from {this.options.Database.DeploymentOperationsTableName} as op
+inner join {this.options.Database.DeploymentOperationsTableName} as dp on dp.ResourceId=op.ParentResourceId
+where dp.Id=@Id",
+new
+{
+    Id = deploymentOperationId
+});
+            await db.ExecuteReaderAsync((reader, index) =>
+            {
+                rtv.Add(reader.GetString(1));
+                if (deepSearch)
+                    rtv.AddRange(GetAllRetryResource(reader.GetString(0)).Result);
+
+            });
+            return rtv;
         }
     }
 }

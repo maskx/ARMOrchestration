@@ -30,7 +30,7 @@ namespace maskx.ARMOrchestration
             this.ResourceId = resource.ResourceId;
             this.Name = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullName : resource.Name;
             this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullType : resource.Type;
-            this.ParentResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : resource.Input.ResourceId;
+            this.ParentResourceId = resource.ParentResourceId;
             this.SubscriptionId = resource.SubscriptionId;
             this.ManagementGroupId = resource.ManagementGroupId;
         }

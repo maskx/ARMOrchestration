@@ -1,59 +1,155 @@
 ﻿using maskx.ARMOrchestration.Functions;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
+using System.ComponentModel;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class SKU
+    public class SKU : ChangeTracking
     {
         public const string Default = "Default";
-        public string Name { get; set; } = Default;
-        public string Tier { get; set; }
-        public string Size { get; set; }
-        public string Family { get; set; }
-        public string Capacity { get; set; }
-        public static SKU Parse(string rawString, ARMFunctions functions, Dictionary<string, object> context)
+        private string _Name;
+        [DisplayName("name")]
+        public string Name
         {
-            using var doc = JsonDocument.Parse(rawString);
-            return Parse(doc.RootElement, functions, context);
+            get
+            {
+                if (string.IsNullOrEmpty(_Name))
+                {
+                    if (RootElement.TryGetProperty("name", out JsonElement nameE))
+                    {
+                        if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
+                            _Name = nameE.GetString();
+                        else
+                            _Name = _Functions.Evaluate(nameE.GetString(), FullContext).ToString();
+                    }
+                    else
+                    {
+                        _Name = Default;
+                    }
+                }
+                return _Name;
+            }
+            set
+            {
+                _Name = value;
+                Change(value, "name");
+            }
         }
-        public static SKU Parse(JsonElement root, ARMFunctions functions, Dictionary<string, object> context)
+        private string _Tier;
+        [DisplayName("tier")]
+        public string Tier
         {
-            SKU sku = new SKU();
-            if (root.TryGetProperty("name", out JsonElement nameE))
-                sku.Name = functions.Evaluate(nameE.GetString(), context).ToString();
+            get
+            {
+                if (string.IsNullOrEmpty(_Tier))
+                {
+                    if (RootElement.TryGetProperty("tier", out JsonElement tierE))
+                    {
+                        if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
+                            _Tier = tierE.GetString();
+                        else
+                            _Tier = _Functions.Evaluate(tierE.GetString(), FullContext).ToString();
+                    }
+                }
+                return _Tier;
+            }
+            set
+            {
+                _Tier = value;
+                Change(value, "tier");
+            }
+        }
+        private string _Size;
+        [DisplayName("size")]
+        public string Size
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_Size))
+                {
+                    if (RootElement.TryGetProperty("size", out JsonElement sizeE))
+                    {
+                        if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
+                            _Size = sizeE.GetString();
+                        else
+                            _Size = _Functions.Evaluate(sizeE.GetString(), FullContext).ToString();
+                    }
+                }
+                return _Size;
+            }
+            set
+            {
+                _Size = value;
+                Change(value, "size");
+            }
+        }
+        private string _Family;
+        [DisplayName("family")]
+        public string Family
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_Family))
+                {
+                    if (RootElement.TryGetProperty("family", out JsonElement familyE))
+                    {
+                        if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
+                            _Family = familyE.GetString();
+                        else
+                            _Family = _Functions.Evaluate(familyE.GetString(), FullContext).ToString();
+                    }
+                }
+                return _Family;
+            }
+            set
+            {
+                _Family = value;
+                Change(value, "family");
+            }
+        }
+        private string _Capacity;
+        [DisplayName("capacity")]
+        public string Capacity
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_Capacity))
+                {
+                    if (RootElement.TryGetProperty("capacity", out JsonElement capacityE))
+                    {
+                        _Capacity = capacityE.GetRawText();
+                    }
+                }
+                return _Capacity;
+            }
+            set
+            {
+                _Capacity = value;
+                Change(value, "capacity");
+            }
+        }
+        private Resource _Resource;
+        internal Dictionary<string, object> FullContext
+        {
+            get { return _Resource.FullContext; }
+        }
+        public Deployment Input { get { return _Resource.Input; } }
+        protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
+
+        internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
+        public SKU() { }
+        public SKU(Resource resource)
+        {
+            _Resource = resource;
+            if (resource.RootElement.TryGetProperty("sku", out JsonElement sku))
+                this.RawString = sku.GetRawText();
             else
-                throw new Exception("cannot find name property in SKU node");
-            if (root.TryGetProperty("tier", out JsonElement tierE))
-                sku.Name = functions.Evaluate(tierE.GetString(), context).ToString();
-            if (root.TryGetProperty("size", out JsonElement sizeE))
-                sku.Size = functions.Evaluate(sizeE.GetString(), context).ToString();
-            if (root.TryGetProperty("family", out JsonElement familyE))
-                sku.Family = functions.Evaluate(familyE.GetString(), context).ToString();
-            if (root.TryGetProperty("capacity", out JsonElement capacityE))
-                sku.Capacity = capacityE.GetRawText();
-            return sku;
+                this.RawString = "{}";
+
         }
-        public override string ToString()
-        {
-            using MemoryStream ms = new MemoryStream();
-            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-            writer.WriteStartObject();
-            writer.WriteString("name", this.Name);
-            if (!string.IsNullOrEmpty(this.Tier))
-                writer.WriteString("tier", this.Tier);
-            if (!string.IsNullOrEmpty(this.Size))
-                writer.WriteString("size", this.Size);
-            if (!string.IsNullOrEmpty(this.Family))
-                writer.WriteString("family", this.Family);
-            if (!string.IsNullOrEmpty(this.Capacity))
-                writer.WriteString("capacity", this.Capacity);
-            writer.WriteEndObject();
-            writer.Flush();
-            return Encoding.UTF8.GetString(ms.ToArray());
-        }
+
     }
 }
