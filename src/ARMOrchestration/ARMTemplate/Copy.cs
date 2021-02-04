@@ -184,7 +184,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             for (int i = 0; i < this.Count; i++)
             {
                 var r = GetResource(i);
-                if (_Resource.Input.Template.ChangedCopyResoures.TryGetValue(r.NameWithServiceType, out Resource cr))
+                if (_Resource.Input.Template.ChangedCopyResoures.TryGetValue(r.ResourceId, out Resource cr))
                     yield return cr;
                 else
                     yield return r;

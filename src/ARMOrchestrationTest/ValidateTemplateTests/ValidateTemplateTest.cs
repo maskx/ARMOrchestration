@@ -126,7 +126,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             };
             var (r, m) = Deployment.Validate();
             Assert.True(r);
-            Assert.True(Deployment.Template.Resources.ContainsKey("storagecopy"));
+            Assert.True(Deployment.Template.Resources.TryGetValue("storagecopy",out Resource _));
             var copy = Deployment.Template.Resources["storagecopy"];
             Assert.NotNull(copy.Copy);
             Assert.Equal("storagecopy", copy.Copy.Name);

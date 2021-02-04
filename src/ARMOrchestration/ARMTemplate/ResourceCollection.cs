@@ -1,6 +1,7 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SqlServer.Management.Dmf;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -41,16 +42,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private void SyncAllChanges()
         {
-            foreach (var item in _Resources.Values)
+            foreach (var r in _Resources)
             {
-                foreach (var r in item)
+                if (r is IChangeTracking ct)
                 {
-                    if (r is IChangeTracking ct)
+                    if (ct.TrackingVersion != this.TrackingVersion)
                     {
-                        if (ct.TrackingVersion != this.TrackingVersion)
-                        {
-                            this.TrackingVersion = DateTime.Now.Ticks;
-                        }
+                        this.TrackingVersion = DateTime.Now.Ticks;
                     }
                 }
             }
@@ -62,14 +60,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return false;
             if (newVersion == 0)
                 newVersion = this.TrackingVersion;
-            foreach (var rs in _Resources.Values)
+
+            foreach (var r in _Resources)
             {
-                foreach (var r in rs)
-                {
-                    if (r.TrackingVersion != newVersion)
-                        r.Accepet(this.TrackingVersion);
-                }
+                if (r.TrackingVersion != newVersion)
+                    r.Accepet(this.TrackingVersion);
             }
+
             this.TrackingVersion = newVersion;
             return false;
         }
@@ -112,13 +109,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 using MemoryStream ms = new MemoryStream();
                 using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
                 writer.WriteStartArray();
-                foreach (var item in _Resources.Values)
+                foreach (var r in _Resources)
                 {
-                    foreach (var r in item)
-                    {
-                        r.Accepet(this.TrackingVersion);
-                        writer.WriteRawString(r.ToString());
-                    }
+                    r.Accepet(this.TrackingVersion);
+                    writer.WriteRawString(r.ToString());
                 }
                 writer.WriteEndArray();
                 writer.Flush();
@@ -130,87 +124,38 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 Change(null, null);
             }
         }
-        private readonly ConcurrentDictionary<string, List<Resource>> _Resources = new ConcurrentDictionary<string, List<Resource>>();
+        private readonly List<Resource> _Resources = new List<Resource>();
         private List<Deployment> _Deployments = null;
 
         public Resource this[string name]
         {
             get
             {
-                int index = name.LastIndexOf('/');
-                if (index > 0)
-                {
-                    string n = name[(index + 1)..];
-                    if (!this._Resources.TryGetValue(n, out List<Resource> rs))
-                        throw new KeyNotFoundException(name);
-                    bool withServiceType = name.Contains('.');
-                    foreach (var r in rs)
-                    {
-                        if (withServiceType && r.ResourceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
-                            return r;
-                        if (!withServiceType && r.Name == name)
-                            return r;
-                    }
-                    throw new KeyNotFoundException(name);
-                }
-                else
-                {
-                    if (!this._Resources.TryGetValue(name, out List<Resource> rs))
-                        throw new KeyNotFoundException(name);
-                    if (rs.Count > 1)
-                        throw new Exception($"more than one resource have named '{name}',try to get resource by fullname or inclued Servcie Types)");
-                    return rs[0];
-                }
-            }
-            set
-            {
-                Remove(value);
-                Add(value);
+                if (TryGetValue(name, out Resource r))
+                    return r;
+                return null;
             }
         }
 
         public bool TryGetValue(string name, out Resource resource)
         {
-            resource = null;
-            int index = name.LastIndexOf('/');
-            if (index > 0)
+            foreach (var r in _Resources)
             {
-                string n = name[(index + 1)..];
-                if (!this._Resources.TryGetValue(n, out List<Resource> rs))
-                    return false;
-                bool withServiceType = name.Contains('.');
-                foreach (var r in rs)
+                if (r.ResourceId.EndsWith(name) || r.FullName.EndsWith(name))
                 {
-                    if (withServiceType && r.ResourceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        resource = r;
-                        return true;
-                    }
-                    if (!withServiceType && r.Name == name)
-                    {
-                        resource = r;
-                        return true;
-                    }
+                    resource = r;
+                    return true;
                 }
-                return false;
             }
-            else
-            {
-                if (!this._Resources.TryGetValue(name, out List<Resource> rs))
-                    return false;
-                if (rs.Count > 1)
-                    return false;
-                //throw new Exception($"more than one resource have named '{name}',try to get resource by fullname or inclued Servcie Types)");
-                resource = rs[0];
-                return true;
-            }
+            resource = null;
+            return false;
         }
 
         public int Count
         {
             get
             {
-                return _Resources.Values.Sum((rs) => { return rs.Count; });
+                return _Resources.Count;
             }
         }
 
@@ -218,26 +163,16 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public void Add(Resource item)
         {
-            string name = item.Name;
-            if (item.Copy != null && !item.CopyIndex.HasValue)
-                name = item.Copy.Name;
-            int index = name.LastIndexOf('/');
-            if (index > 0)
-                name = name[(index + 1)..];
-            if (!_Resources.TryGetValue(name, out List<Resource> rs))
+            if (Contains(item))
             {
-                rs = new List<Resource>();
-                _Resources.TryAdd(name, rs);
+                throw new Exception($"already exists:{item.ResourceId}");
             }
-            foreach (var r in rs)
+            else
             {
-                // item already in clollection
-                if (r.ResourceId.Equals(item.ResourceId, StringComparison.OrdinalIgnoreCase))
-                    return;
+                item.Input = _Input;
+                _Resources.Add(item);
+                Change(null, null);
             }
-            item.Input = _Input;
-            rs.Add(item);
-            Change(null, null);
         }
 
         public void Clear()
@@ -247,79 +182,36 @@ namespace maskx.ARMOrchestration.ARMTemplate
             Change(null, null);
         }
 
-        public bool ContainsKey(string name)
+
+
+        public bool Contains(Resource item)
         {
-            int index = name.LastIndexOf('/');
-            if (index < 0)
-                return this._Resources.ContainsKey(name);
-            string n = name[(index + 1)..];
-            if (!this._Resources.TryGetValue(n, out List<Resource> rs))
-                return false;
-            bool withServiceType = name.Contains('.');
-            foreach (var r in rs)
+            foreach (var r in _Resources)
             {
-                if (withServiceType && r.ResourceId.EndsWith(name, StringComparison.OrdinalIgnoreCase))
-                    return true;
-                if (!withServiceType && r.Name == name)
+                if (r.ResourceId.Equals(item.ResourceId, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
             return false;
         }
 
-        public bool Contains(Resource item)
-        {
-            return ContainsKey(item.Name);
-        }
-
         public void CopyTo(Resource[] array, int arrayIndex)
         {
-            if (array == null)
-                throw new ArgumentNullException();
-            if (arrayIndex < 0)
-                throw new ArgumentOutOfRangeException();
-            if (array.Length - arrayIndex < this.Count)
-                throw new ArgumentException("The number of elements in the source is greater than the available space from arrayIndex to the end of the destination array");
-            int i = arrayIndex;
-            foreach (var rs in this._Resources.Values)
-            {
-                foreach (var r in rs)
-                {
-                    array[i] = r;
-                    i++;
-                }
-            }
+            _Resources.CopyTo(array, arrayIndex);
         }
 
         public IEnumerator<Resource> GetEnumerator()
         {
-            foreach (var rs in _Resources.Values)
-            {
-                foreach (var r in rs)
-                {
-                    yield return r;
-                }
-            }
+            return _Resources.GetEnumerator();
         }
 
         public bool Remove(Resource item)
         {
-            string name = item.Name;
-            int index = name.LastIndexOf('/');
-            if (index > 0)
-                name = name[(index + 1)..];
-            if (!this._Resources.TryGetValue(name, out List<Resource> rs))
-                return false;
-            if (rs.Count == 1)
+            foreach (var r in _Resources)
             {
-                Change(null, null);
-                return this._Resources.TryRemove(name, out _);
-            }
-            foreach (var r in rs)
-            {
-                if (r.Name == item.Name)
+                if (r.ResourceId.Equals(item.ResourceId, StringComparison.OrdinalIgnoreCase))
                 {
-                    Change(null, null);
-                    return rs.Remove(r);
+                    _Resources.Remove(r);
+                    return true;
                 }
             }
             return false;
@@ -327,13 +219,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            foreach (var rs in _Resources.Values)
-            {
-                foreach (var r in rs)
-                {
-                    yield return r;
-                }
-            }
+            return _Resources.GetEnumerator();
         }
 
         public override string ToString()
@@ -353,7 +239,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 var infra = _ServiceProvider.GetService<IInfrastructure>();
                 this._Deployments.Clear();
-                foreach (var item in this)
+                foreach (var item in _Resources)
                 {
                     if (item.Type == infra.BuiltinServiceTypes.Deployments)
                     {

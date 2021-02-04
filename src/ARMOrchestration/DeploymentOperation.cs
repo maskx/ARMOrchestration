@@ -73,10 +73,7 @@ namespace maskx.ARMOrchestration
         public string SubscriptionId { get; set; }
         public string ManagementGroupId { get; set; }
 
-        /// <summary>
-        /// child of copy, the ParentId copy's path, like /Microsoft.Resources/deployments/{deploymentName}copy/{copyname}
-        /// todo: this should be ParentDeploymentOperationId
-        /// </summary>
+
         public string ParentResourceId { get; set; }
 
         public string ResourceId { get; set; }

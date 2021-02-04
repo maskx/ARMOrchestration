@@ -100,7 +100,7 @@ BEGIN
 		deallocate deployment_cursor
 	end
 
-	select case @ParentResourceId when NULL then 0 else 1 end  as Effected,Stage,CorrelationId,LastRunUserId from [{0}].[{1}_DeploymentOperations] where Id=@Id
+	select case when @ParentResourceId  is NULL then 0 else 1 end  as Effected,Stage,CorrelationId,LastRunUserId from [{0}].[{1}_DeploymentOperations] where Id=@Id
 END
 GO
 

@@ -49,7 +49,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Code = $"{Name}:PrepareRetry",
                             Message = $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
                         });
-                    // todo: 重置 ChildResource stage，避免 ChildResource 之间依赖影响 Retry
                 }
                 else
                 {
