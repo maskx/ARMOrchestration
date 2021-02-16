@@ -1,15 +1,16 @@
-﻿using maskx.ARMOrchestration.Functions;
+﻿using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     /// <summary>
     /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances
     /// </summary>
-    public class Copy : ChangeTracking
+    public class Copy : ObjectChangeTracking
     {
         public const string ServiceType = "copy";
         public const string SerialMode = "serial";
@@ -30,9 +31,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     cxt.Add(item.Key, item.Value);
                 }
-                return _ARMFunctions.ResourceId(_Resource.Input, new object[] {
+                return _ARMFunctions.ResourceId(_Resource.Deployment, new object[] {
                     $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
-                    _Resource.Input.Name,
+                    _Resource.Deployment.Name,
                     Name });
             }
         }
@@ -43,9 +44,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (!RootElement.TryGetProperty("name", out JsonElement name))
+                if (!RootElement.TryGetValue("name", out JToken name))
                     throw new Exception("cannot find name prooerty");
-                return name.GetString();
+                return name.Value<string>();
             }
         }
         public string Type
@@ -85,18 +86,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (!_Count.HasValue)
                 {
-                    if (!RootElement.TryGetProperty("count", out JsonElement count))
+                    if (!RootElement.TryGetValue("count", out JToken count))
                         throw new Exception("not find count in copy node");
-                    if (count.ValueKind == JsonValueKind.Number)
-                        _Count = count.GetInt32();
-                    else if (count.ValueKind == JsonValueKind.String)
+                    if (count.Type == JTokenType.Integer)
+                        _Count = count.Value<int>();
+                    else if (count.Type == JTokenType.String)
                     {
                         Dictionary<string, object> cxt = new Dictionary<string, object>();
                         foreach (var item in _ParentContext)
                         {
                             cxt.Add(item.Key, item.Value);
                         }
-                        _Count = (int)_ARMFunctions.Evaluate(count.GetString(), cxt);
+                        _Count = (int)_ARMFunctions.Evaluate(count.Value<string>(), cxt, $"{RootElement.Path}.count");
                         // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
                         if (cxt.ContainsKey(ContextKeys.DEPENDSON))
                             throw new Exception("You can't use the reference function to set the value of the count property in a copy loop.");
@@ -116,8 +117,8 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (RootElement.TryGetProperty("mode", out JsonElement mode))
-                    return mode.GetString().ToLower();
+                if (RootElement.TryGetValue("mode", out JToken mode))
+                    return mode.Value<string>().ToLower();
                 return ParallelMode;
             }
         }
@@ -131,20 +132,20 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (!_BatchSize.HasValue)
                 {
-                    if (!RootElement.TryGetProperty("batchSize", out JsonElement batchSize))
+                    if (!RootElement.TryGetValue("batchSize", out JToken batchSize))
                         _BatchSize = 0;
                     else
                     {
-                        if (batchSize.ValueKind == JsonValueKind.Number)
-                            _BatchSize = batchSize.GetInt32();
-                        else if (batchSize.ValueKind == JsonValueKind.String)
+                        if (batchSize.Type == JTokenType.Integer)
+                            _BatchSize = batchSize.Value<Int32>();
+                        else if (batchSize.Type == JTokenType.String)
                         {
                             Dictionary<string, object> cxt = new Dictionary<string, object>();
                             foreach (var item in _ParentContext)
                             {
                                 cxt.Add(item.Key, item.Value);
                             }
-                            _BatchSize = (int)_ARMFunctions.Evaluate(batchSize.GetString(), cxt);
+                            _BatchSize = (int)_ARMFunctions.Evaluate(batchSize.Value<string>(), cxt, $"{RootElement.Path}.batchSize");
                         }
 
                     }
@@ -161,22 +162,21 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (RootElement.TryGetProperty("input", out JsonElement input))
+                if (RootElement.TryGetValue("input", out JToken input))
                 {
-                    return input.GetRawText();
+                    return input.ToString();
                 }
                 return null;
             }
         }
 
-        public Copy(string rawString, Dictionary<string, object> context, Resource resource) : this(rawString, context)
+        public Copy(JObject root, Dictionary<string, object> context, Resource resource) : this(root, context)
         {
             this._Resource = resource;
         }
-        public Copy(string rawString, Dictionary<string, object> context)
+        public Copy(JObject root, Dictionary<string, object> context) : base(root, context)
         {
             this.DeploymentOrchestrationInput = context[ContextKeys.ARM_CONTEXT] as Deployment;
-            this.RawString = rawString;
             this._ParentContext = context;
         }
         public IEnumerable<Resource> EnumerateResource(bool flatChild = false)
@@ -184,10 +184,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             for (int i = 0; i < this.Count; i++)
             {
                 var r = GetResource(i);
-                if (_Resource.Input.Template.ChangedCopyResoures.TryGetValue(r.ResourceId, out Resource cr))
-                    yield return cr;
-                else
-                    yield return r;
+                yield return r;
                 if (flatChild)
                 {
                     foreach (var child in r.FlatEnumerateChild())
@@ -199,7 +196,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
         public Resource GetResource(int index)
         {
-            return new Resource(_Resource.RawString, _Resource.FullContext, _Resource.DeploymentOperationId, index);
+            return new Resource(_Resource.RootElement, _Resource.FullContext, index);
         }
     }
 }

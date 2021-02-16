@@ -1,6 +1,6 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Functions;
-using maskx.OrchestrationService.Worker;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -9,7 +9,7 @@ namespace maskx.ARMOrchestration.Extensions
 {
     public static class Utf8JsonWriterExtensions
     {
-        public static void WriteElement(this Utf8JsonWriter writer, JsonElement element, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
+        public static void WriteElement(this Utf8JsonWriter writer, JsonElement element, Dictionary<string, object> context, string path)
         {
             switch (element.ValueKind)
             {
@@ -25,7 +25,7 @@ namespace maskx.ARMOrchestration.Extensions
                     writer.WriteStartObject();
                     foreach (var p in element.EnumerateObject())
                     {
-                        writer.WriteProperty(p, context, functions, infrastructure);
+                        writer.WriteProperty(p, context, path);
                     }
                     writer.WriteEndObject();
                     break;
@@ -34,13 +34,13 @@ namespace maskx.ARMOrchestration.Extensions
                     writer.WriteStartArray();
                     foreach (var a in element.EnumerateArray())
                     {
-                        writer.WriteElement(a, context, functions, infrastructure);
+                        writer.WriteElement(a, context, path);
                     }
                     writer.WriteEndArray();
                     break;
 
                 case JsonValueKind.String:
-                    var r = functions.Evaluate(element.GetString(), context);
+                    var r = (context[ContextKeys.ARM_CONTEXT] as Deployment).Functions.Evaluate(element.GetString(), context, path);
                     if (r is JsonValue j)
                         j.RootElement.WriteTo(writer);
                     else if (r is bool b)
@@ -72,16 +72,14 @@ namespace maskx.ARMOrchestration.Extensions
             writer.WriteRawString(rawString);
         }
 
-        public static void ExpandCopy(this Utf8JsonWriter writer, JsonElement copyProperty, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
+        public static void ExpandCopy(this Utf8JsonWriter writer, JsonElement copyProperty, Dictionary<string, object> context, string path)
         {
             // this is for Variable  and Property iteration
             if (copyProperty.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in copyProperty.EnumerateArray())
                 {
-                    Copy copy = copy =new Copy(item.GetRawText(), context);
-
-                    using JsonDocument doc = JsonDocument.Parse(copy.Input);
+                    Copy copy = copy = new Copy(JObject.Parse(item.GetRawText()), context);
                     var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
                     Dictionary<string, object> copyContext = new Dictionary<string, object>
                         {
@@ -94,11 +92,16 @@ namespace maskx.ARMOrchestration.Extensions
                     }
                     writer.WritePropertyName(copy.Name);
                     writer.WriteStartArray();
+                    if (!item.TryGetProperty("input", out JsonElement inputE))
+                    {
+                        throw new Exception($"cannot find input property in path: {path}");
+                    }
                     for (int i = 0; i < copy.Count; i++)
                     {
                         copyindex[copy.Name] = i;
-                        writer.WriteElement(doc.RootElement, copyContext, functions, infrastructure);
+                        writer.WriteElement(inputE, copyContext, path);
                     }
+
                     writer.WriteEndArray();
                     if (copyContext.TryGetValue(ContextKeys.DEPENDSON, out object copyDependsOn))
                     {
@@ -123,11 +126,12 @@ namespace maskx.ARMOrchestration.Extensions
             {
                 var input = copyProperty.GetProperty("input");
                 var countProperty = copyProperty.GetProperty("count");
+                var deployment = context[ContextKeys.ARM_CONTEXT] as Deployment;
                 int count;
                 if (countProperty.ValueKind == JsonValueKind.Number)
                     count = countProperty.GetInt32();
                 else if (countProperty.ValueKind == JsonValueKind.String)
-                    count = (int)functions.Evaluate(countProperty.GetString(), context);
+                    count = (int)deployment.Functions.Evaluate(countProperty.GetString(), context);
                 else
                     throw new Exception("the property of count has wrong error. It should be number or an function return a number");
                 var name = Guid.NewGuid().ToString("N");
@@ -146,7 +150,7 @@ namespace maskx.ARMOrchestration.Extensions
                 for (int i = 0; i < count; i++)
                 {
                     copyindex[name] = i;
-                    writer.WriteElement(input, copyContext, functions, infrastructure);
+                    writer.WriteElement(input, copyContext, path);
                 }
                 writer.WriteEndArray();
             }
@@ -156,17 +160,17 @@ namespace maskx.ARMOrchestration.Extensions
             }
         }
 
-        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
+        public static (bool Result, string Message) WriteProperty(this Utf8JsonWriter writer, JsonProperty property, Dictionary<string, object> context, string path)
         {
             // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-numeric#copyindex
             if ("copy".Equals(property.Name, StringComparison.OrdinalIgnoreCase))
             {
-                writer.ExpandCopy(property.Value, context, functions, infrastructure);
+                writer.ExpandCopy(property.Value, context, $"{path}.copy");
             }
             else
             {
                 writer.WritePropertyName(property.Name);
-                writer.WriteElement(property.Value, context, functions, infrastructure);
+                writer.WriteElement(property.Value, context, $"{path}.{ property.Name}");
             }
             return (true, string.Empty);
         }

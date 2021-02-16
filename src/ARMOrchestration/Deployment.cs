@@ -95,7 +95,7 @@ namespace maskx.ARMOrchestration
 
         public static Deployment Parse(Resource resource)
         {
-            Deployment deploymentContext = resource.Input;
+            Deployment deploymentContext = resource.Deployment;
             ARMFunctions functions = resource.ServiceProvider.GetService<ARMFunctions>();
             IInfrastructure infrastructure = resource.ServiceProvider.GetService<IInfrastructure>();
             Dictionary<string, object> context = new Dictionary<string, object>();
@@ -104,7 +104,7 @@ namespace maskx.ARMOrchestration
                 context.Add(item.Key, item.Value);
             }
 
-            using var doc = JsonDocument.Parse(resource.RawProperties.RawString);
+            using var doc = JsonDocument.Parse(resource.RawProperties);
             var rootElement = doc.RootElement;
 
             var mode = DeploymentMode.Incremental;
@@ -146,7 +146,7 @@ namespace maskx.ARMOrchestration
             }
             var (groupId, groupType, hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
             context.Remove(ContextKeys.ARM_CONTEXT);
-            return new Deployment()
+            var d= new Deployment()
             {
                 Condition = resource.Condition,
                 RootId = deploymentContext.RootId,
@@ -175,6 +175,7 @@ namespace maskx.ARMOrchestration
                 ServiceProvider = resource.ServiceProvider,
                 ExpressionEvaluationOptions = expressionEvaluationOptions
             };
+            return d;
         }
 
         private IServiceProvider _ServiceProvider;
@@ -187,10 +188,11 @@ namespace maskx.ARMOrchestration
             {
                 _ServiceProvider = value;
                 if (Template != null)
-                    Template.Input = this;
+                    Template.Deployment = this;
             }
         }
-
+        [JsonIgnore]
+        public ARMFunctions Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
         public bool IsRuntime { get; set; } = false;
         public string ExpressionEvaluationOptions { get; set; }
         /// <summary>
@@ -256,13 +258,10 @@ namespace maskx.ARMOrchestration
         {
             get
             {
-                if (template != null)
-                    return template;
-                if (TemplateLink != null)
+                if (template == null)
                 {
-                    template = this.ServiceProvider.GetService<IInfrastructure>().GetTemplateContentAsync(TemplateLink, this).Result;
-                    if (template != null)
-                        template.Input = this;
+                    template = new Template();
+                    template.Deployment = this;
                 }
                 return template;
             }
@@ -270,7 +269,7 @@ namespace maskx.ARMOrchestration
             {
                 template = value;
                 if (template != null)
-                    template.Input = this;
+                    template.Deployment = this;
             }
         }
         string _Parameters = null;
@@ -314,7 +313,14 @@ namespace maskx.ARMOrchestration
         /// </summary>
         public Dictionary<string, object> Extensions { get; set; }
 
-        public TemplateLink TemplateLink { get; set; }
+        public TemplateLink TemplateLink
+        {
+            get { return Template.TemplateLink; }
+            set
+            {
+                Template.TemplateLink = value;
+            }
+        }
         public ParametersLink ParametersLink { get; set; }
 
         public DependsOnCollection DependsOn { get; set; } = new DependsOnCollection();
@@ -480,13 +486,16 @@ namespace maskx.ARMOrchestration
         }
         public Dictionary<string, object> Context = new Dictionary<string, object>();
 
+        public Dictionary<string, object> ChangeMap = new Dictionary<string, object>();
+        public Dictionary<string, object> PersistenceValue = new Dictionary<string, object>();
         public string GetOutputs()
         {
             // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
-            var aRMFunctions = ServiceProvider.GetService<ARMFunctions>();
+           
             Dictionary<string, object> context = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, this } };
-            var outputDefineElement = this.Template.Outputs.RootElement;
+            using var json = JsonDocument.Parse(this.Template.Outputs);
+            var outputDefineElement = json.RootElement;
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms, new JsonWriterOptions() { Indented = false });
             writer.WriteStartObject();
@@ -513,10 +522,10 @@ namespace maskx.ARMOrchestration
                     if (condition.ValueKind == JsonValueKind.False)
                         continue;
                     if (condition.ValueKind == JsonValueKind.String &&
-                        !(bool)aRMFunctions.Evaluate(condition.GetString(), context))
+                        !(bool)Functions.Evaluate(condition.GetString(), context))
                         continue;
                 }
-                writer.WriteProperty(item, context, aRMFunctions, infrastructure);
+                writer.WriteProperty(item, context, "outputs");
             }
             writer.WriteEndObject();
 

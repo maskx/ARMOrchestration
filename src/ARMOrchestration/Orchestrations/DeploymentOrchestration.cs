@@ -47,7 +47,8 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 ResourceOrchestrationInput res = DataConverter.Deserialize<ResourceOrchestrationInput>(arg);
                 res.ServiceProvider = this._ServiceProvider;
-                _DeploymentOperationId = res.DeploymentOperationId;
+                if (!res.IsRetry)
+                    _DeploymentOperationId = context.OrchestrationInstance.InstanceId;
                 if (!context.IsReplaying)
                 {
                     var dep = Deployment.Parse(res.Resource);
@@ -57,17 +58,19 @@ namespace maskx.ARMOrchestration.Orchestrations
                     {
                         var r = helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
                         if (r == null)
-                            return new TaskResult(400, new ErrorResponse() {
-                                Code=$"{Name}:PrepareRetry",
-                                Message= $"cannot find DeploymentOperation with Id:{res.DeploymentOperationId}"
-                            } );
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:PrepareRetry",
+                                Message = $"cannot find DeploymentOperation with Id:{res.DeploymentOperationId}"
+                            });
                         if (r.Value == ProvisioningStage.Successed)
                             return new TaskResult(200, "");
                         if (r.Value != ProvisioningStage.StartProvisioning)
-                            return new TaskResult(400,new ErrorResponse() {
-                                Code= $"{Name}:PrepareRetry",
-                                Message= $"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
-                            } );
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:PrepareRetry",
+                                Message = $"Deployment[{_DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
+                            });
                     }
                     else
                     {
@@ -86,9 +89,10 @@ namespace maskx.ARMOrchestration.Orchestrations
                                 Message = "CorrelationId duplicated"
                             });
                         if (operation.Id != _DeploymentOperationId)
-                            return new TaskResult(400,new ErrorResponse() { 
+                            return new TaskResult(400, new ErrorResponse()
+                            {
                                 Code = $"{Name}:CreatDeploymentOperation",
-                                Message =$"{operation.ResourceId} already exists"
+                                Message = $"{operation.ResourceId} already exists"
                             });
                     }
                 }

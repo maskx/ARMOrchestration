@@ -66,7 +66,7 @@ namespace ARMOrchestrationTest.Mock
                 r.Location = rinput.Resource.Location;
                 r.SKU = rinput.Resource.SKU?.Name;
                 r.Kind = rinput.Resource.Kind;
-                deployment = rinput.Resource.Input;
+                deployment = rinput.Resource.Deployment;
             }
 
             r.SubscriptionId = deployment.SubscriptionId;

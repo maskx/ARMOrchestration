@@ -2,6 +2,7 @@
 using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,33 +10,37 @@ using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    [JsonObject(MemberSerialization.OptIn)]
+
     public class Template : ChangeTracking
     {
-        private Dictionary<string, object> _FullContext;
-
-        internal Dictionary<string, object> FullContext
+        [JsonProperty]
+        public string RawString { get; private set; }
+        private TemplateLink _TemplateLink { get; set; }
+        public TemplateLink TemplateLink
+        {
+            get { return _TemplateLink; }
+            set
+            {
+                _TemplateLink = value;
+                _RootElement = null;
+            }
+        }
+        JObject _RootElement;
+        internal  JObject RootElement
         {
             get
             {
-                if (_FullContext == null)
+                if (_RootElement == null)
                 {
-                    _FullContext = new Dictionary<string, object> {
-                        {ContextKeys.ARM_CONTEXT,this.Input} };
-                    foreach (var item in Input.Context)
-                    {
-                        if (item.Key == ContextKeys.ARM_CONTEXT) continue;
-                        _FullContext.Add(item.Key, item.Value);
-                    }
+                    if (_TemplateLink != null)
+                        _RootElement = JObject.Parse(this.ServiceProvider.GetService<IInfrastructure>().GetTemplateContentAsync(_TemplateLink, Deployment).Result);
+                    else if (!string.IsNullOrEmpty(this.RawString))
+                        _RootElement = JObject.Parse(this.RawString);
+
                 }
-                return _FullContext;
+                return _RootElement;
             }
         }
-
-        public Deployment Input { get; set; }
-
-        private IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
-
         public static implicit operator Template(string rawString)
         {
             if (string.IsNullOrEmpty(rawString))
@@ -48,9 +53,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (!RootElement.TryGetProperty("$schema", out JsonElement schema))
+                if (!RootElement.TryGetValue("$schema", out JToken schema))
                     throw new Exception("not find $schema in template");
-                return schema.GetString();
+                return schema.Value<string>();
             }
         }
 
@@ -59,9 +64,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (!RootElement.TryGetProperty("contentVersion", out JsonElement contentVersion))
+                if (!RootElement.TryGetValue("contentVersion", out JToken contentVersion))
                     throw new Exception("not find contentVersion in template");
-                return contentVersion.GetString();
+                return contentVersion.ToString();
             }
         }
 
@@ -70,9 +75,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (RootElement.TryGetProperty("apiProfile", out JsonElement apiProfile))
+                if (RootElement.TryGetValue("apiProfile", out JToken apiProfile))
                     return this.ServiceProvider.GetService<ARMFunctions>().Evaluate(
-                        apiProfile.GetString(),
+                        apiProfile.Value<string>(),
                         FullContext
                         ).ToString();
                 return string.Empty;
@@ -84,35 +89,27 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (RootElement.TryGetProperty("parameters", out JsonElement parameters))
-                    return parameters.GetRawText();
+                if (RootElement.TryGetValue("parameters", out JToken parameters))
+                    return parameters.ToString();
                 return "{}";
             }
         }
 
-        public JsonValue _Variables = null;
+        public string _Variables = null;
 
         // thread unsafed
+        // todo: keep newguid result
         [DisplayName("variables")]
-        public JsonValue Variables
+        public string Variables
         {
             get
             {
                 if (_Variables == null)
                 {
-                    if (RootElement.TryGetProperty("variables", out JsonElement variables))
+                    if (RootElement.TryGetValue("variables", out JToken variables))
                     {
                         // variable can refernce variable, so must set variables value before expand
-                        _Variables = new JsonValue(variables.GetRawText());
-                        using var doc = JsonDocument.Parse(_Variables.ToString());
-                        _Variables = new JsonValue(doc.RootElement.ExpandObject(
-                            new Dictionary<string, object>() {{ ContextKeys.ARM_CONTEXT,Input} },
-                            ServiceProvider.GetService<ARMFunctions>(),
-                            ServiceProvider.GetService<IInfrastructure>()));
-                        // 需要确保 newguid 一类的函数，每次获取变量都返回相同的值
-                        // 因此，variables 需要提前展开
-                        // 因此  variables 中不可以使用 reference 函数
-                        Change(_Variables, "variables");
+                        _Variables = variables.ToString();
                     }
                 }
                 return _Variables;
@@ -128,9 +125,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_Resources == null)
                 {
-                    if (!RootElement.TryGetProperty("resources", out JsonElement resources))
+                    if (!RootElement.TryGetValue("resources", out JToken resources))
                         throw new Exception("not find resources in template");
-                    _Resources = new ResourceCollection(resources.GetRawText(), this.FullContext);
+                    _Resources = new ResourceCollection(resources as JArray, this.FullContext);
                 }
                 return _Resources;
             }
@@ -141,32 +138,34 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get
             {
-                if (RootElement.TryGetProperty("functions", out JsonElement funcs))
-                    return Functions.Parse(funcs);
+                if (RootElement.TryGetValue("functions", out JToken funcs))
+                {
+                    using var doc = JsonDocument.Parse(funcs.ToString());
+                    return Functions.Parse(doc.RootElement);
+                }
                 return null;
             }
         }
 
-        private ChangeTracking _Outputs;
+        private string _Outputs;
+        [JsonProperty]
+        private string ChangedOutputs;
 
         [DisplayName("outputs")]
-        public ChangeTracking Outputs
+        public string Outputs
         {
             get
             {
                 if (_Outputs == null)
                 {
-                    if (RootElement.TryGetProperty("outputs", out JsonElement outputs))
-                        _Outputs = new ChangeTracking() { RawString = outputs.GetRawText() };
-                    else
-                        _Outputs = new ChangeTracking();
+                    if (RootElement.TryGetValue("outputs", out JToken outputs))
+                        _Outputs = outputs.ToString();
                 }
-                return _Outputs;
+                return string.IsNullOrEmpty(ChangedOutputs) ? _Outputs : ChangedOutputs;
             }
             set
             {
-                _Outputs = value;
-                Change(value, "outputs");
+                ChangedOutputs = value;
             }
         }
 
@@ -193,9 +192,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             object _;
             try
             {
-                if (!RootElement.TryGetProperty("$schema", out JsonElement schema))
+                if (!RootElement.TryGetValue("$schema", out JToken schema))
                     return (false, "not find $schema in template");
-                if (!RootElement.TryGetProperty("contentVersion", out JsonElement contentVersion))
+                if (!RootElement.TryGetValue("contentVersion", out JToken contentVersion))
                     return (false, "not find contentVersion in template");
                 _ = this.Variables;
                 _ = this.ApiProfile;
@@ -213,15 +212,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return (true, "");
         }
 
-        ResourceCollection _ChangedCopyResoures;
-        public ResourceCollection ChangedCopyResoures
+        public override string ToString()
         {
-            get
-            {
-                if (_ChangedCopyResoures == null)
-                    _ChangedCopyResoures = new ResourceCollection("[]", FullContext);
-                return _ChangedCopyResoures;
-            }
+            return RootElement.ToString(Formatting.Indented);
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using maskx.ARMOrchestration.Functions;
-using maskx.OrchestrationService.Worker;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -88,27 +86,29 @@ namespace maskx.ARMOrchestration.Extensions
             return null;
         }
 
-        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure) 
+        public static string ExpandObject(this JsonElement self, Dictionary<string, object> context, string path)
         {
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
             writer.WriteStartObject();
             foreach (var item in self.EnumerateObject())
             {
-                writer.WriteProperty(item, context, functions, infrastructure);
+                writer.WriteProperty(item, context, path);
             }
             writer.WriteEndObject();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());
         }
-
-        public static string ExpadCopy(this JsonElement copyProperty, Dictionary<string, object> context, ARMFunctions functions, IInfrastructure infrastructure)
+        public static string ExpandArray(this JsonElement self, Dictionary<string, object> context, string path)
         {
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-            writer.WriteStartObject();
-            writer.ExpandCopy(copyProperty, context, functions, infrastructure);
-            writer.WriteEndObject();
+            writer.WriteStartArray();
+            foreach (var item in self.EnumerateArray())
+            {
+                writer.WriteElement(item, context, path);
+            }
+            writer.WriteEndArray();
             writer.Flush();
             return Encoding.UTF8.GetString(ms.ToArray());
         }

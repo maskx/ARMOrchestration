@@ -23,6 +23,7 @@
         public string DeploymentOperationsTableName => $"[{SchemaName}].[{HubName}_{DeploymentOperationsTable}]";
         public string DeploymentOperationHistoryTableName => $"[{SchemaName}].[{HubName}_{DeploymentOperationHistoryTable}]";
         internal string RetrySPName => $"[{SchemaName}].[{HubName}_PrepareRetry]";
+        internal string RetryResourceSPName => $"[{SchemaName}].[{HubName}_PrepareRetryByResourceId]";
         internal string CreateDeploymentOperationSPName=> $"[{SchemaName}].[{HubName}_CreateDeploymentOperation]";
         internal string InitRetrySPName => $"[{SchemaName}].[{HubName}_InitRetry]";
     }

@@ -1,5 +1,7 @@
 ﻿using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,17 +9,16 @@ using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class Plan : ChangeTracking
+    public class Plan 
     {
-        private readonly Dictionary<string, object> FullContext;
-
         private readonly ARMFunctions _Functions;
-
-        public Plan(JsonElement element, Dictionary<string, object> fullContext)
+        private JObject RootElement;
+        private Dictionary<string, object> _FullContext;
+        public Plan(JObject element, Dictionary<string, object> fullContext)
         {
             this.RootElement = element;
-            this.FullContext = fullContext;
             this._Functions = (fullContext[ContextKeys.ARM_CONTEXT] as Deployment).ServiceProvider.GetService<ARMFunctions>();
+            this._FullContext = fullContext;
         }
 
         private string _Name = null;
@@ -29,16 +30,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_Name == null)
                 {
-                    if (!RootElement.TryGetProperty("name", out JsonElement nameE))
+                    if (!RootElement.TryGetValue("name", out JToken nameE))
                         throw new Exception("cannot find name property in paln node");
-                    _Name = this._Functions.Evaluate(nameE.GetString(), FullContext).ToString();
+                    _Name = this._Functions.Evaluate(nameE.Value<string>(), _FullContext,$"{RootElement.Path}.name").ToString();
                 }
                 return _Name;
-            }
-            set
-            {
-                _Name = value;
-                Change(value, "name");
             }
         }
 
@@ -51,17 +47,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_PromotionCode == null)
                 {
-                    if (RootElement.TryGetProperty("promotionCode", out JsonElement promotionCodeE))
-                        _PromotionCode = this._Functions.Evaluate(promotionCodeE.GetString(), FullContext).ToString();
+                    if (RootElement.TryGetValue("promotionCode", out JToken promotionCodeE))
+                        _PromotionCode = this._Functions.Evaluate(promotionCodeE.Value<string>(), _FullContext,$"{RootElement.Path}.promotionCode").ToString();
                     else
                         _PromotionCode = string.Empty;
                 }
                 return _PromotionCode;
-            }
-            set
-            {
-                _PromotionCode = value;
-                Change(value, "promotionCode");
             }
         }
 
@@ -74,17 +65,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_Publisher == null)
                 {
-                    if (RootElement.TryGetProperty("publisher", out JsonElement publisherE))
-                        _Publisher = this._Functions.Evaluate(publisherE.GetString(), FullContext).ToString();
+                    if (RootElement.TryGetValue("publisher", out JToken publisherE))
+                        _Publisher = this._Functions.Evaluate(publisherE.Value<string>(), _FullContext,$"{RootElement.Path}.publisher").ToString();
                     else
                         _Publisher = string.Empty;
                 }
                 return _Publisher;
-            }
-            set
-            {
-                _Publisher = value;
-                Change(value, "publisher");
             }
         }
 
@@ -97,17 +83,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_Product == null)
                 {
-                    if (!RootElement.TryGetProperty("product", out JsonElement productE))
-                        _Product = this._Functions.Evaluate(productE.GetString(), FullContext).ToString();
+                    if (!RootElement.TryGetValue("product", out JToken productE))
+                        _Product = this._Functions.Evaluate(productE.Value<string>(), _FullContext,$"{RootElement.Path}.product").ToString();
                     else
                         _Product = string.Empty;
                 }
                 return _Product;
-            }
-            set
-            {
-                _Product = value;
-                Change(value, "product");
             }
         }
 
@@ -120,17 +101,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (_Version == null)
                 {
-                    if (RootElement.TryGetProperty("version", out JsonElement versionE))
-                        _Version = this._Functions.Evaluate(versionE.GetString(), FullContext).ToString();
+                    if (RootElement.TryGetValue("version", out JToken versionE))
+                        _Version = this._Functions.Evaluate(versionE.Value<string>(), _FullContext).ToString();
                     else
                         _Version = string.Empty;
                 }
                 return _Version;
-            }
-            set
-            {
-                _Version = value;
-                Change(value, "version");
             }
         }
 
@@ -139,7 +115,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             object _;
             try
             {
-                if (!RootElement.TryGetProperty("name", out JsonElement type))
+                if (!RootElement.TryGetValue("name", out JToken type))
                     return (false, "cannot find name property in paln node");
                 _ = this.Product;
                 _ = this.PromotionCode;

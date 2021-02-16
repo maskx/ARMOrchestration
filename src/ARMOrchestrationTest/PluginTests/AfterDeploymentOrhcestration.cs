@@ -19,7 +19,7 @@ namespace ARMOrchestrationTest.PluginTests
         public override Task<TaskResult> RunTask(OrchestrationContext context, Deployment input)
         {
             input.ServiceProvider = _ServiceProvider;
-            string s = input.Template.Outputs.RawString;
+            string s = input.Template.Outputs;
             if (string.IsNullOrEmpty(s))
                 s = "{}";
             var j = JObject.Parse(s);

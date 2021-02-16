@@ -101,7 +101,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 "[listId('resourceId','2019-01-02')]",
                 new Dictionary<string, object>() {
                     {"armcontext",new Deployment(){
-                        Template=new Template() } }
+                        Template="{}" } }
                 }); ;
             Assert.NotNull(rtv);
         }
@@ -111,7 +111,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
         {
             Dictionary<string, object> cxt = new Dictionary<string, object>() {
                     {"armcontext",new Deployment(){
-                        Template=new Template() ,
+                        Template="{ }" ,
                         IsRuntime=false}}
                 };
             ARMFunctions functions = new ARMFunctions(

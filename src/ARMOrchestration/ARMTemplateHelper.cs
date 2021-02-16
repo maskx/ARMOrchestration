@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -150,9 +151,8 @@ where Id=@Id
                     "1.0",
                     new ResourceOrchestrationInput()
                     {
-                        DeploymentOperationId = resource.DeploymentOperationId,
-                        DeploymentId = resource.Input.DeploymentId,
-                        NameWithServiceType = resource.Copy.NameWithServiceType,
+                        DeploymentId = resource.Deployment.DeploymentId,
+                        ResourceId = resource.ResourceId,
                         IsRetry = isRetry,
                         LastRunUserId = lastRunUserId
                     }));
@@ -164,10 +164,8 @@ where Id=@Id
                     "1.0",
                     _DataConverter.Serialize(new ResourceOrchestrationInput()
                     {
-                        DeploymentOperationId = resource.DeploymentOperationId,
-                        DeploymentId = resource.Input.DeploymentId,
-                        NameWithServiceType = resource.NameWithServiceType,
-                        ServiceProvider = resource.ServiceProvider,
+                        DeploymentId = resource.Deployment.DeploymentId,
+                        ResourceId = resource.ResourceId,
                         CopyIndex = resource.CopyIndex ?? -1,
                         IsRetry = isRetry,
                         LastRunUserId = lastRunUserId
@@ -180,10 +178,8 @@ where Id=@Id
                                      "1.0",
                                      new ResourceOrchestrationInput()
                                      {
-                                         DeploymentOperationId = resource.DeploymentOperationId,
-                                         DeploymentId = resource.Input.DeploymentId,
-                                         NameWithServiceType = resource.NameWithServiceType,
-                                         ServiceProvider = resource.ServiceProvider,
+                                         DeploymentId = resource.Deployment.DeploymentId,
+                                         ResourceId = resource.ResourceId,
                                          CopyIndex = resource.CopyIndex ?? -1,
                                          IsRetry = isRetry,
                                          LastRunUserId = lastRunUserId
@@ -304,7 +300,7 @@ where Id=@Id
             db.AddStatement(@$"
 select op.Id,op.ResourceId from {this.options.Database.DeploymentOperationsTableName} as op
 inner join {this.options.Database.DeploymentOperationsTableName} as dp on dp.ResourceId=op.ParentResourceId
-where dp.Id=@Id",
+where dp.Id=@Id and op.Stage={(int)ProvisioningStage.Pending}",
 new
 {
     Id = deploymentOperationId
@@ -317,6 +313,28 @@ new
 
             });
             return rtv;
+        }
+        public (ProvisioningStage? Stage, string DeploymentOpeartionId) PrepareRetry(ResourceOrchestrationInput input, string newInstanceId, string newExecutionId)
+        {
+            ProvisioningStage? Stage = null;
+            string DeploymentOpeartionId = null;
+            using var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory);
+            db.ExecuteStoredProcedureASync(options.Database.RetryResourceSPName,
+                (reader, index) =>
+                {
+                    DeploymentOpeartionId = reader.GetString(0);
+                    Stage = (ProvisioningStage)reader.GetInt32(1);
+                },
+                new
+                {
+                    DeploymentId = input.DeploymentId,
+                    ResourceId = input.ResourceId,
+                    NewInstanceId = newInstanceId,
+                    NewExecutionId = newExecutionId,
+                    LastRunUserId = input.LastRunUserId,
+                    Input = _DataConverter.Serialize(input)
+                }).Wait();
+            return (Stage, DeploymentOpeartionId);
         }
     }
 }

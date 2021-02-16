@@ -1,13 +1,13 @@
-﻿using maskx.ARMOrchestration.Functions;
+﻿using Dynamitey.DynamicObjects;
+using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
-using System;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class SKU : ChangeTracking
+    public class SKU : ObjectChangeTracking
     {
         public const string Default = "Default";
         private string _Name;
@@ -18,12 +18,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (string.IsNullOrEmpty(_Name))
                 {
-                    if (RootElement.TryGetProperty("name", out JsonElement nameE))
+                    if (RootElement.TryGetValue("name", out JToken nameE))
                     {
                         if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
-                            _Name = nameE.GetString();
+                            _Name = nameE.Value<string>();
                         else
-                            _Name = _Functions.Evaluate(nameE.GetString(), FullContext).ToString();
+                            _Name = _Functions.Evaluate(nameE.Value<string>(), FullContext).ToString();
                     }
                     else
                     {
@@ -46,12 +46,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (string.IsNullOrEmpty(_Tier))
                 {
-                    if (RootElement.TryGetProperty("tier", out JsonElement tierE))
+                    if (RootElement.TryGetValue("tier", out JToken tierE))
                     {
                         if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
-                            _Tier = tierE.GetString();
+                            _Tier = tierE.Value<string>();
                         else
-                            _Tier = _Functions.Evaluate(tierE.GetString(), FullContext).ToString();
+                            _Tier = _Functions.Evaluate(tierE.Value<string>(), FullContext).ToString();
                     }
                 }
                 return _Tier;
@@ -70,12 +70,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (string.IsNullOrEmpty(_Size))
                 {
-                    if (RootElement.TryGetProperty("size", out JsonElement sizeE))
+                    if (RootElement.TryGetValue("size", out JToken sizeE))
                     {
                         if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
-                            _Size = sizeE.GetString();
+                            _Size = sizeE.Value<string>();
                         else
-                            _Size = _Functions.Evaluate(sizeE.GetString(), FullContext).ToString();
+                            _Size = _Functions.Evaluate(sizeE.Value<string>(), FullContext).ToString();
                     }
                 }
                 return _Size;
@@ -94,12 +94,12 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (string.IsNullOrEmpty(_Family))
                 {
-                    if (RootElement.TryGetProperty("family", out JsonElement familyE))
+                    if (RootElement.TryGetValue("family", out JToken familyE))
                     {
                         if (_Resource.Copy != null && !_Resource.CopyIndex.HasValue)
-                            _Family = familyE.GetString();
+                            _Family = familyE.Value<string>();
                         else
-                            _Family = _Functions.Evaluate(familyE.GetString(), FullContext).ToString();
+                            _Family = _Functions.Evaluate(familyE.Value<string>(), FullContext).ToString();
                     }
                 }
                 return _Family;
@@ -118,9 +118,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 if (string.IsNullOrEmpty(_Capacity))
                 {
-                    if (RootElement.TryGetProperty("capacity", out JsonElement capacityE))
+                    if (RootElement.TryGetValue("capacity", out JToken capacityE))
                     {
-                        _Capacity = capacityE.GetRawText();
+                        _Capacity = capacityE.ToString();
                     }
                 }
                 return _Capacity;
@@ -132,23 +132,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
         private Resource _Resource;
-        internal Dictionary<string, object> FullContext
-        {
-            get { return _Resource.FullContext; }
-        }
-        public Deployment Input { get { return _Resource.Input; } }
+
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
-        internal IServiceProvider ServiceProvider { get { return Input.ServiceProvider; } }
         public SKU() { }
-        public SKU(Resource resource)
+        public SKU(JObject root, Dictionary<string, object> context) : base(root, context) { }
+        public static SKU Parse(Resource resource)
         {
-            _Resource = resource;
-            if (resource.RootElement.TryGetProperty("sku", out JsonElement sku))
-                this.RawString = sku.GetRawText();
-            else
-                this.RawString = "{}";
-
+            if (!resource.RootElement.TryGetValue("sku", out JToken sku))
+                return null;
+            var s = new SKU(sku as JObject, resource.FullContext);
+            s._Resource = resource;
+            return s;
         }
 
     }

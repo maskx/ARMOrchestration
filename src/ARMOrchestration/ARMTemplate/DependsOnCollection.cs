@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class DependsOnCollection : IEnumerable<string>, IChangeTracking
+    public class DependsOnCollection : ChangeTracking, IEnumerable<string>
     {
         [JsonProperty]
         private readonly List<string> _List = new List<string>();
@@ -19,29 +19,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public int Count => _List.Count;
 
         public bool IsReadOnly => true;
-        private long _OldVersion;
-        private long _NewVersion;
-
-        public long TrackingVersion
-        {
-            get { return _NewVersion; }
-            set { _OldVersion = _NewVersion = value; }
-        }
-
-        public bool HasChanged
-        {
-            get
-            {
-                return _NewVersion == _OldVersion;
-            }
-        }
-
-
-        public bool Accepet(long newVersion = 0)
-        {
-            this.TrackingVersion = newVersion;
-            return true;
-        }
 
         public void Add(string item, Deployment deployment)
         {
@@ -79,7 +56,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public void Change(object value, string name = "")
         {
-            this._NewVersion = DateTime.Now.Ticks;
+           // todo: collection Chage
         }
 
         public void Clear()

@@ -12,7 +12,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-
+using Microsoft.Extensions.DependencyInjection;
+using ImpromptuInterface;
 
 namespace maskx.ARMOrchestration.Functions
 {
@@ -39,7 +40,7 @@ namespace maskx.ARMOrchestration.Functions
             #region https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-array?tabs=json
             Functions.Add("array", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt)[0];
                 string str = string.Empty;
                 if (par1 is string)
                 {
@@ -86,7 +87,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("empty", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt)[0];
                 args.Result = false;
                 if (par1 is null)
                     args.Result = true;
@@ -101,7 +102,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("first", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt)[0];
                 if (par1 is string s)
                     args.Result = s[0].ToString();
                 else if (par1 is JsonValue jv)
@@ -119,7 +120,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("last", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt)[0];
                 if (par1 is string s)
                     args.Result = s.Last().ToString();
                 else if (par1 is JsonValue jv)
@@ -127,7 +128,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("length", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 if (par1 is string s)
                     args.Result = s.Length;
                 else if (par1 is JsonValue jv)
@@ -222,7 +223,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 for (int i = 0; i < args.Parameters.Length; i++)
                 {
-                    var a = args.Parameters[i].Evaluate(cxt);
+                    var a = EvaluateParameters(args, cxt, i);
                     if (a != null)
                     {
                         args.Result = a;
@@ -335,13 +336,15 @@ namespace maskx.ARMOrchestration.Functions
                             break;
                     }
                 }
-                args.Result =dt.ToString("yyyyMMdd'T'HHmmss'Z'");
+                args.Result = dt.ToString("yyyyMMdd'T'HHmmss'Z'");
             });
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-date?tabs=json#utcnow
+            // This function can only be used in the default value for a parameter.
             Functions.Add("utcnow", (args, cxt) =>
             {
                 if (args.Parameters.Length > 0)
                 {
-                    args.Result = DateTime.UtcNow.ToString(args.Parameters[0].Evaluate(cxt).ToString());
+                    args.Result = DateTime.UtcNow.ToString(EvaluateParameters(args, cxt, 0).ToString());
                 }
                 else
                 {
@@ -401,13 +404,13 @@ namespace maskx.ARMOrchestration.Functions
                 // TODO: support securestring
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
                 // may be need implement at Resource Provider
-                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
+                var par1 = EvaluateParameters(args, cxt, 0).ToString();
                 var rtv = GetParameter(par1, cxt);
                 args.Result = rtv.Result;
             });
             Functions.Add("variables", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt).ToString();
+                var par1 = EvaluateParameters(args, cxt, 0).ToString();
                 var rtv = GetVariables(par1, cxt);
                 args.Result = rtv.Result;
             });
@@ -430,7 +433,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("bool", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt).ToString().ToLower();
+                var par1 = EvaluateParameters(args, cxt, 0).ToString().ToLower();
                 if (par1 == "1" || par1 == "true")
                     args.Result = true;
                 else
@@ -442,19 +445,24 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("if", (args, cxt) =>
             {
-                if ((bool)args.Parameters[0].Evaluate(cxt))
-                    args.Result = args.Parameters[1].Evaluate(cxt);
+                if ((bool)EvaluateParameters(args, cxt, 0))
+                {
+                    args.Result = EvaluateParameters(args, cxt, 1);
+                }
                 else
-                    args.Result = args.Parameters[2].Evaluate(cxt);
+                {
+                    args.Result = EvaluateParameters(args, cxt, 2);
+                }
+
             });
             Functions.Add("not", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 args.Result = !(bool)par1;
             });
             Functions.Add("or", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = false;
                 foreach (var item in pars)
                 {
@@ -475,19 +483,19 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("base64", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 var plainTextBytes = Encoding.UTF8.GetBytes(par1 as string);
                 args.Result = Convert.ToBase64String(plainTextBytes);
             });
             Functions.Add("base64tojson", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 var base64EncodedBytes = Convert.FromBase64String(par1 as string);
                 args.Result = new JsonValue(Encoding.UTF8.GetString(base64EncodedBytes));
             });
             Functions.Add("base64tostring", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 var base64EncodedBytes = Convert.FromBase64String(par1 as string);
                 args.Result = Encoding.UTF8.GetString(base64EncodedBytes);
             });
@@ -495,13 +503,13 @@ namespace maskx.ARMOrchestration.Functions
             // contains in array function group
             Functions.Add("datauri", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 var plainTextBytes = Encoding.UTF8.GetBytes(par1 as string);
                 args.Result = "data:text/plain;charset=utf8;base64," + Convert.ToBase64String(plainTextBytes);
             });
             Functions.Add("datauritostring", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 var s = (par1 as string);
                 s = s[(s.LastIndexOf(',') + 1)..].Trim();
                 var base64EncodedBytes = Convert.FromBase64String(s);
@@ -510,42 +518,53 @@ namespace maskx.ARMOrchestration.Functions
             // empty in array function group
             Functions.Add("endswith", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = (pars[0] as string).EndsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
             // first in array function group           
             Functions.Add("format", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = string.Format((pars[0] as string), pars.Skip(1).ToArray());
             });
             Functions.Add("guid", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 MD5 md5 = new MD5CryptoServiceProvider();
                 byte[] bytes = md5.ComputeHash(Encoding.Unicode.GetBytes(string.Join('-', pars)));
                 args.Result = new Guid(bytes).ToString();
             });
             Functions.Add("indexof", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = (pars[0] as string).IndexOf(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
             // json in ojbect function group
             // last in array function group
             Functions.Add("lastindexof", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = (pars[0] as string).LastIndexOf(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
             // length in array function group
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-string?tabs=json#newguid
+            // This function can only be used in the default value for a parameter.
             Functions.Add("newguid", (args, cxt) =>
             {
-                args.Result = Guid.NewGuid().ToString();
+                var deployment = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
+                var path = cxt[ContextKeys.PATH].ToString();
+                if (!deployment.PersistenceValue.TryGetValue(path, out object v))
+                {
+                    v = Guid.NewGuid().ToString();
+                    args.Result = v;
+                    deployment.PersistenceValue.Add(path, v);
+                    deployment.ServiceProvider.GetService<ARMTemplateHelper>().SaveDeploymentOperation(new DeploymentOperation(deployment.DeploymentId, deployment) { Input = _DataConverter.Serialize(deployment) });
+                }
+                args.Result = v;
             });
             Functions.Add("padleft", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var s = pars[0] as string;
                 var width = (int)pars[1];
                 if (pars.Length > 2)
@@ -558,13 +577,13 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("replace", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = (pars[0] as string).Replace(pars[1] as string, pars[2] as string);
             });
             // skip in array function group
             Functions.Add("split", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var str = pars[0] as string;
                 string[] rtv;
                 if (pars[1] is string split)
@@ -584,17 +603,17 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("startswith", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = (pars[0] as string).StartsWith(pars[1] as string, StringComparison.InvariantCultureIgnoreCase);
             });
             Functions.Add("string", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 args.Result = par1.ToString();
             });
             Functions.Add("substring", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt); ;
                 var s = pars[0] as string;
                 var startIndex = (int)pars[1];
                 if (pars.Length > 2)
@@ -609,20 +628,20 @@ namespace maskx.ARMOrchestration.Functions
             // take in array function group
             Functions.Add("tolower", (args, cxt) =>
             {
-                args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToLower();
+                args.Result = EvaluateParameters(args, cxt, 0).ToString().ToLower();
             });
             Functions.Add("toupper", (args, cxt) =>
             {
-                args.Result = args.Parameters[0].Evaluate(cxt).ToString().ToUpper();
+                args.Result = EvaluateParameters(args, cxt, 0).ToString().ToUpper();
             });
             Functions.Add("trim", (args, cxt) =>
             {
-                args.Result = args.Parameters[0].Evaluate(cxt).ToString().Trim();
+                args.Result = EvaluateParameters(args, cxt, 0).ToString().Trim();
             });
             // https://stackoverflow.com/a/48305669
             Functions.Add("uniquestring", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 string result = "";
                 var buffer = Encoding.UTF8.GetBytes(string.Join('-', pars));
                 var hashArray = new SHA512Managed().ComputeHash(buffer);
@@ -638,17 +657,17 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("uri", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = System.IO.Path.Combine(pars[0] as string, pars[1] as string);
             });
             Functions.Add("uricomponent", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 args.Result = Uri.EscapeDataString(par1 as string);
             });
             Functions.Add("uricomponenttostring", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 args.Result = Uri.UnescapeDataString(par1 as string);
             });
             #endregion String
@@ -657,12 +676,12 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("add", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = Convert.ToInt32(pars[0]) + Convert.ToInt32(pars[1]);
             });
             Functions.Add("copyindex", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 string loopName = string.Empty; ;
                 int offset = 0;
                 if (pars.Length == 0)
@@ -690,35 +709,35 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("div", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = Convert.ToInt32(pars[0]) / Convert.ToInt32(pars[1]);
             });
             Functions.Add("float", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt);
                 args.Result = Convert.ToDecimal(par1);
             });
             Functions.Add("int", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 args.Result = Convert.ToInt32(par1);
             });
             // max in array function group
             // min in array function group
             Functions.Add("mod", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var d = Math.DivRem(Convert.ToInt32(pars[0]), Convert.ToInt32(pars[1]), out int result);
                 args.Result = result;
             });
             Functions.Add("mul", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = Convert.ToInt32(pars[0]) * Convert.ToInt32(pars[1]);
             });
             Functions.Add("sub", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = Convert.ToInt32(pars[0]) - Convert.ToInt32(pars[1]);
             });
 
@@ -729,7 +748,7 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("createobject", (args, cxt) =>
             {
                 List<string> rtv = new List<string>();
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 JObject jo = new JObject();
                 for (int i = 0; i < pars.Length - 1; i += 2)
                 {
@@ -756,7 +775,7 @@ namespace maskx.ARMOrchestration.Functions
             // intersection in array function gruop
             Functions.Add("json", (args, cxt) =>
             {
-                var par1 = args.Parameters[0].Evaluate(cxt);
+                var par1 = EvaluateParameters(args, cxt, 0);
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-expressions#null-values
                 if (par1.ToString() == "null")
                     args.Result = null;
@@ -775,7 +794,7 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("extensionresourceid", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var fullnames = pars[1].ToString().Split('/');
                 string nestr = "";
                 int typeIndex = 2;
@@ -793,13 +812,15 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("providers", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var taskResult = this.infrastructure.Providers(pars[0].ToString(), pars[1].ToString());
                 args.Result = new JsonValue(taskResult.Content.ToString());
             });
+            //https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource?tabs=json#reference
+            //The reference function can only be used in the properties of a resource definition and the outputs section of a template or deployment
             Functions.Add("reference", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 string resourceName = pars[0].ToString();
                 var context = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
                 string apiVersion = string.Empty;
@@ -812,8 +833,8 @@ namespace maskx.ARMOrchestration.Functions
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#resource-name-or-identifier
                 // if the referenced resource is provisioned within same template and you refer to the resource by its name (not resource ID)
                 // reference 'ResourceProvider/ServiceType/ResourceName' will create a implicit dependency
-                if (!(resourceName.StartsWith("/"+infrastructure.BuiltinPathSegment.ManagementGroup)
-                        || resourceName.StartsWith("/"+infrastructure.BuiltinPathSegment.Subscription)
+                if (!(resourceName.StartsWith("/" + infrastructure.BuiltinPathSegment.ManagementGroup)
+                        || resourceName.StartsWith("/" + infrastructure.BuiltinPathSegment.Subscription)
                         || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ManagementGroup)
                         || resourceName.StartsWith(infrastructure.BuiltinPathSegment.Subscription)
                         || resourceName.StartsWith(infrastructure.BuiltinPathSegment.ResourceGroup)))
@@ -871,7 +892,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("resourceid", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
                 var t = input.Template;
                 if (t.DeployLevel == DeployLevel.ResourceGroup)
@@ -887,17 +908,17 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("subscriptionresourceid", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
                 args.Result = SubscriptionResourceId(input, pars);
             });
             Functions.Add("tenantresourceid", (args, cxt) =>
             {
-                args.Result = TenantResourceId(args.EvaluateParameters(cxt));
+                args.Result = TenantResourceId(EvaluateParameters(args, cxt));
             });
             Functions.Add("managementgroupresourceid", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
                 args.Result = ManagementResourceId(input, pars);
             });
@@ -922,14 +943,47 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 rtv = GetVariables(name, parentCxt);
             }
-            if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Variables.ToString()))
+            if (!rtv.HasResult)
             {
-                using var defineDoc = JsonDocument.Parse(input.Template.Variables.ToString());
-                if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef))
-                    rtv.Result = JsonValue.GetElementValue(parEleDef);
+                cxt.TryGetValue(ContextKeys.PATH, out object segment);
+                cxt[ContextKeys.PATH] = "variables.{name}}";
+                if (!string.IsNullOrEmpty(input.Template.Variables.ToString()))
+                {
+                    using var defineDoc = JsonDocument.Parse(input.Template.Variables.ToString());
+                    var ele = defineDoc.RootElement;
+                    if (ele.TryGetProperty(name, out JsonElement parEleDef))
+                    {
+                        if (parEleDef.ValueKind == JsonValueKind.Object)
+                        {
+                            string path = $"{cxt[ContextKeys.PATH]}.{name}";
+                            rtv.Result = new JsonValue(parEleDef.ExpandObject(cxt, path));
+                        }
+                        else if (parEleDef.ValueKind == JsonValueKind.Array)
+                        {
+                            string path = $"{cxt[ContextKeys.PATH]}.{name}";
+                            rtv.Result = new JsonValue(parEleDef.ExpandArray(cxt, path));
+                        }
+                        else
+                            rtv.Result = JsonValue.GetElementValue(parEleDef);
+                    }
+                    else if (ele.TryGetProperty("copy", out JsonElement copyE))
+                    {
+                        foreach (var item in copyE.EnumerateArray())
+                        {
+                            if (item.TryGetProperty("name", out JsonElement nameE) && nameE.GetString() == name)
+                            {
+                                rtv.Result = ExpandCopy(item, cxt);
+                            }
+                        }
+                    }
+
+                }
+                if (rtv.HasResult && rtv.Result is string s)
+                {
+                    rtv.Result = Evaluate(s, cxt);
+                }
+                cxt[ContextKeys.PATH] = segment;
             }
-            if (rtv.HasResult && rtv.Result is string s)
-                rtv.Result = Evaluate(s, cxt);
             return rtv;
         }
         internal FunctionArgs GetParameter(string name, Dictionary<string, object> cxt)
@@ -953,30 +1007,40 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 rtv = GetParameter(name, parentCxt);
             }
-            if (!rtv.HasResult && !string.IsNullOrEmpty(input.Parameters))
+            if (!rtv.HasResult)
             {
-                using var jsonDoc = JsonDocument.Parse(input.Parameters);
-                if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
-                    rtv.Result = JsonValue.GetElementValue(v);
+                cxt.TryGetValue(ContextKeys.PATH, out object segment);
+                cxt[ContextKeys.PATH] = "parameters.{name}}";
+                if (!string.IsNullOrEmpty(input.Parameters))
+                {
+                    using var jsonDoc = JsonDocument.Parse(input.Parameters);
+                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                        rtv.Result = JsonValue.GetElementValue(v);
+                }
+                if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Parameters))
+                {
+                    using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
+                    if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                        rtv.Result = JsonValue.GetElementValue(defValue);
+                }
+                // this is User Defined Functions
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
+                if (!rtv.HasResult && cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
+                {
+                    using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
+                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                        rtv.Result = JsonValue.GetElementValue(v);
+                }
+                // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
+                // paramete's default value can be included function
+                if (rtv.HasResult && rtv.Result is string s)
+                {
+                    rtv.Result = Evaluate(s, cxt);
+                }
+                cxt[ContextKeys.PATH] = segment;
             }
-            if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Parameters))
-            {
-                using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
-                if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
-                    rtv.Result = JsonValue.GetElementValue(defValue);
-            }
-            // this is User Defined Functions
-            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
-            if (!rtv.HasResult && cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
-            {
-                using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
-                if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
-                    rtv.Result = JsonValue.GetElementValue(v);
-            }
-            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
-            // paramete's default value can be included function
-            if (rtv.HasResult && rtv.Result is string s)
-                rtv.Result = Evaluate(s, cxt);
+
+
             return rtv;
         }
 
@@ -1112,6 +1176,14 @@ namespace maskx.ARMOrchestration.Functions
             return $"/{infrastructure.BuiltinPathSegment.Provider}/{fullnames[0]}/{fullnames[1]}/{resource}{nestr}";
         }
 
+        public object Evaluate(string function, Dictionary<string, object> cxt, string path)
+        {
+            cxt.TryGetValue(ContextKeys.PATH, out object p);
+            cxt[ContextKeys.PATH] = $"{path}:func:";
+            var r = Evaluate(function, cxt);
+            cxt[ContextKeys.PATH] = p;
+            return r;
+        }
         /// <summary>
         /// Evaluate expression
         /// </summary>
@@ -1214,7 +1286,7 @@ namespace maskx.ARMOrchestration.Functions
             args.Result = GetOutput(member.Output, udfContext);
         }
 
-        private bool TryGetCustomFunction(string function, Dictionary<string, object> context, out ARMTemplate.Member member)
+        private bool TryGetCustomFunction(string function, Dictionary<string, object> context, out Member member)
         {
             member = null;
             if (!context.TryGetValue(ContextKeys.ARM_CONTEXT, out object armcxt))
@@ -1265,6 +1337,74 @@ namespace maskx.ARMOrchestration.Functions
             var value = rootEle.GetProperty("value").GetString();
             var v = this.Evaluate(value, context);
             return v;
+        }
+
+        public object[] EvaluateParameters(FunctionArgs args, Dictionary<string, object> context)
+        {
+            var values = new object[args.Parameters.Length];
+            context.TryGetValue(ContextKeys.PATH, out object p);
+            for (int i = 0; i < values.Length; i++)
+            {
+                context[ContextKeys.PATH] = $"{p}/par[{i}]";
+                values[i] = args.Parameters[i].Evaluate(context);
+            }
+            context[ContextKeys.PATH] = p;
+            return values;
+        }
+        public object EvaluateParameters(FunctionArgs args, Dictionary<string, object> context, int index)
+        {
+            var p = context[ContextKeys.PATH];
+            context[ContextKeys.PATH] = $"{p}/par[{index}]";
+            var r = args.Parameters[index].Evaluate(context);
+            context[ContextKeys.PATH] = p;
+            return r;
+        }
+
+        public JsonValue ExpandCopy(JsonElement item, Dictionary<string, object> context)
+        {
+            string path = $"{context[ContextKeys.PATH]}.copy";
+            using MemoryStream ms = new MemoryStream();
+            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
+
+            Copy copy = copy = new Copy(JObject.Parse(item.GetRawText()), context);
+            var copyindex = new Dictionary<string, int>() { { copy.Name, 0 } };
+            Dictionary<string, object> copyContext = new Dictionary<string, object>
+                        {
+                            { "copyindex", copyindex },
+                            { "currentloopname", copy.Name }
+                        };
+            foreach (var k in context.Keys)
+            {
+                copyContext.Add(k, context[k]);
+            }
+            writer.WriteStartArray();
+            if (!item.TryGetProperty("input", out JsonElement inputE))
+            {
+                throw new Exception($"cannot find input property in path: {path}");
+            }
+            for (int i = 0; i < copy.Count; i++)
+            {
+                copyindex[copy.Name] = i;
+                writer.WriteElement(inputE, copyContext, path);
+            }
+
+            writer.WriteEndArray();
+            if (copyContext.TryGetValue(ContextKeys.DEPENDSON, out object copyDependsOn))
+            {
+                List<string> dependsOn;
+                if (context.TryGetValue(ContextKeys.DEPENDSON, out object d))
+                {
+                    dependsOn = d as List<string>;
+                }
+                else
+                {
+                    dependsOn = new List<string>();
+                    context.Add(ContextKeys.DEPENDSON, dependsOn);
+                }
+                dependsOn.AddRange(copyDependsOn as List<string>);
+            }
+            writer.Flush();
+            return new JsonValue(Encoding.UTF8.GetString(ms.ToArray()));
         }
     }
 }

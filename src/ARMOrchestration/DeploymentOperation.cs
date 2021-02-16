@@ -26,7 +26,7 @@ namespace maskx.ARMOrchestration
 
         public DeploymentOperation(string id, Resource resource)
         {
-            BuildDeploymentInformation(id, resource.Input);
+            BuildDeploymentInformation(id, resource.Deployment);
             this.ResourceId = resource.ResourceId;
             this.Name = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullName : resource.Name;
             this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullType : resource.Type;

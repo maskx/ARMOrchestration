@@ -13,19 +13,19 @@ namespace maskx.ARMOrchestration.Orchestrations
     {
         public const string Name = "CopyOrchestration";
         private readonly ARMTemplateHelper helper;
-        private readonly IInfrastructure infrastructure;
         private readonly IServiceProvider _ServiceProvider;
 
-        public CopyOrchestration(ARMTemplateHelper helper, IInfrastructure infrastructure, IServiceProvider service)
+        public CopyOrchestration(ARMTemplateHelper helper, IServiceProvider service)
         {
             this._ServiceProvider = service;
             this.helper = helper;
-            this.infrastructure = infrastructure;
         }
 
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
+            if (!input.IsRetry)
+                input.DeploymentOperationId = context.OrchestrationInstance.InstanceId;
             var copy = input.Resource.Copy;
             if (copy == null)
                 return new TaskResult(500, new ErrorResponse() { Code = "CopyOrchestration-Fail", Message = "input is not Copy resource" });

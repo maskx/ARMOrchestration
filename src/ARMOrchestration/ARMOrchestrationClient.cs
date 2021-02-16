@@ -65,8 +65,6 @@ namespace maskx.ARMOrchestration
             if (string.IsNullOrEmpty(args.RootId)) args.RootId = args.DeploymentId;
             if (string.IsNullOrEmpty(args.LastRunUserId)) args.LastRunUserId = args.CreateByUserId;
             if (args.ServiceProvider == null) args.ServiceProvider = _ServiceProvider;
-            // todo: 提前展开 Variables和Parameters
-            var _ = args.Template.Variables;
             var deploymentOperation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(args.DeploymentId, args)
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
@@ -143,6 +141,7 @@ namespace maskx.ARMOrchestration
             var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
             input.IsRetry = true;
             input.LastRunUserId = userId;
+            input.DeploymentOperationId = op.Id;
             var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(input));
             if (r.Result != 201)
                 return r;
@@ -162,6 +161,7 @@ namespace maskx.ARMOrchestration
             var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
             input.IsRetry = true;
             input.LastRunUserId = userId;
+            input.DeploymentOperationId = op.Id;
             var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(input));
             if (r.Result != 201)
                 return r;

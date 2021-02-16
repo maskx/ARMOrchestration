@@ -1,5 +1,8 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.OrchestrationService.SQL;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
 
@@ -8,10 +11,29 @@ namespace maskx.ARMOrchestration.Orchestrations
     public class ResourceOrchestrationInput
     {
         public bool IsRetry { get; set; } = false;
-        public string DeploymentOperationId { get; set; }
+        string _DeploymentOperationId;
+        [JsonIgnore]
+        public string DeploymentOperationId
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_DeploymentOperationId))
+                {
+                    if (IsRetry)
+                    {
+                        var options = ServiceProvider.GetService<IOptions<ARMOrchestrationOptions>>().Value;
+                        using var db = new SQLServerAccess(options.Database.ConnectionString, ServiceProvider.GetService<ILoggerFactory>());
+                        db.AddStatement($"select Id from {options.Database.DeploymentOperationsTableName} where DeploymentId=N'{DeploymentId}' and ResourceId=N'{ResourceId}'");
+                        _DeploymentOperationId = db.ExecuteScalarAsync().Result?.ToString();
+                    }
+                }
+                return _DeploymentOperationId;
+            }
+            set { _DeploymentOperationId = value; }
+        }
         public string LastRunUserId { get; set; }
         public string DeploymentId { get; set; }
-        public string NameWithServiceType { get; set; }
+        public string ResourceId { get; set; }
         public int CopyIndex { get; set; } = -1;
         private Deployment _Deployment;
         [JsonIgnore]
@@ -34,11 +56,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 if (_Resource == null)
                 {
-                    _Resource = Deployment.GetFirstResource(NameWithServiceType);
-                    if (_Resource.Copy != null && CopyIndex != -1)
-                    {
-                        _Resource = _Resource.Copy.GetResource(CopyIndex);
-                    }
+                    _Resource = Deployment.GetFirstResource(ResourceId);
                 }
                 return _Resource;
             }

@@ -1,177 +1,95 @@
-﻿using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Functions;
+﻿using maskx.ARMOrchestration.Functions;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Text;
-using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class ChangeTracking : IDisposable, IChangeTracking
+    public class ChangeTracking
     {
-        public ChangeTracking()
-        {
-            RawString = "{}";
-        }
-
-        [JsonProperty]
-        public virtual string RawString
+        public Deployment Deployment { get; set; }
+        public IServiceProvider ServiceProvider { get { return Deployment.ServiceProvider; } }
+        public ARMFunctions Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
+        private Dictionary<string, object> _FullContext;
+        internal virtual Dictionary<string, object> FullContext
         {
             get
             {
-                this.Accepet();
-                return RootElement.GetRawText();
-            }
-            set
-            {
-                if (json != null)
-                    json.Dispose();
-                json = JsonDocument.Parse(value);
-                RootElement = json.RootElement;
-            }
-        }
-
-        public static implicit operator ChangeTracking(string rawString)
-        {
-            return new ChangeTracking() { RawString = rawString };
-        }
-
-        private long _OldVersion;
-        private long _NewVersion;
-
-        public long TrackingVersion
-        {
-            get { return _NewVersion; }
-            set { _OldVersion = _NewVersion = value; }
-        }
-
-        public bool HasChanged
-        {
-            get
-            {
-                SyncAllChanges();
-                return _ChangeTracking.Count > 0;
-            }
-        }
-
-        private JsonDocument json;
-
-        internal JsonElement RootElement;
-
-        private readonly Dictionary<string, object> _ChangeTracking = new Dictionary<string, object>();
-
-        private void SyncAllChanges()
-        {
-            long ver = DateTime.Now.Ticks;
-            bool hasChanged = false;
-            Type IChangeTrackingType = typeof(IChangeTracking);
-            foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(this))
-            {
-                if (IChangeTrackingType.IsAssignableFrom(descriptor.PropertyType))
+                if (_FullContext == null)
                 {
-                    var v = descriptor.GetValue(this) as IChangeTracking;
-                    if (v == null || v.TrackingVersion != this._OldVersion)
+                    _FullContext = new Dictionary<string, object> {
+                        {ContextKeys.ARM_CONTEXT,this.Deployment} };
+                    foreach (var item in Deployment.Context)
                     {
-                        if (_ChangeTracking.ContainsKey(descriptor.DisplayName))
-                            _ChangeTracking[descriptor.DisplayName] = v;
-                        else
-                            _ChangeTracking.Add(descriptor.DisplayName, v);
-                        hasChanged = true;
+                        if (item.Key == ContextKeys.ARM_CONTEXT) continue;
+                        _FullContext.Add(item.Key, item.Value);
                     }
                 }
+                return _FullContext;
             }
-            if (hasChanged)
-                this.TrackingVersion = ver;
+        }
+        public string JsonPath
+        {
+            get { return Root.Path; }
+        }
+        public ChangeTracking()
+        {
+
+        }
+        public ChangeTracking(JToken root, Dictionary<string, object> context)
+        {
+
+            this.Deployment = context[ContextKeys.ARM_CONTEXT] as Deployment;
+            this.Root = root;
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <returns>
-        /// true: there have changes
-        /// false: ther have no changes
-        /// </returns>
-        public bool Accepet(long newVersion = 0)
+        internal JToken Root
         {
-            if (!HasChanged)
-                return false;
-            if (newVersion == 0)
-                newVersion = this.TrackingVersion;
-            using MemoryStream ms = new MemoryStream();
-            using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
-            writer.WriteStartObject();
-            foreach (var item in this.RootElement.EnumerateObject())
-            {
-                if (_ChangeTracking.TryGetValue(item.Name, out object value))
-                {
-                    _ChangeTracking.Remove(item.Name);
-                    if (value == null)// this property was removed
-                        continue;
-                    WriteValue(newVersion, writer, item.Name, value);
-                }
-                else
-                {
-                    item.WriteTo(writer);
-                }
-            }
-            // for new added property
-            foreach (var item in _ChangeTracking)
-            {
-                WriteValue(newVersion, writer, item.Key, item.Value);
-            }
-            writer.WriteEndObject();
-            writer.Flush();
-            this.RawString = Encoding.UTF8.GetString(ms.ToArray());
-            this._ChangeTracking.Clear();
-            this.TrackingVersion = newVersion;
-            return true;
+            get; set;
         }
 
-        private static void WriteValue(long newVersion, Utf8JsonWriter writer, string name, object value)
+        public void Change(object value, string name)
         {
-            if (value is JsonElement json)
-            {
-                writer.WritePropertyName(name);
-                json.WriteTo(writer);
-            }
-            else if (value is int i)
-                writer.WriteNumber(name, i);
-            else if (value is bool b)
-                writer.WriteBoolean(name, b);
-            else if (value is string s)
-                writer.WriteString(name, s);
-            else if (value is IChangeTracking c)
-            {
-                c.Accepet(newVersion);
-                writer.WriteRawString(name, c.ToString());
-            }
-            else if (value is JsonValue j)
-            {
-                writer.WriteRawString(name, j.ToString());
-            }
-            else if (value != null)
-                throw new NotSupportedException($"{value.GetType().FullName} is not supported in ChangeJsonValue method");
+            // TODO: Change
+            // this.Input.ChangedResoures.
         }
 
-        public virtual void Change(object value, string name)
+    }
+    public class ObjectChangeTracking : ChangeTracking
+    {
+        public JObject RootElement { get { return Root as JObject; } }
+        public ObjectChangeTracking()
         {
-            _ChangeTracking[name] = value;
-            _NewVersion = DateTime.Now.Ticks;
-        }
 
-        public void Dispose()
-        {
-            if (json != null)
-                json.Dispose();
         }
+        public ObjectChangeTracking(JObject root, Dictionary<string, object> context) : base(root, context)
+        {
 
-        public override string ToString()
-        {
-            return this.RawString;
         }
+        public T GetValue<T>(string name)
+        {
+            if (RootElement.TryGetValue(name, out JToken e))
+            {
+                object o = null;
+                if (e.Type == JTokenType.String)
+                    o = this.Functions.Evaluate(e.Value<string>(), FullContext, $"{RootElement.Path}.{name}");
+                else if (e.Type == JTokenType.Boolean)
+                    o = e.Value<bool>();
+                else if (e.Type == JTokenType.Integer)
+                    o = e.Value<int>();
+                return (T)o;
+            }
+            else
+                return default;
+        }
+    }
+    public class ArrayChangeTracking : ChangeTracking
+    {
+        public JArray RootElement { get { return Root as JArray; } }
+        public ArrayChangeTracking() { }
+        public ArrayChangeTracking(JArray root, Dictionary<string, object> context) : base(root, context) { }
     }
 }

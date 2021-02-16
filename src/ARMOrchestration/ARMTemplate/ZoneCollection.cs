@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    public class ZoneCollection : IList<string>, IChangeTracking
+    public class ZoneCollection : IList<string>
     {
         private readonly List<string> _List = new List<string>();
 

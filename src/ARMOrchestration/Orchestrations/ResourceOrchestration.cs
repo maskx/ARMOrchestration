@@ -29,12 +29,14 @@ namespace maskx.ARMOrchestration.Orchestrations
         public override async Task<TaskResult> RunTask(OrchestrationContext context, ResourceOrchestrationInput input)
         {
             input.ServiceProvider = _ServiceProvider;
-
+            if (!input.IsRetry)
+                input.DeploymentOperationId = context.OrchestrationInstance.InstanceId;
             if (!context.IsReplaying)
             {
                 if (input.IsRetry)
                 {
                     var r = templateHelper.PrepareRetry(input.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, input.LastRunUserId, DataConverter.Serialize(input));
+
                     if (r == null)
                         return new TaskResult(400, new ErrorResponse()
                         {
