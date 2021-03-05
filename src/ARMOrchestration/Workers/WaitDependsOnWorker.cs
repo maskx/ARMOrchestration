@@ -40,12 +40,12 @@ namespace maskx.ARMOrchestration.Workers
                 this.options.Database.DeploymentOperationsTableName,
                 (int)ProvisioningStage.Successed);
             this.removeCommandString = string.Format(removeCommandTemplate, this.options.Database.WaitDependsOnTableName);
-            orchestrationWorker.AddActivity(typeof(WaitDependsOnActivity), WaitDependsOnActivity.Name, "1.0");
             orchestrationWorker.AddActivity(typeof(AsyncRequestActivity<T>), AsyncRequestActivity<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(DeploymentOrchestration<T>), DeploymentOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(ResourceOrchestration<T>), ResourceOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(RequestOrchestration<T>), RequestOrchestration<T>.Name, "1.0");
             orchestrationWorker.AddOrchestration(typeof(CopyOrchestration<T>), CopyOrchestration<T>.Name, "1.0");
+            orchestrationWorker.AddOrchestration(typeof(WaitDependsOnOrchestration<T>),WaitDependsOnOrchestration<T>.Name,"1.0");
         }
 
         public override async Task StartAsync(CancellationToken cancellationToken)

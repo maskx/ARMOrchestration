@@ -377,8 +377,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 {"exampleOutput1","myVariable"},
                 {"exampleOutput2","[1,2,3,4]" },
                 {"exampleOutput3","myVariable"},
-                {"exampleOutput4","{\"property1\":\"value1\",\"property2\":\"value2\"}"},
-                { "newGuid","true"}
+                {"exampleOutput4","{\"property1\":\"value1\",\"property2\":\"value2\"}"}
             };
             TestHelper.FunctionTest(this.fixture, "variables", result);
         }
@@ -664,7 +663,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
             //     if (!args.IsSubOrchestration && args.InstanceId == instance.InstanceId)
             //         t.SetResult(args.Result);
             // });
-            var (instance, state) = TestHelper.FunctionTestNotCheckResult(fixture, filename, Guid.NewGuid().ToString());
+            var (_, state) = TestHelper.FunctionTestNotCheckResult(fixture, filename, Guid.NewGuid().ToString());
            // var t = TestHelper.DataConverter.Deserialize<TaskResult>(state.Output);
             var outputString = TestHelper.DataConverter.Deserialize<TaskResult>(state.Output).Content.ToString();
 

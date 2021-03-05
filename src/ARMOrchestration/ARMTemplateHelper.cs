@@ -13,7 +13,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -147,15 +146,16 @@ where Id=@Id
             if (resource.Copy != null && !resource.CopyIndex.HasValue)
             {
                 tasks.Add(orchestrationContext.CreateSubOrchestrationInstance<TaskResult>(
-                    CopyOrchestration<T>.Name,
-                    "1.0",
-                    new ResourceOrchestrationInput()
-                    {
-                        DeploymentId = resource.Deployment.DeploymentId,
-                        ResourceId = resource.ResourceId,
-                        IsRetry = isRetry,
-                        LastRunUserId = lastRunUserId
-                    }));
+                CopyOrchestration<T>.Name,
+                "1.0",
+                new ResourceOrchestrationInput()
+                {
+                    DeploymentId = resource.Deployment.DeploymentId,
+                    ResourceId = resource.Copy.Id,
+                    IsRetry = isRetry,
+                    CopyIndex = -1,
+                    LastRunUserId = lastRunUserId
+                }));
             }
             else if (resource.Type == _Infrastructure.BuiltinServiceTypes.Deployments)
             {
@@ -165,7 +165,7 @@ where Id=@Id
                     _DataConverter.Serialize(new ResourceOrchestrationInput()
                     {
                         DeploymentId = resource.Deployment.DeploymentId,
-                        ResourceId = resource.ResourceId,
+                        ResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : resource.ResourceId,
                         CopyIndex = resource.CopyIndex ?? -1,
                         IsRetry = isRetry,
                         LastRunUserId = lastRunUserId
@@ -179,7 +179,7 @@ where Id=@Id
                                      new ResourceOrchestrationInput()
                                      {
                                          DeploymentId = resource.Deployment.DeploymentId,
-                                         ResourceId = resource.ResourceId,
+                                         ResourceId = resource.CopyIndex.HasValue ? resource.Copy.Id : resource.ResourceId,
                                          CopyIndex = resource.CopyIndex ?? -1,
                                          IsRetry = isRetry,
                                          LastRunUserId = lastRunUserId
@@ -327,11 +327,11 @@ new
                 },
                 new
                 {
-                    DeploymentId = input.DeploymentId,
-                    ResourceId = input.ResourceId,
+                    input.DeploymentId,
+                    input.ResourceId,
                     NewInstanceId = newInstanceId,
                     NewExecutionId = newExecutionId,
-                    LastRunUserId = input.LastRunUserId,
+                    input.LastRunUserId,
                     Input = _DataConverter.Serialize(input)
                 }).Wait();
             return (Stage, DeploymentOpeartionId);

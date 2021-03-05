@@ -167,7 +167,7 @@ BEGIN
 	SELECT @resId=ResourceId from [{0}].[{1}_DeploymentOperations] where CorrelationId=@CorrelationId and ParentResourceId is null
 	IF @resId IS NULL OR @ParentResourceId IS NOT NULL
 	BEGIN
-		IF NOt EXISTS (select 0 from [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId)
+		IF NOt EXISTS (select 0 from [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId and DeploymentId=@DeploymentId)
 		BEGIN
 			INSERT INTO [{0}].[{1}_DeploymentOperations]
 			([ApiVersion],[Id],[InstanceId],[ExecutionId],[GroupId],[GroupType],[HierarchyId],[RootId],[DeploymentId],[CorrelationId],[ParentResourceId],[ResourceId],[Name],[Type],[Stage],[CreateTimeUtc],[UpdateTimeUtc],[SubscriptionId],[ManagementGroupId],[Input],[Comments],[CreateByUserId],[LastRunUserId])
@@ -177,7 +177,7 @@ BEGIN
 		END
 		ELSE
 		BEGIN
-			SELECT * FROM [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId
+			SELECT * FROM [{0}].[{1}_DeploymentOperations] where ResourceId=@ResourceId and DeploymentId=@DeploymentId
 		END
 	END
 	ELSE

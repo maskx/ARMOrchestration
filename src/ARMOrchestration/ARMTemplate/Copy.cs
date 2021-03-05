@@ -1,6 +1,4 @@
-﻿using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Functions;
-using Microsoft.Extensions.DependencyInjection;
+﻿using maskx.ARMOrchestration.Functions;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -16,11 +14,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public const string SerialMode = "serial";
         public const string ParallelMode = "parallel";
 
-        public Deployment DeploymentOrchestrationInput { get; set; }
-        private readonly Resource _Resource;
-        private IInfrastructure _Infrastructure { get { return DeploymentOrchestrationInput.ServiceProvider.GetService<IInfrastructure>(); } }
-        private ARMFunctions _ARMFunctions { get { return DeploymentOrchestrationInput.ServiceProvider.GetService<ARMFunctions>(); } }
-        private readonly Dictionary<string, object> _ParentContext;
+        internal Resource Resource;
 
         public string Id
         {
@@ -31,9 +25,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 {
                     cxt.Add(item.Key, item.Value);
                 }
-                return _ARMFunctions.ResourceId(_Resource.Deployment, new object[] {
-                    $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
-                    _Resource.Deployment.Name,
+                return ARMFunctions.ResourceId(Resource.Deployment, new object[] {
+                    $"{Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}",
+                    Resource.Deployment.Name,
                     Name });
             }
         }
@@ -48,18 +42,22 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     throw new Exception("cannot find name prooerty");
                 return name.Value<string>();
             }
+            set
+            {
+                RootElement["name"] = value;
+            }
         }
         public string Type
         {
             get { return Copy.ServiceType; }
         }
-        public string FullType { get { return $"{_Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}"; } }
+        public string FullType { get { return $"{Infrastructure.BuiltinServiceTypes.Deployments}/{Copy.ServiceType}"; } }
         public string FullName
         {
             get
             {
 
-                return $"{DeploymentOrchestrationInput.Name}/{this.Name}";
+                return $"{Resource.Deployment.Name}/{this.Name}";
             }
         }
         public string NameWithServiceType
@@ -97,7 +95,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         {
                             cxt.Add(item.Key, item.Value);
                         }
-                        _Count = (int)_ARMFunctions.Evaluate(count.Value<string>(), cxt, $"{RootElement.Path}.count");
+                        _Count = (int)ARMFunctions.Evaluate(count.Value<string>(), cxt, $"{RootElement.Path}.count");
                         // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-functions-resource#valid-uses-1
                         if (cxt.ContainsKey(ContextKeys.DEPENDSON))
                             throw new Exception("You can't use the reference function to set the value of the count property in a copy loop.");
@@ -107,6 +105,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
                 }
                 return _Count.Value;
+            }
+            set
+            {
+                _Count = value;
+                RootElement["count"] = value;
             }
         }
 
@@ -120,6 +123,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 if (RootElement.TryGetValue("mode", out JToken mode))
                     return mode.Value<string>().ToLower();
                 return ParallelMode;
+            }
+            set
+            {
+                RootElement["mode"] = value;
             }
         }
         private int? _BatchSize;
@@ -145,13 +152,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
                             {
                                 cxt.Add(item.Key, item.Value);
                             }
-                            _BatchSize = (int)_ARMFunctions.Evaluate(batchSize.Value<string>(), cxt, $"{RootElement.Path}.batchSize");
+                            _BatchSize = (int)ARMFunctions.Evaluate(batchSize.Value<string>(), cxt, $"{RootElement.Path}.batchSize");
                         }
 
                     }
                 }
                 return _BatchSize.Value;
-
+            }
+            set
+            {
+                _BatchSize = value;
+                RootElement["batchSize"] = value;
             }
         }
 
@@ -168,16 +179,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 }
                 return null;
             }
+            set
+            {
+                RootElement["input"] = value;
+            }
         }
-
+        public Copy() : base(new JObject(), null) { }
         public Copy(JObject root, Dictionary<string, object> context, Resource resource) : this(root, context)
         {
-            this._Resource = resource;
+            this.Resource = resource;
         }
         public Copy(JObject root, Dictionary<string, object> context) : base(root, context)
         {
-            this.DeploymentOrchestrationInput = context[ContextKeys.ARM_CONTEXT] as Deployment;
-            this._ParentContext = context;
         }
         public IEnumerable<Resource> EnumerateResource(bool flatChild = false)
         {
@@ -196,7 +209,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
         }
         public Resource GetResource(int index)
         {
-            return new Resource(_Resource.RootElement, _Resource.FullContext, index);
+            return new Resource(Resource.RootElement, Resource.FullContext, index);
         }
     }
 }

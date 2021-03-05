@@ -58,8 +58,12 @@ namespace ARMOrchestrationTest.Mock
             }
             else
             {
-                var rinput = _DataConverter.Deserialize<ResourceOrchestrationInput>(operation.Input);
-                rinput.ServiceProvider = serviceProvider;
+                var rinput = new ResourceOrchestrationInput()
+                {
+                    DeploymentId = operation.DeploymentId,
+                    ResourceId = operation.ResourceId,
+                    ServiceProvider = serviceProvider
+                };
                 r.ApiVersion = rinput.Resource.ApiVersion;
                 r.Type = rinput.Resource.Type;
                 r.Name = rinput.Resource.Name;

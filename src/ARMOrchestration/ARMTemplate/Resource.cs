@@ -1,12 +1,10 @@
 ﻿using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.SqlServer.Management.SqlParser.SqlCodeDom;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -15,104 +13,47 @@ namespace maskx.ARMOrchestration.ARMTemplate
     /// 部署服务需提供以下API
     /// https://docs.microsoft.com/en-us/rest/api/resources/
     /// </summary>
-    [JsonObject(MemberSerialization.OptIn)]
     public class Resource : ObjectChangeTracking
     {
-        public string ParentResourceId
-        {
-            get
-            {
-                return CopyIndex.HasValue ? Copy.Id : string.IsNullOrEmpty(_ParentName) ? Deployment.ResourceId : Deployment.GetFirstResource(GetNameWithServiceType(_ParentType, _ParentName)).ResourceId;
-            }
-        }
-        [JsonProperty]
-        protected readonly string _ParentName;
-
-        [JsonProperty]
-        protected readonly string _ParentType;
-
-        /// <summary>
-        /// if CopyIndex has value, means this is a expanded resource
-        /// </summary>
-        [JsonProperty]
-        public int? CopyIndex { get; set; }
-
-        /// <summary>
-        /// for nesting copy, this context should save all copy context from root to direct parent
-        /// for clear serialize, this context not include ContextKeys.ARM_CONTEXT
-        /// at runtime, should set ContextKeys.ARM_CONTEXT after deserialize
-        /// </summary>
-        [JsonProperty]
-        public Dictionary<string, object> ParentContext;
-
-        private Dictionary<string, object> _FullContext;
-
-        internal override Dictionary<string, object> FullContext
-        {
-            get
-            {
-                if (_FullContext == null)
-                {
-                    _FullContext = new Dictionary<string, object> {
-                        {ContextKeys.ARM_CONTEXT,this.Deployment} };
-                    if (ParentContext != null)
-                    {
-                        foreach (var item in ParentContext)
-                        {
-                            _FullContext.Add(item.Key, item.Value);
-                        }
-                    }
-                    if (Copy != null && CopyIndex.HasValue)
-                    {
-                        Dictionary<string, int> indexDic = new Dictionary<string, int>();
-                        if (_FullContext.TryGetValue(ContextKeys.COPY_INDEX, out object indexOjb))
-                        {
-                            foreach (var item in indexOjb as Dictionary<string, int>)
-                            {
-                                indexDic[item.Key] = item.Value;
-                            }
-                        }
-                        indexDic[Copy.Name] = this.CopyIndex.Value;
-                        _FullContext[ContextKeys.COPY_INDEX] = indexDic;
-                        _FullContext[ContextKeys.CURRENT_LOOP_NAME] = Copy.Name;
-                    }
-                }
-                return _FullContext;
-            }
-        }
-
-        protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
-
-        public Resource()
+        #region 构造函数
+        public Resource() : base(new JObject(), null)
         {
         }
 
-        public Resource(JObject root, Dictionary<string, object> fullContext,  int index) : base(root, fullContext)
+        public Resource(JObject root, Dictionary<string, object> fullContext, int index) : base(root, fullContext)
         {
-            this.ParentContext = new Dictionary<string, object>();
-            foreach (var item in fullContext)
-            {
-                if (item.Key == ContextKeys.ARM_CONTEXT) continue;
-                ParentContext.Add(item.Key, item.Value);
-            }
             this.CopyIndex = index;
-      
+
         }
         public Resource(JObject root, Dictionary<string, object> fullContext, string parentName = null, string parentType = null) : base(root, fullContext)
         {
             this._ParentName = parentName;
             this._ParentType = parentType;
-            this.ParentContext = new Dictionary<string, object>();
-            foreach (var item in fullContext)
-            {
-                if (item.Key == ContextKeys.ARM_CONTEXT) continue;
-                ParentContext.Add(item.Key, item.Value);
-            }
         }
+        #endregion
 
+        #region private member
         private bool? _Condition;
+        private string _ApiVersion = null;
+        private string _Type = null;
+        private string _Name = null;
+        private string _Location = null;
+        private string _Comments = null;
+        private DependsOnCollection _DependsOn;
+        private string _Properties;
+        private SKU _SKU;
+        private string _Kind;
+        private Plan _Plan = null;
+        private List<string> _Zones;
+        private ResourceCollection _Resources;
+        private Copy _Copy = null;
+        private string _resourceGroup = null;
+        private string _SubscriptionId = null;
+        public string _ManagementGroupId = null;
+        #endregion
 
-        [DisplayName("condition")]
+        #region Resource Property
+        [JsonProperty]
         public bool Condition
         {
             get
@@ -141,13 +82,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Condition = value;
-                Change(value, "condition");
+                RootElement["condition"] = value;
             }
         }
-
-        private string _ApiVersion = null;
-
-        [DisplayName("apiVersion")]
+        [JsonProperty]
         public string ApiVersion
         {
             get
@@ -164,16 +102,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _ApiVersion = value;
-                Change(value, "apiVersion");
+                if (value == null)
+                    RootElement.Remove("apiVersion");
+                else
+                    RootElement["apiVersion"] = value;
             }
         }
-
-        private string _Type = null;
-
-        /// <summary>
-        /// the type set in template
-        /// </summary>
-        [DisplayName("type")]
+        [JsonProperty]
         public string Type
         {
             get
@@ -190,17 +125,13 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Type = value;
-                Change(value, "type");
+                if (value == null)
+                    RootElement.Remove("type");
+                else
+                    RootElement["type"] = value;
             }
         }
-        public string FullType { get { return string.IsNullOrEmpty(this._ParentType) ? this.Type : $"{this._ParentType}/{this.Type}"; } }
-
-        private string _Name = null;
-
-        /// <summary>
-        /// the name set in template
-        /// </summary>
-        [DisplayName("name")]
+        [JsonProperty]
         public string Name
         {
             get
@@ -219,14 +150,386 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Name = value;
-                Change(value, "name");
+                if (value == null)
+                    RootElement.Remove("name");
+                else
+                    RootElement["name"] = value;
             }
         }
+        [JsonProperty]
+        public string Location
+        {
+            get
+            {
+                if (_Location == null)
+                {
+                    if (RootElement.TryGetValue("location", out JToken location))
+                        _Location = this._Functions.Evaluate(location.Value<string>(), FullContext, $"{RootElement.Path}.location").ToString();
+                    else
+                        _Location = string.Empty;
+                }
+                return _Location;
+            }
+            set
+            {
+                _Location = value;
+                if (value == null)
+                    RootElement.Remove("location");
+                else
+                    RootElement["location"] = value;
+            }
+        }
+        [JsonProperty]
+        public string Comments
+        {
+            get
+            {
+                if (_Comments == null)
+                {
+                    if (RootElement.TryGetValue("comments", out JToken comments))
+                        _Comments = comments.Value<string>();
+                    else
+                        _Comments = string.Empty;
+                }
+                return _Comments;
+            }
+            set
+            {
+                _Comments = value;
+                if (value == null)
+                    RootElement.Remove("comments");
+                else
+                    RootElement["comments"] = value;
+            }
+        }
+        /// <summary>
+        /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
+        ///
+        /// Depend on resources in a loop
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#depend-on-resources-in-a-loop
+        ///
+        ///
+        /// You only need to define dependencies for resources that are deployed in the same template.
+        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
+        ///
+        /// </summary>
+        [JsonProperty]
+        public DependsOnCollection DependsOn
+        {
+            get
+            {
+                if (_DependsOn == null || _PropertiesNeedReload)
+                    LazyLoadDependsOnAnProperties();
+                return _DependsOn;
+            }
+            set
+            {
+                _DependsOn = value;
+                if (value == null)
+                    RootElement.Remove("dependsOn");
+                else
+                    RootElement["dependsOn"] = JArray.Parse(value.ToString());
+            }
+        }
+        [JsonProperty]
+        public string Properties
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_Properties) || _PropertiesNeedReload)
+                    LazyLoadDependsOnAnProperties();
+                return _Properties;
+            }
+            set
+            {
+                _Properties = value;
+                if (value == null)
+                    RootElement.Remove("properites");
+                else
+                    RootElement["properites"] = JObject.Parse(value);
+            }
+        }
+        [JsonProperty]
+        public SKU SKU
+        {
+            get
+            {
+                if (_SKU == null)
+                {
+                    _SKU = SKU.Parse(this);
+                }
+                return _SKU;
+            }
+            set
+            {
+                _SKU = value;
+                if (value == null)
+                    RootElement.Remove("sku");
+                else
+                    RootElement["sku"] = JObject.Parse(value.ToString());
+            }
+        }
+        [JsonProperty]
+        public string Kind
+        {
+            get
+            {
+                if (_Kind == null)
+                {
+                    if (RootElement.TryGetValue("kind", out JToken kind))
+                        _Kind = _Functions.Evaluate(kind.Value<string>(), FullContext, $"{RootElement.Path}.kind").ToString();
+                    _Kind = string.Empty;
+                }
+                return _Kind;
+            }
+            set
+            {
+                _Kind = value;
+                if (value == null)
+                    RootElement.Remove("kind");
+                else
+                    RootElement["kind"] = value;
+            }
+        }
+        [JsonProperty]
+        public Plan Plan
+        {
+            get
+            {
+                if (_Plan == null)
+                {
+                    if (RootElement.TryGetValue("plan", out JToken planE))
+                        _Plan = new Plan(planE as JObject, FullContext);
+                }
+                return _Plan;
+            }
+            set
+            {
+                _Plan = value;
+                if (value == null)
+                    RootElement.Remove("plan");
+                else
+                    RootElement["plan"] = JObject.Parse(value.ToString());
+            }
+        }
+        [JsonProperty]
+        public List<string> Zones
+        {
+            get
+            {
+                if (_Zones == null)
+                {
+                    _Zones = new List<string>();
+                    if (RootElement.TryGetValue("zones", out JToken zones))
+                    {
+                        if (zones.Type == JTokenType.Array)
+                        {
+                            foreach (var z in zones.Children())
+                            {
+                                _Zones.Add(_Functions.Evaluate(z.Value<string>(), FullContext).ToString());
+                            }
+                        }
+                        else if (zones.Type == JTokenType.String)
+                        {
+                            if (!(_Functions.Evaluate(zones.Value<string>(), FullContext) is JsonValue arr) || arr.ValueKind != JsonValueKind.Array)
+                                throw new Exception("wrong value of zones");
+                            for (int i = 0; i < arr.Length; i++)
+                            {
+                                _Zones.Add(arr[i].ToString());
+                            }
+                        }
+                    }
+                }
+                return _Zones;
+            }
+            set
+            {
+                _Zones = value;
+                if (value == null)
+                    RootElement.Remove("zones");
+                else
+                    RootElement["zones"] = JArray.FromObject(value);
+            }
+        }
+        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
+        // You can't use a copy loop for a child resource.
+        [JsonProperty]
+        public ResourceCollection Resources
+        {
+            get
+            {
+                if (_Resources == null)
+                {
+                    if (this.RootElement.TryGetValue("resources", out JToken resourcesE))
+                    {
+                        _Resources = new ResourceCollection(resourcesE as JArray, this.FullContext, this.FullName, this.FullType);
+                    }
+                    else
+                    {
+                        var d = new JArray();
+                        this.RootElement.Add(new JProperty("resources", d));
+                        _Resources = new ResourceCollection(d, this.FullContext, this.FullName, this.FullType);
+                    }
+                }
+                return _Resources;
+            }
+            set
+            {
+                _Resources = value;
+                if (value == null)
+                    RootElement.Remove("resources");
+                else
+                    RootElement["resources"] = JArray.Parse(value.ToString());
+            }
+        }
+        [JsonProperty]
+        public Copy Copy
+        {
+            get
+            {
+                if (_Copy == null)
+                {
+                    if (RootElement.TryGetValue("copy", out JToken copy))
+                        _Copy = new Copy(copy as JObject, FullContext, this);
+                }
+                return _Copy;
+
+            }
+            set
+            {
+                _Copy = value;
+                if (value == null)
+                    RootElement.Remove("copy");
+                else
+                {
+                    _Copy.Resource = this;
+                    RootElement["copy"] = JObject.Parse(value.ToString());
+                }
+            }
+        }
+        [JsonProperty]
+        public string ResourceGroup
+        {
+            get
+            {
+                if (_resourceGroup == null)
+                {
+                    if (RootElement.TryGetValue("resourceGroup", out JToken resourceGroup))
+                        _resourceGroup = _Functions.Evaluate(resourceGroup.Value<string>(), FullContext, $"{RootElement.Path}.resourceGroup").ToString();
+                    else
+                        _resourceGroup = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).ResourceGroup;
+                }
+                return _resourceGroup;
+            }
+            set
+            {
+                _resourceGroup = value;
+                RootElement["resourceGroup"] = value;
+            }
+        }
+        [JsonProperty]
+        public string SubscriptionId
+        {
+            get
+            {
+                if (_SubscriptionId == null)
+                {
+                    if (RootElement.TryGetValue("subscriptionId", out JToken subscriptionId))
+                        _SubscriptionId = _Functions.Evaluate(subscriptionId.Value<string>(), FullContext, $"{RootElement.Path}.subscriptionId").ToString();
+                    else
+                        _SubscriptionId = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).SubscriptionId;
+                }
+                return _SubscriptionId;
+            }
+            set
+            {
+                _SubscriptionId = value;
+                RootElement["subscriptionId"] = value;
+            }
+        }
+        [JsonProperty]
+        public string ManagementGroupId
+        {
+            get
+            {
+                if (_ManagementGroupId == null)
+                {
+                    if (RootElement.TryGetValue("managementGroupId", out JToken managementGroupId))
+                        _ManagementGroupId = _Functions.Evaluate(managementGroupId.Value<string>(), FullContext, $"{RootElement.Path}.managementGroupId").ToString();
+                    else
+                        _ManagementGroupId = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).ManagementGroupId;
+                }
+                return _ManagementGroupId;
+            }
+            set
+            {
+                _ManagementGroupId = value;
+                RootElement["managementGroupId"] = value;
+            }
+        }
+        #endregion
+
+        #region
+        [JsonProperty] protected readonly string _ParentName;
+        [JsonProperty] protected readonly string _ParentType;
+        /// <summary>
+        /// if CopyIndex has value, means this is a expanded resource
+        /// </summary>
+        [JsonProperty] public int? CopyIndex { get; set; }
+        #endregion
+
+        public string ParentResourceId
+        {
+            get
+            {
+                return CopyIndex.HasValue ? Copy.Id : string.IsNullOrEmpty(_ParentName) ? Deployment.ResourceId : Deployment.GetFirstResource(GetNameWithServiceType(_ParentType, _ParentName)).ResourceId;
+            }
+        }
+
+        private Dictionary<string, object> _FullContext;
+
+        internal override Dictionary<string, object> FullContext
+        {
+            get
+            {
+                if (_FullContext == null)
+                {
+                    _FullContext = new Dictionary<string, object>();
+                    if (_ParentContext != null)
+                    {
+                        foreach (var item in _ParentContext)
+                        {
+                            _FullContext.Add(item.Key, item.Value);
+                        }
+                    }
+                    if (Copy != null && CopyIndex.HasValue)
+                    {
+                        Dictionary<string, int> indexDic = new Dictionary<string, int>();
+                        if (_FullContext.TryGetValue(ContextKeys.COPY_INDEX, out object indexOjb))
+                        {
+                            foreach (var item in indexOjb as Dictionary<string, int>)
+                            {
+                                indexDic[item.Key] = item.Value;
+                            }
+                        }
+                        indexDic[Copy.Name] = this.CopyIndex.Value;
+                        _FullContext[ContextKeys.COPY_INDEX] = indexDic;
+                        _FullContext[ContextKeys.CURRENT_LOOP_NAME] = Copy.Name;
+                    }
+                }
+                return _FullContext;
+            }
+        }
+
+        protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
+
+        public string FullType { get { return string.IsNullOrEmpty(this._ParentType) ? this.Type : $"{this._ParentType}/{this.Type}"; } }
+
         public string FullName
         {
             get
             {
-
                 return string.IsNullOrEmpty(this._ParentName) ? this.Name : $"{this._ParentName}/{this.Name}";
             }
         }
@@ -248,100 +551,17 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 return GetNameWithServiceType(FullType, FullName);
             }
         }
-
-        private string _Location = null;
-
-        [DisplayName("location")]
-        public string Location
-        {
-            get
-            {
-                if (_Location == null)
-                {
-                    if (RootElement.TryGetValue("location", out JToken location))
-                        _Location = this._Functions.Evaluate(location.Value<string>(), FullContext, $"{RootElement.Path}.location").ToString();
-                    else
-                        _Location = string.Empty;
-                }
-                return _Location;
-            }
-            set
-            {
-                _Location = value;
-                Change(value, "location");
-            }
-        }
-
-        private string _Comments = null;
-
-        [DisplayName("comments")]
-        public string Comments
-        {
-            get
-            {
-                if (_Comments == null)
-                {
-                    if (RootElement.TryGetValue("comments", out JToken comments))
-                        _Comments = comments.Value<string>();
-                    else
-                        _Comments = string.Empty;
-                }
-                return _Comments;
-            }
-            set
-            {
-                _Comments = value;
-                Change(value, "comments");
-            }
-        }
-
-        private DependsOnCollection _DependsOn;
-
-        /// <summary>
-        /// The list can include resources that are conditionally deployed. When a conditional resource isn't deployed, Azure Resource Manager automatically removes it from the required dependencies.
-        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency#dependson
-        ///
-        /// Depend on resources in a loop
-        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/create-multiple-instances#depend-on-resources-in-a-loop
-        ///
-        ///
-        /// You only need to define dependencies for resources that are deployed in the same template.
-        /// https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/define-resource-dependency
-        ///
-        /// </summary>
-        [DisplayName("dependsOn")]
-        public DependsOnCollection DependsOn
-        {
-            get
-            {
-                if (_DependsOn == null || _PropertiesNeedReload)
-                    LazyLoadDependsOnAnProperties();
-                return _DependsOn;
-            }
-        }
-        private string _Properties;
-        public string Properties
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(_Properties) || _PropertiesNeedReload)
-                    LazyLoadDependsOnAnProperties();
-                return _Properties;
-            }
-        }
         public string RawProperties
         {
             get
             {
-                if (Deployment.ChangeMap.TryGetValue($"{RootElement.Path}.properties", out object v))
-                    return v.ToString();
                 if (RootElement.TryGetValue("properties", out JToken p))
                     return p.ToString();
                 return "{}";
             }
             set
             {
-                Deployment.ChangeMap.Add($"{RootElement.Path}.properties", value);
+                RootElement["properties"] = JObject.Parse(value);
             }
         }
 
@@ -352,6 +572,23 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public void Refresh()
         {
             _PropertiesNeedReload = true;
+            _Condition = null;
+            _ApiVersion = null;
+            _Type = null;
+            _Name = null;
+            _Location = null;
+            _Comments = null;
+            _DependsOn = null;
+            _Properties = null;
+            _SKU = null;
+            _Kind = null;
+            _Plan = null;
+            _Zones = null;
+            _Copy = null;
+            _resourceGroup = null;
+            _SubscriptionId = null;
+            _ManagementGroupId = null;
+
         }
 
         private void LazyLoadDependsOnAnProperties()
@@ -375,196 +612,20 @@ namespace maskx.ARMOrchestration.ARMTemplate
                     index++;
                 }
             }
-
-            var infrastructure = ServiceProvider.GetService<IInfrastructure>();
-            if (this.Type == infrastructure.BuiltinServiceTypes.Deployments)
+            // if there has Implicit dependency by reference function in properties
+            // the reference function should be evaluate at provisioning time
+            using var doc = JsonDocument.Parse(RawProperties);
+            _Properties = doc.RootElement.ExpandObject(FullContext, $"{RootElement.Path}.properties");
+            if (FullContext.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
             {
-                // Implicit dependsOn only generate in deployment, cannot cross deployment
-
-            }
-            else if (Copy != null && !CopyIndex.HasValue)
-            {
-                // copy's dependsOn will create in expand resource
-            }
-            else
-            {
-                // if there has Implicit dependency by reference function in properties
-                // the reference function should be evaluate at provisioning time
-                using var doc = JsonDocument.Parse(RawProperties);
-                _Properties = doc.RootElement.ExpandObject(FullContext, $"{RootElement.Path}.properties");
-                if (FullContext.TryGetValue(ContextKeys.DEPENDSON, out object conditionDep))
-                {
-                    _DependsOn.AddRange(conditionDep as List<string>, Deployment);
-                    FullContext.Remove(ContextKeys.DEPENDSON);
-                }
+                _DependsOn.AddRange(conditionDep as List<string>, Deployment);
+                FullContext.Remove(ContextKeys.DEPENDSON);
             }
             if (!string.IsNullOrEmpty(this._ParentName))
             {
                 _DependsOn.Add(GetNameWithServiceType(_ParentType, _ParentName), Deployment);
             }
-        }
 
-        private SKU _SKU;
-
-        [DisplayName("sku")]
-        public SKU SKU
-        {
-            get
-            {
-                if (_SKU == null)
-                {
-                    _SKU = SKU.Parse(this);
-                }
-                return _SKU;
-            }
-        }
-
-        private string _Kind;
-
-        [DisplayName("kind")]
-        public string Kind
-        {
-            get
-            {
-                if (_Kind == null)
-                {
-                    if (RootElement.TryGetValue("kind", out JToken kind))
-                        _Kind = _Functions.Evaluate(kind.Value<string>(), FullContext, $"{RootElement.Path}.kind").ToString();
-                    _Kind = string.Empty;
-                }
-                return _Kind;
-            }
-            set
-            {
-                _Kind = value;
-                Change(value, "kind");
-            }
-        }
-
-        private Plan _Plan = null;
-
-        [DisplayName("plan")]
-        public Plan Plan
-        {
-            get
-            {
-                if (_Plan == null)
-                {
-                    if (RootElement.TryGetValue("plan", out JToken planE))
-                        _Plan = new Plan(planE as JObject, FullContext);
-                }
-                return _Plan;
-            }
-            set
-            {
-                _Plan = value;
-                Change(value, "plan");
-            }
-        }
-
-        private ZoneCollection _Zones;
-
-        // todo: support modify
-        [DisplayName("zones")]
-        public ZoneCollection Zones
-        {
-            get
-            {
-                if (_Zones == null)
-                {
-                    _Zones = new ZoneCollection();
-                    if (RootElement.TryGetValue("zones", out JToken zones))
-                    {
-                        if (zones.Type == JTokenType.Array)
-                        {
-                            foreach (var z in zones.Children())
-                            {
-                                _Zones.Add(_Functions.Evaluate(z.Value<string>(), FullContext).ToString());
-                            }
-                        }
-                        else if (zones.Type == JTokenType.String)
-                        {
-                            if (!(_Functions.Evaluate(zones.Value<string>(), FullContext) is JsonValue arr) || arr.ValueKind != JsonValueKind.Array)
-                                throw new Exception("wrong value of zones");
-                            for (int i = 0; i < arr.Length; i++)
-                            {
-                                _Zones.Add(arr[i].ToString());
-                            }
-                        }
-                    }
-                }
-
-                return _Zones;
-            }
-        }
-
-        private string _resourceGroup = null;
-
-        [DisplayName("resourceGroup")]
-        public string ResourceGroup
-        {
-            get
-            {
-                if (_resourceGroup == null)
-                {
-                    if (RootElement.TryGetValue("resourceGroup", out JToken resourceGroup))
-                        _resourceGroup = _Functions.Evaluate(resourceGroup.Value<string>(), FullContext, $"{RootElement.Path}.resourceGroup").ToString();
-                    else
-                        _resourceGroup = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).ResourceGroup;
-                }
-                return _resourceGroup;
-            }
-            set
-            {
-                _resourceGroup = value;
-                Change(value, "resourceGroup");
-            }
-        }
-
-        private string _SubscriptionId = null;
-
-        [DisplayName("subscriptionId")]
-        public string SubscriptionId
-        {
-            get
-            {
-                if (_SubscriptionId == null)
-                {
-                    if (RootElement.TryGetValue("subscriptionId", out JToken subscriptionId))
-                        _SubscriptionId = _Functions.Evaluate(subscriptionId.Value<string>(), FullContext, $"{RootElement.Path}.subscriptionId").ToString();
-                    else
-                        _SubscriptionId = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).SubscriptionId;
-                }
-                return _SubscriptionId;
-            }
-            set
-            {
-                _SubscriptionId = value;
-                Change(value, "subscriptionId");
-            }
-        }
-
-        public string _ManagementGroupId = null;
-
-        [DisplayName("managementGroupId")]
-        public string ManagementGroupId
-        {
-            get
-            {
-                if (_ManagementGroupId == null)
-                {
-                    if (RootElement.TryGetValue("managementGroupId", out JToken managementGroupId))
-                        _ManagementGroupId = _Functions.Evaluate(managementGroupId.Value<string>(), FullContext, $"{RootElement.Path}.managementGroupId").ToString();
-                    else
-                        _ManagementGroupId = (FullContext[ContextKeys.ARM_CONTEXT] as Deployment).ManagementGroupId;
-                }
-                return _ManagementGroupId;
-            }
-            set
-            {
-                _ManagementGroupId = value;
-                Change(value, "managementGroupId");
-            }
         }
 
         public string ResourceId
@@ -594,94 +655,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private Copy _Copy = null;
-        public Copy Copy
-        {
-            get
-            {
-                if (_Copy == null)
-                {
-                    if (RootElement.TryGetValue("copy", out JToken copy))
-                        _Copy = new Copy(copy as JObject, FullContext, this);
-                }
-                return _Copy;
-
-            }
-        }
-
-        private ResourceCollection _Resources;
-        // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/copy-resources#iteration-for-a-child-resource
-        // You can't use a copy loop for a child resource.
-        [DisplayName("resources")]
-        public ResourceCollection Resources
-        {
-            get
-            {
-                if (_Resources == null)
-                {
-                    if (this.RootElement.TryGetValue("resources", out JToken resourcesE))
-                    {
-                        _Resources = new ResourceCollection(resourcesE as JArray, this.FullContext, this.FullName, this.FullType);
-                    }
-                    else
-                    {
-                        _Resources = new ResourceCollection();
-                    }
-                }
-                return _Resources;
-            }
-        }
-
-        internal (bool, string) Validate()
-        {
-            try
-            {
-                if (!RootElement.TryGetValue("type", out JToken type))
-                    return (false, "not find type in resource node");
-                string msg;
-                bool rtv;
-                if (this.Copy != null && !this.CopyIndex.HasValue)
-                {
-                    foreach (var r in this.Copy.EnumerateResource())
-                    {
-                        (rtv, msg) = r.Validate();
-                        if (!rtv) return (rtv, msg);
-                    }
-                }
-                else
-                {
-                    object _;
-                    _ = this.Name;
-                    _ = this.ApiVersion;
-                    _ = this.Condition;
-                    _ = this.Location;
-                    _ = this.SKU;
-                    _ = this.Kind;
-                    if (this.Plan != null)
-                    {
-                        (rtv, msg) = this.Plan.Validate();
-                        if (!rtv) return (rtv, msg);
-                    }
-                    // validate properties and dependson and parameter and variables
-                    LazyLoadDependsOnAnProperties();
-                    // validate child
-                    if (this.Resources != null)
-                    {
-                        foreach (var child in this.Resources)
-                        {
-                            (rtv, msg) = child.Validate();
-                            if (!rtv)
-                                return (rtv, msg);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return (false, ex.Message);
-            }
-            return (true, string.Empty);
-        }
 
         public IEnumerable<Resource> FlatEnumerateChild()
         {
@@ -700,6 +673,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         public override string ToString()
         {
             return RootElement.ToString(Formatting.Indented);
+        }
+        public void Change(string content)
+        {
+            this.RootElement.Replace(JObject.Parse(content));
         }
     }
 }

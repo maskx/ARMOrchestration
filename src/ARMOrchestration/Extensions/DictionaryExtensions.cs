@@ -14,12 +14,28 @@ namespace maskx.ARMOrchestration.Extensions
             }
             return rtv;
         }
-        public static Dictionary<string,object> AppendPath(this Dictionary<string, object> source,string segment)
+        public static Dictionary<string, object> AppendSegment(this Dictionary<string, object> source, string segment)
         {
-            if (source.TryGetValue(ContextKeys.PATH, out object p))
-                source[ContextKeys.PATH] = $"{p}/{segment}";
+            if (string.IsNullOrEmpty(segment))
+                return source;
+            if (source.TryGetValue(ContextKeys.FUNCTION_PATH, out object p))
+                source[ContextKeys.FUNCTION_PATH] = $"{p}/{segment}";
             else
-                source[ContextKeys.PATH] = segment;
+                source[ContextKeys.FUNCTION_PATH] = segment;
+            return source;
+        }
+        public static Dictionary<string, object> RemoveLastSegment(this Dictionary<string, object> source)
+        {
+            if (source.TryGetValue(ContextKeys.FUNCTION_PATH, out object p))
+            {
+                var d = p.ToString().Split('/');
+                if (d.Length == 1)
+                    source.Remove(ContextKeys.FUNCTION_PATH);
+                else
+                {
+                    source[ContextKeys.FUNCTION_PATH] = string.Join('/', d, 0, d.Length - 1);
+                }
+            }
             return source;
         }
     }

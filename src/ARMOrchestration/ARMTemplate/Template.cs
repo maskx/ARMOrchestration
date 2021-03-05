@@ -1,11 +1,9 @@
-﻿using maskx.ARMOrchestration.Extensions;
-using maskx.ARMOrchestration.Functions;
+﻿using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -26,7 +24,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
         JObject _RootElement;
-        internal  JObject RootElement
+        internal JObject RootElement
         {
             get
             {
@@ -36,7 +34,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
                         _RootElement = JObject.Parse(this.ServiceProvider.GetService<IInfrastructure>().GetTemplateContentAsync(_TemplateLink, Deployment).Result);
                     else if (!string.IsNullOrEmpty(this.RawString))
                         _RootElement = JObject.Parse(this.RawString);
-
                 }
                 return _RootElement;
             }
@@ -48,7 +45,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return new Template() { RawString = rawString };
         }
 
-        [DisplayName("$schema")]
         public string Schema
         {
             get
@@ -59,7 +55,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        [DisplayName("contentVersion")]
         public string ContentVersion
         {
             get
@@ -70,7 +65,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        [DisplayName("apiProfile")]
         public string ApiProfile
         {
             get
@@ -84,7 +78,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        [DisplayName("parameters")]
         public string Parameters
         {
             get
@@ -97,9 +90,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public string _Variables = null;
 
-        // thread unsafed
-        // todo: keep newguid result
-        [DisplayName("variables")]
         public string Variables
         {
             get
@@ -118,7 +108,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         private ResourceCollection _Resources;
 
-        [DisplayName("resources")]
         public ResourceCollection Resources
         {
             get
@@ -133,7 +122,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        [DisplayName("functions")]
         public Functions Functions
         {
             get
@@ -147,25 +135,18 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        private string _Outputs;
-        [JsonProperty]
-        private string ChangedOutputs;
-
-        [DisplayName("outputs")]
         public string Outputs
         {
             get
             {
-                if (_Outputs == null)
-                {
-                    if (RootElement.TryGetValue("outputs", out JToken outputs))
-                        _Outputs = outputs.ToString();
-                }
-                return string.IsNullOrEmpty(ChangedOutputs) ? _Outputs : ChangedOutputs;
+                if (RootElement.TryGetValue("outputs", out JToken outputs))
+                    return outputs.ToString();
+
+                return null;
             }
             set
             {
-                ChangedOutputs = value;
+                // todo: template.Outputs
             }
         }
 
@@ -187,34 +168,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        internal (bool, string) Validate()
-        {
-            object _;
-            try
-            {
-                if (!RootElement.TryGetValue("$schema", out JToken schema))
-                    return (false, "not find $schema in template");
-                if (!RootElement.TryGetValue("contentVersion", out JToken contentVersion))
-                    return (false, "not find contentVersion in template");
-                _ = this.Variables;
-                _ = this.ApiProfile;
-                _ = this.Functions;
-                foreach (var res in this.Resources)
-                {
-                    var (r, m) = res.Validate();
-                    if (!r) return (r, m);
-                }
-            }
-            catch (Exception ex)
-            {
-                return (false, ex.Message);
-            }
-            return (true, "");
-        }
 
         public override string ToString()
         {
             return RootElement.ToString(Formatting.Indented);
         }
+
     }
 }

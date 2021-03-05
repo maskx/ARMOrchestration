@@ -29,10 +29,6 @@
     "exampleOutput4": {
       "value": "[variables('var4')]",
       "type": "object"
-    },
-    "newGuid": {
-      "type": "bool",
-      "value": "[if(equals(variables('var5'),variables('var5')),true,false)]"
     }
   }
 }

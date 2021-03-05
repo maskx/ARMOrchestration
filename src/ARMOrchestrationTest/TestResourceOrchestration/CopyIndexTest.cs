@@ -80,7 +80,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                   "CopyIndex/output", subscriptionId: Guid.NewGuid().ToString());
-            var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result[0];
+            var r = this.fixture.ARMOrchestrationClient.GetDeploymentOperationListAsync(instance.InstanceId).Result[0];
             var result = JsonDocument.Parse(r.Result).RootElement;
             var storageEndpoints = result.GetProperty("properties").GetProperty("outputs").GetProperty("storageEndpoints");
             Assert.True(storageEndpoints.TryGetProperty("value", out JsonElement value));

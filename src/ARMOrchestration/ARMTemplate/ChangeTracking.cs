@@ -1,4 +1,5 @@
-﻿using maskx.ARMOrchestration.Functions;
+﻿using maskx.ARMOrchestration.Extensions;
+using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,39 +11,30 @@ namespace maskx.ARMOrchestration.ARMTemplate
     [JsonObject(MemberSerialization.OptIn)]
     public class ChangeTracking
     {
-        public Deployment Deployment { get; set; }
+        public Deployment Deployment { get { return _ParentContext[ContextKeys.ARM_CONTEXT] as Deployment; } }
         public IServiceProvider ServiceProvider { get { return Deployment.ServiceProvider; } }
-        public ARMFunctions Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
-        private Dictionary<string, object> _FullContext;
+        public ARMFunctions ARMFunctions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
+        public IInfrastructure Infrastructure { get { return ServiceProvider.GetService<IInfrastructure>(); } }
+        internal Dictionary<string, object> _ParentContext;
         internal virtual Dictionary<string, object> FullContext
         {
             get
             {
-                if (_FullContext == null)
-                {
-                    _FullContext = new Dictionary<string, object> {
-                        {ContextKeys.ARM_CONTEXT,this.Deployment} };
-                    foreach (var item in Deployment.Context)
-                    {
-                        if (item.Key == ContextKeys.ARM_CONTEXT) continue;
-                        _FullContext.Add(item.Key, item.Value);
-                    }
-                }
-                return _FullContext;
+                return _ParentContext.CopyNew();
             }
         }
+        [JsonProperty]
         public string JsonPath
         {
-            get { return Root.Path; }
+            get { return Root?.Path; }
         }
         public ChangeTracking()
         {
 
         }
-        public ChangeTracking(JToken root, Dictionary<string, object> context)
+        public ChangeTracking(JToken root, Dictionary<string, object> parentContext)
         {
-
-            this.Deployment = context[ContextKeys.ARM_CONTEXT] as Deployment;
+            this._ParentContext = parentContext;
             this.Root = root;
         }
 
@@ -50,13 +42,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             get; set;
         }
-
-        public void Change(object value, string name)
+        public override string ToString()
         {
-            // TODO: Change
-            // this.Input.ChangedResoures.
+            return Root?.ToString(Formatting.Indented);
         }
-
     }
     public class ObjectChangeTracking : ChangeTracking
     {
@@ -75,7 +64,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
             {
                 object o = null;
                 if (e.Type == JTokenType.String)
-                    o = this.Functions.Evaluate(e.Value<string>(), FullContext, $"{RootElement.Path}.{name}");
+                    o = this.ARMFunctions.Evaluate(e.Value<string>(), FullContext, $"{RootElement.Path}.{name}");
                 else if (e.Type == JTokenType.Boolean)
                     o = e.Value<bool>();
                 else if (e.Type == JTokenType.Integer)
@@ -85,11 +74,19 @@ namespace maskx.ARMOrchestration.ARMTemplate
             else
                 return default;
         }
+        public override string ToString()
+        {
+            return Root == null ? "{}" : Root.ToString(Formatting.Indented);
+        }
     }
     public class ArrayChangeTracking : ChangeTracking
     {
         public JArray RootElement { get { return Root as JArray; } }
         public ArrayChangeTracking() { }
         public ArrayChangeTracking(JArray root, Dictionary<string, object> context) : base(root, context) { }
+        public override string ToString()
+        {
+            return Root == null ? "[]" : Root.ToString(Formatting.Indented);
+        }
     }
 }

@@ -80,7 +80,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                   "Templates/CopyIndex/output", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
-            var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result[0];
+            var r = this.fixture.ARMOrchestrationClient.GetDeploymentOperationListAsync(instance.InstanceId).Result[0];
             var result = JsonDocument.Parse(r.Result).RootElement;
             var storageEndpoints = result.GetProperty("properties").GetProperty("outputs").GetProperty("storageEndpoints");
             Assert.True(storageEndpoints.TryGetProperty("value", out JsonElement value));

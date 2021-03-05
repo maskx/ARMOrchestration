@@ -1,5 +1,6 @@
 ﻿using ARMOrchestrationTest.Mock;
 using maskx.ARMOrchestration;
+using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Orchestrations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -60,15 +61,15 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             var instance = TestHelper.OrchestrationTest(fixture,
                  "Templates/dependsOn/DuplicatedName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
-            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            var resources = client.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
-                    input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Equal(1, input.Resource.DependsOn.Count);
-                    Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
+                    var res = TestHelper.DataConverter.Deserialize<Resource>(r.Input);
+                  
+                    Assert.Equal(1, res.DependsOn.Count);
+                    Assert.Equal("ns.rp/st/resource1",res.DependsOn[0]);
                 }
             }
         }
@@ -79,15 +80,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             var instance = TestHelper.OrchestrationTest(fixture,
                  "Templates/dependsOn/NameAndServiceTypeName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
-            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            var resources = client.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
-                    input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Equal(1, input.Resource.DependsOn.Count);
-                    Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
+                    var res = TestHelper.DataConverter.Deserialize<Resource>(r.Input);
+                   Assert.Equal(1, res.DependsOn.Count);
+                    Assert.Equal("ns.rp/st/resource1",res.DependsOn[0]);
                 }
             }
         }
@@ -98,15 +98,14 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             var instance = TestHelper.OrchestrationTest(fixture,
                  "Templates/dependsOn/ServiceTypeNameAndName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
-            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            var resources = client.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
-                    input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Equal(1, input.Resource.DependsOn.Count);
-                    Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
+                    var res = TestHelper.DataConverter.Deserialize<Resource>(r.Input);
+                    Assert.Equal(1, res.DependsOn.Count);
+                    Assert.Equal("ns.rp/st/resource1", res.DependsOn[0]);
                 }
             }
         }
@@ -139,15 +138,15 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             var instance = TestHelper.OrchestrationTest(fixture,
                  "Templates/dependsOn/DuplicatedServiceTypeName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
-            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            var resources = client.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
-                    input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Equal(1, input.Resource.DependsOn.Count);
-                    Assert.Equal("ns.rp/st/resource1", input.Resource.DependsOn[0]);
+                    var res = TestHelper.DataConverter.Deserialize<Resource>(r.Input);
+                   
+                    Assert.Equal(1, res.DependsOn.Count);
+                    Assert.Equal("ns.rp/st/resource1", res.DependsOn[0]);
                 }
             }
         }
@@ -158,16 +157,16 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
             var instance = TestHelper.OrchestrationTest(fixture,
                  "Templates/dependsOn/DiffServiceTypeSameName", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
             var client = fixture.ServiceProvider.GetService<ARMOrchestrationClient<CustomCommunicationJob>>();
-            var resources = client.GetResourceListAsync(instance.InstanceId).Result;
+            var resources = client.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             foreach (var r in resources)
             {
                 if (r.Name == "resource2")
                 {
-                    var input = TestHelper.DataConverter.Deserialize<ResourceOrchestrationInput>(r.Input);
-                    input.ServiceProvider = fixture.ServiceProvider;
-                    Assert.Equal(2, input.Resource.DependsOn.Count);
-                    Assert.Contains("ns.rp/st/resource1", input.Resource.DependsOn);
-                    Assert.Contains("ns.rp/st1/resource1", input.Resource.DependsOn);
+                    var res = TestHelper.DataConverter.Deserialize<Resource>(r.Input);
+                  
+                    Assert.Equal(2, res.DependsOn.Count);
+                    Assert.Contains("ns.rp/st/resource1", res.DependsOn);
+                    Assert.Contains("ns.rp/st1/resource1", res.DependsOn);
                 }
             }
         }

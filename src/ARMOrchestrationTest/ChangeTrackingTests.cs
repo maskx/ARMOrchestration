@@ -24,65 +24,63 @@ namespace ARMOrchestrationTest
             var input = new maskx.ARMOrchestration.Deployment()
             {
                 Name = "VariableIteration",
-                Template = TestHelper.GetJsonFileContent("ValidateTemplateTests/Template/Empty"),
-                ServiceProvider = fixture.ServiceProvider
+                Template = TestHelper.GetJsonFileContent("Templates/NestTemplate/NestTemplate"),
+                ServiceProvider = fixture.ServiceProvider,
+                SubscriptionId = Guid.NewGuid().ToString("N"),
+                ResourceGroup = "ChangeTrackingTest",
+                DeploymentId = Guid.NewGuid().ToString("N")
             };
-            Assert.Empty(input.Template.Resources);
+            Assert.Single(input.EnumerateResource());
+            Assert.Single(input.EnumerateDeployments());
+
+            var nestTemplate = input.GetFirstResource("nestedTemplate1");
 
             #region add new resource
-            input.Template.Resources.Add(new Resource()
-            {
-                Type = "isv.rp/st",
-                Name = "Name1",
-                RawProperties = "{}"
-            });
+            //input.Template.Resources.Add(new Resource()
+            //{
+            //    Type = "isv.rp/st",
+            //    Name = "Name1",
+            //    RawProperties = "{}"
+            //});
 
-            Assert.Single(input.Template.Resources);
+            Assert.Equal(2, input.Template.Resources.Count);
+            Assert.Equal(2, input.EnumerateResource().Count());
 
-            var r = input.Template.Resources.First();
+            var r = input.GetFirstResource("Name1");
             Assert.Equal("Name1", r.Name);
             #endregion
 
             #region change resource's name property
-            r.Name = "Name1-Changed";
 
-            using var doc1 = JsonDocument.Parse(input.Template.RawString);
-            var resourcesE = doc1.RootElement.GetProperty("resources");
-            Assert.Single(resourcesE.EnumerateArray());
-            var resE = resourcesE.EnumerateArray().First();
-            Assert.True(resE.TryGetProperty("name", out JsonElement nameE));
-            Assert.Equal("Name1-Changed", nameE.GetString());
+            nestTemplate.Name = "nestTemplate1-Changed";
+
+            Assert.Null(input.GetFirstResource("nestTemplate1"));
+            Assert.NotNull(input.GetFirstResource("nestTemplate1-Changed"));
+
             #endregion
 
             #region change resource's properties property
-            r.RawProperties = "{\"p1\":123}";
-            Assert.Equal("{\"p1\":123}", r.RawProperties);
-            using var doc2 = JsonDocument.Parse(input.Template.RawString);
-            resourcesE = doc2.RootElement.GetProperty("resources");
-            Assert.Single(resourcesE.EnumerateArray());
-            var res2 = resourcesE.EnumerateArray().First();
-            Assert.True(res2.TryGetProperty("properties", out JsonElement properties));
-            Assert.Equal("{\"p1\":123}", properties.GetRawText());
+            var p = nestTemplate.RawProperties;
+            nestTemplate.RawProperties = "{\"p1\":123}";
+            Assert.Equal("{\"p1\":123}", nestTemplate.RawProperties);
+            nestTemplate.RawProperties = p;
+            Assert.Equal(p, nestTemplate.RawProperties);
             #endregion
 
             #region modify DependsOn
 
             Assert.Empty(r.DependsOn);
-            input.Template.Resources.Add(new Resource()
-            {
-                Type = "isv.rp/st",
-                Name = "Name2",
-                RawProperties = "{}",
-            });
+            //input.Template.Resources.Add(new Resource()
+            //{
+            //    Type = "isv.rp/st",
+            //    Name = "Name2",
+            //    RawProperties = "{}",
+            //});
             var r2 = input.Template.Resources["Name2"];
             Assert.Empty(r2.DependsOn);
-            Assert.Throws<Exception>(() =>
-           {
-               r2.DependsOn.Add("Name1", input);
-           });
-            r2.DependsOn.Add("Name1-Changed", input);
+            r2.DependsOn.Add("Name1", input);
             Assert.Single(r2.DependsOn);
-            r2.DependsOn.Remove("Name1-Changed");
+            r2.DependsOn.Remove("Name1");
             Assert.Empty(r2.DependsOn);
 
             r2.RawProperties = "{\"property1\":\"[reference('Name1-Changed',true).name]\"}";
@@ -101,7 +99,7 @@ namespace ARMOrchestrationTest
             r.Zones.Add("zone1");
             Assert.Single(r.Zones);
             using var docZone = JsonDocument.Parse(r.ToString());
-            Assert.True(docZone.RootElement.TryGetProperty("zones",out JsonElement zonesE));
+            Assert.True(docZone.RootElement.TryGetProperty("zones", out JsonElement zonesE));
             Assert.Equal(JsonValueKind.Array, zonesE.ValueKind);
             Assert.Single(zonesE.EnumerateArray());
             Assert.Equal("zone1", zonesE.EnumerateArray().First().GetString());

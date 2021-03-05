@@ -1,19 +1,17 @@
 ﻿using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
     public class Plan 
     {
         private readonly ARMFunctions _Functions;
-        private JObject RootElement;
-        private Dictionary<string, object> _FullContext;
+        private readonly JObject RootElement;
+        private readonly Dictionary<string, object> _FullContext;
         public Plan(JObject element, Dictionary<string, object> fullContext)
         {
             this.RootElement = element;

@@ -56,7 +56,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.StartProvisioning,
-                        Input = DataConverter.Serialize(input),
+                        Input = input.Resource.ToString(),
                         LastRunUserId = input.LastRunUserId
                     }).Result;
                     if (operation == null)

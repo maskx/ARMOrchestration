@@ -65,6 +65,9 @@ namespace maskx.ARMOrchestration
             if (string.IsNullOrEmpty(args.RootId)) args.RootId = args.DeploymentId;
             if (string.IsNullOrEmpty(args.LastRunUserId)) args.LastRunUserId = args.CreateByUserId;
             if (args.ServiceProvider == null) args.ServiceProvider = _ServiceProvider;
+            var (r, s) = args.Validate();
+            if (!r)
+                throw new Exception(s);
             var deploymentOperation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(args.DeploymentId, args)
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
@@ -85,7 +88,7 @@ namespace maskx.ARMOrchestration
             deploymentOperation.ExecutionId = instance.ExecutionId;
             return deploymentOperation;
         }
-        public async Task<(int Result, string Message)> Retry(string deploymentOperationId,string correlationId, string userId)
+        public async Task<(int Result, string Message)> Retry(string deploymentOperationId, string correlationId, string userId)
         {
             var op = await GetDeploymentOperationAsync(deploymentOperationId);
             if (op.Stage != ProvisioningStage.Failed)
@@ -96,7 +99,7 @@ namespace maskx.ARMOrchestration
                 return await RetryCopy(op, correlationId, userId);
             return await RetryResource(op, correlationId, userId);
         }
-        private async Task<(int Result, string Message)> InitRetry(string deploymentOPerationId, string correlationId, string lastRunUserId, string input )
+        private async Task<(int Result, string Message)> InitRetry(string deploymentOPerationId, string correlationId, string lastRunUserId, string input)
         {
             int result = 400;
             string message = $"cannot find DeploymentOperation with Id:{deploymentOPerationId}";
@@ -138,11 +141,15 @@ namespace maskx.ARMOrchestration
         }
         public async Task<(int Result, string Message)> RetryCopy(DeploymentOperation op, string correlationId, string userId)
         {
-            var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
-            input.IsRetry = true;
-            input.LastRunUserId = userId;
-            input.DeploymentOperationId = op.Id;
-            var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(input));
+            var input = new ResourceOrchestrationInput()
+            {
+                IsRetry = true,
+                LastRunUserId = userId,
+                DeploymentOperationId = op.Id,
+                ResourceId=op.ResourceId,
+                DeploymentId=op.DeploymentId
+            };
+            var r = await InitRetry(op.Id, correlationId, userId, null);
             if (r.Result != 201)
                 return r;
             await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
@@ -156,13 +163,17 @@ namespace maskx.ARMOrchestration
             });
             return r;
         }
-        public async Task<(int Result, string Message)> RetryResource(DeploymentOperation op,string correlationId, string userId)
+        public async Task<(int Result, string Message)> RetryResource(DeploymentOperation op, string correlationId, string userId)
         {
-            var input = _DataConverter.Deserialize<ResourceOrchestrationInput>(op.Input);
-            input.IsRetry = true;
-            input.LastRunUserId = userId;
-            input.DeploymentOperationId = op.Id;
-            var r = await InitRetry(op.Id, correlationId, userId, _DataConverter.Serialize(input));
+            var input = new ResourceOrchestrationInput()
+            {
+                IsRetry = true,
+                LastRunUserId = userId,
+                DeploymentOperationId = op.Id,
+                ResourceId=op.ResourceId,
+                DeploymentId=op.DeploymentId
+            };
+            var r = await InitRetry(op.Id, correlationId, userId, null);
             if (r.Result != 201)
                 return r;
             await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
@@ -203,7 +214,7 @@ namespace maskx.ARMOrchestration
         /// </summary>
         /// <param name="deploymentId"></param>
         /// <returns></returns>
-        public async Task<List<DeploymentOperation>> GetResourceListAsync(string deploymentId)
+        public async Task<List<DeploymentOperation>> GetDeploymentOperationListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
             using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))

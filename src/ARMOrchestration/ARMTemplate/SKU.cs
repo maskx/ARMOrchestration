@@ -1,9 +1,7 @@
-﻿using Dynamitey.DynamicObjects;
-using maskx.ARMOrchestration.Functions;
+﻿using maskx.ARMOrchestration.Functions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
-using System.ComponentModel;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -11,7 +9,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
     {
         public const string Default = "Default";
         private string _Name;
-        [DisplayName("name")]
         public string Name
         {
             get
@@ -35,11 +32,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Name = value;
-                Change(value, "name");
+                RootElement["name"] = value;
             }
         }
         private string _Tier;
-        [DisplayName("tier")]
         public string Tier
         {
             get
@@ -59,11 +55,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Tier = value;
-                Change(value, "tier");
+                RootElement["tier"] = value;
             }
         }
         private string _Size;
-        [DisplayName("size")]
         public string Size
         {
             get
@@ -83,11 +78,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Size = value;
-                Change(value, "size");
+                RootElement["size"] = value;
             }
         }
         private string _Family;
-        [DisplayName("family")]
         public string Family
         {
             get
@@ -107,11 +101,10 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Family = value;
-                Change(value, "family");
+                RootElement["family"] = value;
             }
         }
         private string _Capacity;
-        [DisplayName("capacity")]
         public string Capacity
         {
             get
@@ -128,22 +121,23 @@ namespace maskx.ARMOrchestration.ARMTemplate
             set
             {
                 _Capacity = value;
-                Change(value, "capacity");
+                RootElement["capacity"] = value;
             }
         }
         private Resource _Resource;
 
         protected ARMFunctions _Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
 
-        public SKU() { }
+        public SKU() : base(new JObject(), null) { }
         public SKU(JObject root, Dictionary<string, object> context) : base(root, context) { }
         public static SKU Parse(Resource resource)
         {
             if (!resource.RootElement.TryGetValue("sku", out JToken sku))
                 return null;
-            var s = new SKU(sku as JObject, resource.FullContext);
-            s._Resource = resource;
-            return s;
+            return new SKU(sku as JObject, resource.FullContext)
+            {
+                _Resource = resource
+            };
         }
 
     }

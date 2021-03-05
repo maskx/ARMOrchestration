@@ -4,7 +4,7 @@
   "parameters": {
     "storagePrefix": {
       "type": "string",
-      "maxLength": 11,
+      "maxLength": 18,
       "defaultValue": "storagePrefix"
     },
     "secondResourceGroup": {
@@ -30,7 +30,7 @@
       "apiVersion": "2019-10-01",
       "name": "Template1",
       "resourceGroup": "firstResourceGroup",
-      "subscriptionId": "[newGuid()]",
+      "subscriptionId": "[Guid('Template1')]",
       "properties": {
         "mode": "Incremental",
         "template": {

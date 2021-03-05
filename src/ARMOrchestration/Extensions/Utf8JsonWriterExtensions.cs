@@ -124,7 +124,6 @@ namespace maskx.ARMOrchestration.Extensions
             // this is for output
             else if (copyProperty.ValueKind == JsonValueKind.Object)
             {
-                var input = copyProperty.GetProperty("input");
                 var countProperty = copyProperty.GetProperty("count");
                 var deployment = context[ContextKeys.ARM_CONTEXT] as Deployment;
                 int count;
@@ -134,25 +133,29 @@ namespace maskx.ARMOrchestration.Extensions
                     count = (int)deployment.Functions.Evaluate(countProperty.GetString(), context);
                 else
                     throw new Exception("the property of count has wrong error. It should be number or an function return a number");
-                var name = Guid.NewGuid().ToString("N");
-                var copyindex = new Dictionary<string, int>() { { name, 0 } };
-                Dictionary<string, object> copyContext = new Dictionary<string, object>
+                // todo: resource copy need validate
+                if (copyProperty.TryGetProperty("input",out JsonElement input))
+                {
+                    var name = Guid.NewGuid().ToString("N");
+                    var copyindex = new Dictionary<string, int>() { { name, 0 } };
+                    Dictionary<string, object> copyContext = new Dictionary<string, object>
                     {
                         { "copyindex", copyindex },
                         { "currentloopname", name }
                     };
-                foreach (var k in context.Keys)
-                {
-                    copyContext.Add(k, context[k]);
+                    foreach (var k in context.Keys)
+                    {
+                        copyContext.Add(k, context[k]);
+                    }
+                    writer.WritePropertyName("value");
+                    writer.WriteStartArray();
+                    for (int i = 0; i < count; i++)
+                    {
+                        copyindex[name] = i;
+                        writer.WriteElement(input, copyContext, path);
+                    }
+                    writer.WriteEndArray();
                 }
-                writer.WritePropertyName("value");
-                writer.WriteStartArray();
-                for (int i = 0; i < count; i++)
-                {
-                    copyindex[name] = i;
-                    writer.WriteElement(input, copyContext, path);
-                }
-                writer.WriteEndArray();
             }
             else
             {

@@ -18,81 +18,6 @@ namespace maskx.ARMOrchestration
     [JsonObject(MemberSerialization.OptOut)]
     public class Deployment
     {
-        public bool IsRetry { get; set; }
-        public bool Condition { get; set; }
-        public (bool, string) Validate(IServiceProvider service = null)
-        {
-            if (service != null)
-                this.ServiceProvider = service;
-            if (this.ServiceProvider == null)
-                throw new Exception("validate template need ServiceProvider");
-
-            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-syntax#parameters
-            using JsonDocument parDefine = JsonDocument.Parse(template.Parameters);
-            if (parDefine.RootElement.EnumerateObject().Count() > 0)
-            {
-                using JsonDocument ParValue = JsonDocument.Parse(string.IsNullOrEmpty(this.Parameters) ? "{}" : this.Parameters);
-                var root = ParValue.RootElement;
-
-                var func = ServiceProvider.GetService<ARMFunctions>();
-                var context = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, this } };
-
-                foreach (var par in parDefine.RootElement.EnumerateObject())
-                {
-                    if (!root.TryGetProperty(par.Name, out JsonElement p))
-                    {
-                        if (!par.Value.TryGetProperty("defaultValue", out JsonElement defaultV))
-                            return (false, $"must set the parameter value of {par.Name}");
-                    }
-                    else
-                    {
-                        #region check type
-                        var type = par.Value.GetProperty("type").GetString();
-                        if (type == "string" && p.ValueKind != JsonValueKind.String)
-                            return (false, $"{par.Name} parameter need a string value");
-                        if (type == "int" && p.ValueKind != JsonValueKind.Number)
-                            return (false, $"{par.Name} parameter need a int value");
-                        if (type == "bool" && p.ValueKind != JsonValueKind.True && p.ValueKind != JsonValueKind.False)
-                            return (false, $"{par.Name} parameter need a bool value");
-                        if (type == "object" && p.ValueKind != JsonValueKind.Object)
-                            return (false, $"{par.Name} parameter need a object value");
-                        if (type == "array" && p.ValueKind != JsonValueKind.Array)
-                            return (false, $"{par.Name} parameter need a array value");
-                        // todo: suppport securestring and secureObject
-                        #endregion
-
-                        var v = func.GetParameter(par.Name, context).Result;
-
-                        if (par.Value.TryGetProperty("allowedValues", out JsonElement allowedValues) &&
-                            !new JsonValue(allowedValues.GetRawText()).Contains(v))
-                            return (false, $"the value of parameter {par.Name} is not in the scope of allowedValues");
-                        if (type == "int" && par.Value.TryGetProperty("minValue", out JsonElement minValue) &&
-                            (int)v < minValue.GetInt32())
-                            return (false, $"the value of paratmter {par.Name} must greater than {minValue.GetInt32()}");
-                        if (type == "int" && par.Value.TryGetProperty("maxValue", out JsonElement maxValue) &&
-                            (int)v > maxValue.GetInt32())
-                            return (false, $"the value of paratmter {par.Name} must less than {maxValue.GetInt32()}");
-                        if (par.Value.TryGetProperty("minLength", out JsonElement minLength))
-                        {
-                            if (type == "string" && v.ToString().Length < minLength.GetInt32())
-                                return (false, $"the value length of parameter {par.Name} must greater than {minLength.GetInt32()}");
-                            if (type == "array" && (v as JsonValue).Length < minLength.GetInt32())
-                                return (false, $"the arraty lenth of paramter {par.Name} must greater then {minLength.GetInt32()}");
-                        }
-                        if (par.Value.TryGetProperty("maxLength", out JsonElement maxLength))
-                        {
-                            if (type == "string" && v.ToString().Length > maxLength.GetInt32())
-                                return (false, $"the value length of parameter {par.Name} must less than {maxLength.GetInt32()}");
-                            if (type == "array" && (v as JsonValue).Length > maxLength.GetInt32())
-                                return (false, $"the arraty lenth of paramter {par.Name} must less then {maxLength.GetInt32()}");
-                        }
-                    }
-                }
-            }
-
-            return this.Template.Validate();
-        }
-
         public static Deployment Parse(Resource resource)
         {
             Deployment deploymentContext = resource.Deployment;
@@ -123,7 +48,7 @@ namespace maskx.ARMOrchestration
             TemplateLink templateLink = null;
             if (rootElement.TryGetProperty("templateLink", out JsonElement _templateLink))
                 templateLink = resource.ServiceProvider.GetService<ARMTemplateHelper>().ParseTemplateLink(_templateLink, context);
-            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
+
             string parameters = string.Empty;
             ParametersLink parametersLink = null;
             if (rootElement.TryGetProperty("parameters", out JsonElement _parameters))
@@ -145,8 +70,8 @@ namespace maskx.ARMOrchestration
                     expressionEvaluationOptions = functions.Evaluate(_scope.GetString(), context).ToString();
             }
             var (groupId, groupType, hierarchyId) = infrastructure.GetGroupInfo(resource.ManagementGroupId, resource.SubscriptionId, resource.ResourceGroup);
-            context.Remove(ContextKeys.ARM_CONTEXT);
-            var d= new Deployment()
+
+            var d = new Deployment()
             {
                 Condition = resource.Condition,
                 RootId = deploymentContext.RootId,
@@ -171,11 +96,108 @@ namespace maskx.ARMOrchestration
                 DependsOn = resource.DependsOn,
                 Extensions = deploymentContext.Extensions,
                 TenantId = deploymentContext.TenantId,
-                Context = context,
                 ServiceProvider = resource.ServiceProvider,
                 ExpressionEvaluationOptions = expressionEvaluationOptions
             };
+            foreach (var item in resource.FullContext)
+            {
+                if (ContextKeys.ARM_CONTEXT == item.Key) continue;
+                d.Context.Add(item.Key, item.Value);
+            }
             return d;
+        }
+
+        public bool IsRetry { get; set; } = false;
+        public bool IsRuntime { get; set; } = false;
+        public bool Condition { get; set; } = false;
+        public (bool, string) Validate(IServiceProvider service = null)
+        {
+            if (service != null)
+                this.ServiceProvider = service;
+            if (this.ServiceProvider == null)
+                throw new Exception("validate template need ServiceProvider");
+
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-syntax#parameters
+            using JsonDocument parDefine = JsonDocument.Parse(template.Parameters);
+            if (parDefine.RootElement.EnumerateObject().Count() > 0)
+            {
+                using JsonDocument ParValue = JsonDocument.Parse(string.IsNullOrEmpty(this.Parameters) ? "{}" : this.Parameters);
+                var root = ParValue.RootElement;
+
+                var func = ServiceProvider.GetService<ARMFunctions>();
+                var context = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, this } };
+
+                foreach (var par in parDefine.RootElement.EnumerateObject())
+                {
+                    if (!root.TryGetProperty(par.Name, out JsonElement p) && !par.Value.TryGetProperty("defaultValue", out JsonElement defaultV))
+                        return (false, $"must set the parameter value of {par.Name}");
+
+                    object v = null;
+                    try
+                    {
+                        v = func.GetParameter(par.Name, context).Result;
+                    }
+                    catch (Exception ex)
+                    {
+                        return (false, ex.Message);
+                    }
+                    #region check type
+                    string typePar = v.GetType().Name;
+                    string type = par.Value.GetProperty("type").GetString();
+                    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-syntax#data-types
+                    // todo: suppport securestring and secureObject
+                    switch (par.Value.GetProperty("type").GetString())
+                    {
+                        case "string":
+                            if (typePar != "String") return (false, $"{par.Name} parameter need a string value");
+                            break;
+                        case "int":
+                            if (typePar != "Int32") return (false, $"{par.Name} parameter need a int value");
+                            break;
+                        case "bool":
+                            if (typePar != "Boolean") return (false, $"{par.Name} parameter need a bool value");
+                            break;
+                        case "object":
+                            if ((v as JsonValue).ValueKind != JsonValueKind.Object)
+                                return (false, $"{par.Name} parameter need a object value");
+                            break;
+                        case "array":
+                            if ((v as JsonValue).ValueKind != JsonValueKind.Array)
+                                return (false, $"{par.Name} parameter need a array value");
+                            break;
+                        default:
+                            return (false, $"incorrect type in parameters of {par.Name}");
+                    }
+                    #endregion
+
+
+                    if (par.Value.TryGetProperty("allowedValues", out JsonElement allowedValues) &&
+                        !new JsonValue(allowedValues.GetRawText()).Contains(v))
+                        return (false, $"the value of parameter {par.Name} is not in the scope of allowedValues");
+                    if (type == "int" && par.Value.TryGetProperty("minValue", out JsonElement minValue) &&
+                        (int)v < minValue.GetInt32())
+                        return (false, $"the value of paratmter {par.Name} must greater than {minValue.GetInt32()}");
+                    if (type == "int" && par.Value.TryGetProperty("maxValue", out JsonElement maxValue) &&
+                        (int)v > maxValue.GetInt32())
+                        return (false, $"the value of paratmter {par.Name} must less than {maxValue.GetInt32()}");
+                    if (par.Value.TryGetProperty("minLength", out JsonElement minLength))
+                    {
+                        if (type == "string" && v.ToString().Length < minLength.GetInt32())
+                            return (false, $"the value length of parameter {par.Name} must greater than {minLength.GetInt32()}");
+                        if (type == "array" && (v as JsonValue).Length < minLength.GetInt32())
+                            return (false, $"the arraty lenth of paramter {par.Name} must greater then {minLength.GetInt32()}");
+                    }
+                    if (par.Value.TryGetProperty("maxLength", out JsonElement maxLength))
+                    {
+                        if (type == "string" && v.ToString().Length > maxLength.GetInt32())
+                            return (false, $"the value length of parameter {par.Name} must less than {maxLength.GetInt32()}");
+                        if (type == "array" && (v as JsonValue).Length > maxLength.GetInt32())
+                            return (false, $"the arraty lenth of paramter {par.Name} must less then {maxLength.GetInt32()}");
+                    }
+                }
+            }
+
+            return (true, "");
         }
 
         private IServiceProvider _ServiceProvider;
@@ -188,12 +210,16 @@ namespace maskx.ARMOrchestration
             {
                 _ServiceProvider = value;
                 if (Template != null)
-                    Template.Deployment = this;
+                {
+                    Dictionary<string, object> cxt = this.Context.CopyNew();
+                    cxt.Add(ContextKeys.ARM_CONTEXT, this);
+                    Template._ParentContext = cxt;
+                }
             }
         }
         [JsonIgnore]
         public ARMFunctions Functions { get { return ServiceProvider.GetService<ARMFunctions>(); } }
-        public bool IsRuntime { get; set; } = false;
+       
         public string ExpressionEvaluationOptions { get; set; }
         /// <summary>
         /// group Id
@@ -261,15 +287,12 @@ namespace maskx.ARMOrchestration
                 if (template == null)
                 {
                     template = new Template();
-                    template.Deployment = this;
                 }
                 return template;
             }
             set
             {
                 template = value;
-                if (template != null)
-                    template.Deployment = this;
             }
         }
         string _Parameters = null;
@@ -452,16 +475,9 @@ namespace maskx.ARMOrchestration
             {
                 foreach (var d in this.Template.Resources.EnumerateDeployments())
                 {
-                    foreach (var r in d.EnumerateResource())
+                    foreach (var r in d.EnumerateResource(flatChild, expandCopy, flatDeployment))
                     {
                         yield return r;
-                        if (flatChild)
-                        {
-                            foreach (var child in r.FlatEnumerateChild())
-                            {
-                                yield return child;
-                            }
-                        }
                     }
                 }
             }
@@ -485,14 +501,12 @@ namespace maskx.ARMOrchestration
             }
         }
         public Dictionary<string, object> Context = new Dictionary<string, object>();
-
-        public Dictionary<string, object> ChangeMap = new Dictionary<string, object>();
         public Dictionary<string, object> PersistenceValue = new Dictionary<string, object>();
         public string GetOutputs()
         {
             // https://docs.microsoft.com/en-us/rest/api/resources/deployments/get#deploymentextended
             var infrastructure = ServiceProvider.GetService<IInfrastructure>();
-           
+
             Dictionary<string, object> context = new Dictionary<string, object>() { { ContextKeys.ARM_CONTEXT, this } };
             using var json = JsonDocument.Parse(this.Template.Outputs);
             var outputDefineElement = json.RootElement;

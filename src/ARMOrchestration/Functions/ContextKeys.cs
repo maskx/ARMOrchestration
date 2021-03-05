@@ -19,6 +19,6 @@
         public const string UDF_CONTEXT = "udf_context";
         public const string NEED_REEVALUATE = "need_reevaluate";
 
-        public const string PATH = "path"; 
+        public const string FUNCTION_PATH = "function_path"; 
     }
 }

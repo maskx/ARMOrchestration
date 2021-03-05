@@ -5,7 +5,6 @@ using System.Collections.Generic;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
-    [JsonObject(MemberSerialization.OptIn)]
     public class DependsOnCollection : ChangeTracking, IEnumerable<string>
     {
         [JsonProperty]
@@ -36,13 +35,11 @@ namespace maskx.ARMOrchestration.ARMTemplate
                 var r = resources[0];
                 if (r.Condition)
                 {
-                    Change(null, null);
                     if (r.Copy != null && !r.CopyIndex.HasValue)
                         _List.Add(r.Copy.NameWithServiceType);
                     else
                         _List.Add(r.NameWithServiceType);
                 }
-
             }
         }
 
@@ -54,15 +51,9 @@ namespace maskx.ARMOrchestration.ARMTemplate
             }
         }
 
-        public void Change(object value, string name = "")
-        {
-           // todo: collection Chage
-        }
-
         public void Clear()
         {
             _List.Clear();
-            Change(null, null);
         }
 
         public bool Contains(string item)
@@ -114,7 +105,6 @@ namespace maskx.ARMOrchestration.ARMTemplate
             if (index == -1)
                 return false;
             _List.RemoveAt(index);
-            Change(null, null);
             return true;
         }
 
@@ -129,4 +119,5 @@ namespace maskx.ARMOrchestration.ARMTemplate
             return $"[\"{string.Join("\",\"", _List)}\"]";
         }
     }
+
 }

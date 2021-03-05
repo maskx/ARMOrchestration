@@ -41,7 +41,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                        "Condition/FunctionConditionFalse", subscriptionId: Guid.NewGuid().ToString());
-            var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
+            var r = this.fixture.ARMOrchestrationClient.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             Assert.Single(r);
         }
     }

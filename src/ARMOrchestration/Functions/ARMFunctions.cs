@@ -4,6 +4,7 @@ using maskx.ARMOrchestration.Extensions;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.Expression;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -12,8 +13,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using ImpromptuInterface;
 
 namespace maskx.ARMOrchestration.Functions
 {
@@ -552,13 +551,16 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("newguid", (args, cxt) =>
             {
                 var deployment = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
-                var path = cxt[ContextKeys.PATH].ToString();
-                if (!deployment.PersistenceValue.TryGetValue(path, out object v))
+                if (!cxt.TryGetValue(ContextKeys.FUNCTION_PATH, out object p))
+                    throw new Exception("You can only use newGuid function within an expression for the default value of a parameter ");
+                var segs = p.ToString().Split('/');
+                if(segs.Length<3 || segs[0]!="parameters" || segs[2]!="defaultValue")
+                    throw new Exception("You can only use newGuid function within an expression for the default value of a parameter ");
+                if (!deployment.PersistenceValue.TryGetValue(p.ToString(), out object v))
                 {
                     v = Guid.NewGuid().ToString();
                     args.Result = v;
-                    deployment.PersistenceValue.Add(path, v);
-                    deployment.ServiceProvider.GetService<ARMTemplateHelper>().SaveDeploymentOperation(new DeploymentOperation(deployment.DeploymentId, deployment) { Input = _DataConverter.Serialize(deployment) });
+                    deployment.PersistenceValue.Add(p.ToString(), v);
                 }
                 args.Result = v;
             });
@@ -945,8 +947,7 @@ namespace maskx.ARMOrchestration.Functions
             }
             if (!rtv.HasResult)
             {
-                cxt.TryGetValue(ContextKeys.PATH, out object segment);
-                cxt[ContextKeys.PATH] = "variables.{name}}";
+                string path = $"variables/{name}";
                 if (!string.IsNullOrEmpty(input.Template.Variables.ToString()))
                 {
                     using var defineDoc = JsonDocument.Parse(input.Template.Variables.ToString());
@@ -955,12 +956,10 @@ namespace maskx.ARMOrchestration.Functions
                     {
                         if (parEleDef.ValueKind == JsonValueKind.Object)
                         {
-                            string path = $"{cxt[ContextKeys.PATH]}.{name}";
                             rtv.Result = new JsonValue(parEleDef.ExpandObject(cxt, path));
                         }
                         else if (parEleDef.ValueKind == JsonValueKind.Array)
                         {
-                            string path = $"{cxt[ContextKeys.PATH]}.{name}";
                             rtv.Result = new JsonValue(parEleDef.ExpandArray(cxt, path));
                         }
                         else
@@ -976,13 +975,11 @@ namespace maskx.ARMOrchestration.Functions
                             }
                         }
                     }
-
                 }
                 if (rtv.HasResult && rtv.Result is string s)
                 {
-                    rtv.Result = Evaluate(s, cxt);
+                    rtv.Result = Evaluate(s, cxt,path);
                 }
-                cxt[ContextKeys.PATH] = segment;
             }
             return rtv;
         }
@@ -992,6 +989,7 @@ namespace maskx.ARMOrchestration.Functions
                 throw new Exception("cannot find context in parameters function");
             var input = armcxt as Deployment;
             FunctionArgs rtv = new FunctionArgs();
+            // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#scope-for-expressions-in-nested-templates
             if (!string.IsNullOrEmpty(input.ParentId) &&
                 (string.IsNullOrEmpty(input.ExpressionEvaluationOptions) || !input.ExpressionEvaluationOptions.Equals("inner", StringComparison.InvariantCultureIgnoreCase)))
             {
@@ -1007,40 +1005,45 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 rtv = GetParameter(name, parentCxt);
             }
+
             if (!rtv.HasResult)
             {
-                cxt.TryGetValue(ContextKeys.PATH, out object segment);
-                cxt[ContextKeys.PATH] = "parameters.{name}}";
-                if (!string.IsNullOrEmpty(input.Parameters))
-                {
-                    using var jsonDoc = JsonDocument.Parse(input.Parameters);
-                    if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
-                        rtv.Result = JsonValue.GetElementValue(v);
-                }
-                if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Parameters))
-                {
-                    using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
-                    if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
-                        rtv.Result = JsonValue.GetElementValue(defValue);
-                }
+                string path = $"parameters/{name}";
                 // this is User Defined Functions
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-user-defined-functions
-                if (!rtv.HasResult && cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
+                if (cxt.TryGetValue(ContextKeys.UDF_CONTEXT, out object udfContext))
                 {
                     using var jsonDoc = JsonDocument.Parse(udfContext.ToString());
                     if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
                         rtv.Result = JsonValue.GetElementValue(v);
                 }
+                else
+                {
+                    if (!string.IsNullOrEmpty(input.Parameters))
+                    {
+                        using var jsonDoc = JsonDocument.Parse(input.Parameters);
+                        if (jsonDoc.RootElement.TryGetProperty(name, out JsonElement ele) && ele.TryGetProperty("value", out JsonElement v))
+                        {
+                            rtv.Result = JsonValue.GetElementValue(v);
+                        }
+                    }
+                    if (!rtv.HasResult && !string.IsNullOrEmpty(input.Template.Parameters))
+                    {
+                        using var defineDoc = JsonDocument.Parse(input.Template.Parameters);
+                        if (defineDoc.RootElement.TryGetProperty(name, out JsonElement parEleDef) && parEleDef.TryGetProperty("defaultValue", out JsonElement defValue))
+                        {
+                            rtv.Result = JsonValue.GetElementValue(defValue);
+                            path += "/defaultValue";
+                        }
+                    }
+                }
                 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/linked-templates#using-variables-to-link-templates
                 // paramete's default value can be included function
                 if (rtv.HasResult && rtv.Result is string s)
                 {
-                    rtv.Result = Evaluate(s, cxt);
+                    rtv.Result = Evaluate(s, cxt,path);
                 }
-                cxt[ContextKeys.PATH] = segment;
             }
-
-
             return rtv;
         }
 
@@ -1178,10 +1181,10 @@ namespace maskx.ARMOrchestration.Functions
 
         public object Evaluate(string function, Dictionary<string, object> cxt, string path)
         {
-            cxt.TryGetValue(ContextKeys.PATH, out object p);
-            cxt[ContextKeys.PATH] = $"{path}:func:";
+            cxt.TryGetValue(ContextKeys.FUNCTION_PATH, out object p);
+            cxt[ContextKeys.FUNCTION_PATH] = path;
             var r = Evaluate(function, cxt);
-            cxt[ContextKeys.PATH] = p;
+            cxt[ContextKeys.FUNCTION_PATH] = p;
             return r;
         }
         /// <summary>
@@ -1281,7 +1284,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 udfContext.Add(key, cxt[key]);
             }
-            udfContext.Add(ContextKeys.UDF_CONTEXT, jObject.ToString(Newtonsoft.Json.Formatting.None));
+            udfContext.Add(ContextKeys.UDF_CONTEXT, jObject.ToString(Formatting.Indented));
 
             args.Result = GetOutput(member.Output, udfContext);
         }
@@ -1342,27 +1345,27 @@ namespace maskx.ARMOrchestration.Functions
         public object[] EvaluateParameters(FunctionArgs args, Dictionary<string, object> context)
         {
             var values = new object[args.Parameters.Length];
-            context.TryGetValue(ContextKeys.PATH, out object p);
+            context.TryGetValue(ContextKeys.FUNCTION_PATH, out object p);
             for (int i = 0; i < values.Length; i++)
             {
-                context[ContextKeys.PATH] = $"{p}/par[{i}]";
+                context[ContextKeys.FUNCTION_PATH] = $"{p}/par[{i}]";
                 values[i] = args.Parameters[i].Evaluate(context);
             }
-            context[ContextKeys.PATH] = p;
+            context[ContextKeys.FUNCTION_PATH] = p;
             return values;
         }
         public object EvaluateParameters(FunctionArgs args, Dictionary<string, object> context, int index)
         {
-            var p = context[ContextKeys.PATH];
-            context[ContextKeys.PATH] = $"{p}/par[{index}]";
+            var p = context[ContextKeys.FUNCTION_PATH];
+            context[ContextKeys.FUNCTION_PATH] = $"{p}/par[{index}]";
             var r = args.Parameters[index].Evaluate(context);
-            context[ContextKeys.PATH] = p;
+            context[ContextKeys.FUNCTION_PATH] = p;
             return r;
         }
 
         public JsonValue ExpandCopy(JsonElement item, Dictionary<string, object> context)
         {
-            string path = $"{context[ContextKeys.PATH]}.copy";
+            string path = $"{context[ContextKeys.FUNCTION_PATH]}.copy";
             using MemoryStream ms = new MemoryStream();
             using Utf8JsonWriter writer = new Utf8JsonWriter(ms);
 

@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
 {
@@ -36,7 +35,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
 
         private readonly List<Resource> _Resources = new List<Resource>();
-        private List<Deployment> _Deployments = null;
+        private readonly List<Deployment> _Deployments = null;
 
         public Resource this[string name]
         {
@@ -74,23 +73,15 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public void Add(Resource item)
         {
+            item._ParentContext = this.FullContext;
             if (Contains(item))
             {
                 throw new Exception($"already exists:{item.ResourceId}");
             }
             else
             {
-                item.Deployment = Deployment;
                 _Resources.Add(item);
-                Change(null, null);
             }
-        }
-
-        public void Clear()
-        {
-            this._Resources.Clear();
-            this._Deployments?.Clear();
-            Change(null, null);
         }
 
         public bool Contains(Resource item)
@@ -134,33 +125,24 @@ namespace maskx.ARMOrchestration.ARMTemplate
 
         public IEnumerable<Deployment> EnumerateDeployments()
         {
-            bool needInit = false;
-            if (this._Deployments == null)
+            foreach (var item in _Resources)
             {
-                needInit = true;
-                this._Deployments = new List<Deployment>();
-            }
-            // TODO: asdfasdfasdf
-            //if (this.HasChanged || needInit)
-            //{
-            //    var infra = ServiceProvider.GetService<IInfrastructure>();
-            //    this._Deployments.Clear();
-            //    foreach (var item in _Resources)
-            //    {
-            //        if (item.Type == infra.BuiltinServiceTypes.Deployments)
-            //        {
-            //            this._Deployments.Add(Deployment.Parse(item));
-            //        }
-            //    }
-            //}
-            foreach (var item in this._Deployments)
-            {
-                yield return item;
-                foreach (var n in item.EnumerateDeployments())
+                if (item.Type == Infrastructure.BuiltinServiceTypes.Deployments)
                 {
-                    yield return n;
+                    var d = Deployment.Parse(item);
+                    yield return d;
+                    foreach (var n in d.EnumerateDeployments())
+                    {
+                        yield return n;
+                    }
                 }
             }
+
+        }
+
+        public void Clear()
+        {
+           
         }
     }
 }

@@ -41,7 +41,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration.TemplateLink
         {
             var instance = TestHelper.OrchestrationTest(fixture,
                        "Templates/Condition/FunctionConditionFalse", subscriptionId: Guid.NewGuid().ToString(), isValidateOrchestration: null, validate: null, usingLinkTemplate: true);
-            var r = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.InstanceId).Result;
+            var r = this.fixture.ARMOrchestrationClient.GetDeploymentOperationListAsync(instance.InstanceId).Result;
             Assert.Single(r);
         }
     }

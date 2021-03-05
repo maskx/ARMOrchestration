@@ -25,7 +25,7 @@ namespace ARMOrchestrationTest.TestResourceOrchestration
             Assert.Equal(OrchestrationStatus.Completed, result.OrchestrationStatus);
             var response = TestHelper.DataConverter.Deserialize<TaskResult>(result.Output);
             Assert.Equal(500, response.Code);
-            var rs = this.fixture.ARMOrchestrationClient.GetResourceListAsync(instance.ExecutionId).Result;
+            var rs = this.fixture.ARMOrchestrationClient.GetDeploymentOperationListAsync(instance.ExecutionId).Result;
             foreach (var r in rs)
             {
                 if (r.Name == "fail")

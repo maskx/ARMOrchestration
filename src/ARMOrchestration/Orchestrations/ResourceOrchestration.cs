@@ -4,7 +4,6 @@ using maskx.ARMOrchestration.Activities;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
@@ -52,14 +51,15 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Message = $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
                         });
                 }
-                else
+                else if (input.Resource.DependsOn.Count == 0)
                 {
+                    input.Deployment.IsRuntime = true;
                     var operation = templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,
                         Stage = ProvisioningStage.StartProvisioning,
-                        Input = DataConverter.Serialize(input),
+                        Input = DataConverter.Serialize(input.Resource),
                         LastRunUserId = input.LastRunUserId
                     }).Result;
                     if (operation == null)
@@ -81,58 +81,22 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (input.Resource.DependsOn.Count > 0)
             {
-                dependsOnWaitHandler = new TaskCompletionSource<string>();
-                try
+                var waitResult = await context.CreateSubOrchestrationInstance<TaskResult>(WaitDependsOnOrchestration<T>.Name, "1.0", new WaitDependsOnOrchestrationInput()
                 {
-                    await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
-                    new WaitDependsOnActivityInput()
-                    {
-                        DeploymentOperationId = input.DeploymentOperationId,
-                        DependsOn = input.Resource.DependsOn.ToList(),
-                        DeploymentId = input.Deployment.DeploymentId,
-                        RootId = input.Deployment.RootId
-                    });
-                }
-                catch (TaskFailedException ex)
-                {
-                    var response = new ErrorResponse()
-                    {
-                        Code = $"{ResourceOrchestration<T>.Name}:{ProvisioningStage.DependsOnWaited}",
-                        Message = ex.Message,
-                        AdditionalInfo = new ErrorAdditionalInfo[] {
-                        new ErrorAdditionalInfo() {
-                            Type=typeof(TaskFailedException).FullName,
-                            Info=ex
-                        } }
-                    };
-                    templateHelper.SafeSaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
-                    {
-                        Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Result = DataConverter.Serialize(response)
-                    });
-                    return new TaskResult()
-                    {
-                        Code = 500,
-                        Content = response
-                    };
-                }
-
-                await dependsOnWaitHandler.Task;
-                var r = DataConverter.Deserialize<TaskResult>(dependsOnWaitHandler.Task.Result);
-                if (r.Code != 200)
-                {
-                    templateHelper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
-                    {
-                        Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Result = DataConverter.Serialize(r)
-                    });
-                    return r;
-                }
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    CopyIndex = input.CopyIndex,
+                    DeploymentId = input.DeploymentId,
+                    DeploymentOperationId = input.DeploymentOperationId,
+                    IsRetry = input.IsRetry,
+                    LastRunUserId = input.LastRunUserId,
+                    ResourceId = input.ResourceId
+                });
+                if (waitResult.Code != 200)
+                    return waitResult;
             }
 
             #endregion DependsOn
-
-            input.Deployment.IsRuntime = true;
 
             #region plug-in
 
@@ -382,14 +346,6 @@ namespace maskx.ARMOrchestration.Orchestrations
             return new TaskResult() { Code = 200 };
         }
 
-        private TaskCompletionSource<string> dependsOnWaitHandler = null;
 
-        public override void OnEvent(OrchestrationContext context, string name, string input)
-        {
-            if (this.dependsOnWaitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.dependsOnWaitHandler.Task.Status == TaskStatus.WaitingForActivation)
-            {
-                this.dependsOnWaitHandler.SetResult(input);
-            }
-        }
     }
 }

@@ -5,7 +5,6 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace maskx.ARMOrchestration.Orchestrations
@@ -236,52 +235,17 @@ namespace maskx.ARMOrchestration.Orchestrations
 
             if (input.DependsOn.Count > 0)
             {
-                waitHandler = new TaskCompletionSource<string>();
-                try
+                var waitResult = await context.CreateSubOrchestrationInstance<TaskResult>(WaitDependsOnOrchestration<T>.Name, "1.0", new WaitDependsOnOrchestrationInput()
                 {
-                    await context.ScheduleTask<TaskResult>(WaitDependsOnActivity.Name, "1.0",
-                                     new WaitDependsOnActivityInput()
-                                     {
-                                         DeploymentOperationId = _DeploymentOperationId,
-                                         DependsOn = input.DependsOn.ToList(),
-                                         DeploymentId = input.DeploymentId,
-                                         RootId = input.RootId
-                                     });
-                }
-                catch (TaskFailedException ex)
-                {
-                    var response = new ErrorResponse()
-                    {
-                        Code = $"{DeploymentOrchestration<T>.Name}:{ProvisioningStage.DependsOnWaited}",
-                        Message = ex.Message,
-                        AdditionalInfo = new ErrorAdditionalInfo[] {
-                        new ErrorAdditionalInfo() {
-                            Type=typeof(TaskFailedException).FullName,
-                            Info=ex
-                        } }
-                    };
-                    helper.SafeSaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId)
-                    {
-                        Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Result = DataConverter.Serialize(response)
-                    });
-                    return new TaskResult()
-                    {
-                        Code = 500,
-                        Content = response
-                    };
-                }
-                await waitHandler.Task;
-                var r = DataConverter.Deserialize<TaskResult>(waitHandler.Task.Result);
-                if (r.Code != 200)
-                {
-                    helper.SaveDeploymentOperation(new DeploymentOperation(_DeploymentOperationId)
-                    {
-                        Stage = ProvisioningStage.DependsOnWaitedFailed,
-                        Result = DataConverter.Serialize(r)
-                    });
-                    return r;
-                }
+                    InstanceId = context.OrchestrationInstance.InstanceId,
+                    ExecutionId = context.OrchestrationInstance.ExecutionId,
+                    DeploymentId = input.DeploymentId,
+                    DeploymentOperationId = _DeploymentOperationId,
+                    IsRetry = input.IsRetry,
+                    LastRunUserId = input.LastRunUserId,
+                });
+                if (waitResult.Code != 200)
+                    return waitResult;
             }
 
             #endregion DependsOn
@@ -435,16 +399,6 @@ namespace maskx.ARMOrchestration.Orchestrations
                 return new TaskResult(200, rtv);
             else
                 return new TaskResult(500, errorResponse);
-        }
-
-        private TaskCompletionSource<string> waitHandler = null;
-
-        public override void OnEvent(OrchestrationContext context, string name, string input)
-        {
-            if (this.waitHandler != null && name == ProvisioningStage.DependsOnWaited.ToString() && this.waitHandler.Task.Status == TaskStatus.WaitingForActivation)
-            {
-                this.waitHandler.SetResult(input);
-            }
         }
     }
 }
