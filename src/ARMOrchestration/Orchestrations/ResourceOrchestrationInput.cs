@@ -114,7 +114,9 @@ namespace maskx.ARMOrchestration.Orchestrations
                 IPolicyService policyService = ServiceProvider.GetService<IPolicyService>();
                 if (policyService != null)
                 {
-                    policyService.Evaluateesource(_Resource);
+                    var tr = policyService.EvaluateResource(_Resource);
+                    if (tr.Code != 200)
+                        throw new Exception(tr.Content.ToString());
                 }
             }
         }

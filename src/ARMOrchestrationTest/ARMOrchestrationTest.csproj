@@ -41,6 +41,9 @@
     <None Update="DeploymentTests\json\NestTemplateLink_main.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Templates\Policy\ResourceIteration.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Templates\NestTemplate\NetTemplate_UDF_in_Parent.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

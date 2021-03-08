@@ -1,10 +1,11 @@
 ﻿using maskx.ARMOrchestration.ARMTemplate;
+using maskx.OrchestrationService;
 
 namespace maskx.ARMOrchestration
 {
     public interface IPolicyService
     {
-        (bool Result,string Message) Evaluateesource(Resource resource);
-        (bool Result, string Message) ValidateDeployment(Deployment deployment);
+        TaskResult EvaluateResource(Resource resource);
+        TaskResult ValidateDeployment(Deployment deployment);
     }
 }

@@ -1,12 +1,10 @@
 ﻿using ARMOrchestrationTest.Mock;
 using DurableTask.Core;
 using DurableTask.Core.Serializing;
-using Dynamitey;
 using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Extensions;
 using maskx.ARMOrchestration.Functions;
-using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
@@ -238,6 +236,7 @@ namespace ARMOrchestrationTest
                          return new MockInfrastructure(sp);
                      return infrastructure;
                  });
+                 services.AddSingleton<IPolicyService,MockPolicyService>();
              });
         }
 

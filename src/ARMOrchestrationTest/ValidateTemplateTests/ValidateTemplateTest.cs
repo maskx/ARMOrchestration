@@ -1,7 +1,5 @@
 ﻿using maskx.ARMOrchestration;
 using maskx.ARMOrchestration.ARMTemplate;
-using maskx.ARMOrchestration.Functions;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -13,15 +11,12 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
     [Collection("WebHost ARMOrchestartion")]
     public class ValidateTemplateTest
     {
-        private readonly ARMFunctions functions;
-        private readonly IInfrastructure infrastructure;
+
         private readonly ARMOrchestartionFixture fixture;
 
         public ValidateTemplateTest(ARMOrchestartionFixture fixture)
         {
             this.fixture = fixture;
-            this.functions = fixture.ARMFunctions;
-            this.infrastructure = fixture.ServiceProvider.GetService<IInfrastructure>();
         }
 
         private string GetTemplate(string filename)
@@ -126,7 +121,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             };
             var (r, m) = Deployment.Validate();
             Assert.True(r);
-            Assert.True(Deployment.Template.Resources.TryGetValue("storagecopy",out Resource _));
+            Assert.True(Deployment.Template.Resources.TryGetValue("storagecopy", out Resource _));
             var copy = Deployment.Template.Resources["storagecopy"];
             Assert.NotNull(copy.Copy);
             Assert.Equal("storagecopy", copy.Copy.Name);
@@ -344,7 +339,7 @@ namespace ARMOrchestrationTest.ValidateTemplateTests
             //Assert.Equal("123", rr.Comments);
             //var str=TestHelper.DataConverter.Serialize(Deployment.Template);
             //Assert.Contains("123", str);
-          
+
             //var c1 = Deployment.Template.Resources["storagecopy"];
             //var r1 = c1.Copy.EnumerateResource().First();
             //Assert.Equal(0, r1.CopyIndex);
