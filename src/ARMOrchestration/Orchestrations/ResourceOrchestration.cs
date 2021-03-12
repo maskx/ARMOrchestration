@@ -5,6 +5,7 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.Worker;
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -51,30 +52,41 @@ namespace maskx.ARMOrchestration.Orchestrations
                             Message = $"Deployment[{input.DeploymentOperationId}] in stage of [{r.Value}], only failed deployment support retry"
                         });
                 }
-                else if (input.Resource.DependsOn.Count == 0)
+                else
                 {
                     input.Deployment.IsRuntime = true;
-                    var operation = templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                    var policyService = _ServiceProvider.GetService<IPolicyService>();
+                    if (policyService != null)
                     {
-                        InstanceId = context.OrchestrationInstance.InstanceId,
-                        ExecutionId = context.OrchestrationInstance.ExecutionId,
-                        Stage = ProvisioningStage.StartProvisioning,
-                        Input = DataConverter.Serialize(input.Resource),
-                        LastRunUserId = input.LastRunUserId
-                    }).Result;
-                    if (operation == null)
-                        return new TaskResult(400, new ErrorResponse()
+                        var tr = policyService.EvaluateResource(input.Resource);
+                        if (tr.Code != 200)
+                            return tr;
+                    }
+                    if (input.Resource.DependsOn.Count == 0)
+                    {
+                        var operation = templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                         {
-                            Code = $"{Name}:CreatDeploymentOperation",
-                            Message = "CorrelationId duplicated"
-                        });
-                    if (operation.Id != input.DeploymentOperationId)
-                        return new TaskResult(400, new ErrorResponse()
-                        {
-                            Code = $"{Name}:CreatDeploymentOperation",
-                            Message = $"{operation.ResourceId} already exists"
-                        });
+                            InstanceId = context.OrchestrationInstance.InstanceId,
+                            ExecutionId = context.OrchestrationInstance.ExecutionId,
+                            Stage = ProvisioningStage.StartProvisioning,
+                            Input = DataConverter.Serialize(input.Resource),
+                            LastRunUserId = input.LastRunUserId
+                        }).Result;
+                        if (operation == null)
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:CreatDeploymentOperation",
+                                Message = "CorrelationId duplicated"
+                            });
+                        if (operation.Id != input.DeploymentOperationId)
+                            return new TaskResult(400, new ErrorResponse()
+                            {
+                                Code = $"{Name}:CreatDeploymentOperation",
+                                Message = $"{operation.ResourceId} already exists"
+                            });
+                    }
                 }
+
             }
 
             #region DependsOn

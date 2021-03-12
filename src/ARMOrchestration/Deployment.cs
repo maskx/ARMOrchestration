@@ -165,6 +165,9 @@ namespace maskx.ARMOrchestration
                             if ((v as JsonValue).ValueKind != JsonValueKind.Array)
                                 return (false, $"{par.Name} parameter need a array value");
                             break;
+                        case "secureString":
+                            
+                            break;
                         default:
                             return (false, $"incorrect type in parameters of {par.Name}");
                     }

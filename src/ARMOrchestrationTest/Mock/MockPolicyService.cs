@@ -16,7 +16,7 @@ namespace ARMOrchestrationTest.Mock
             return new TaskResult(200, "");
         }
 
-        public TaskResult ValidateDeployment(Deployment deployment)
+        public TaskResult EvaluateDeployment(Deployment deployment)
         {
             return new TaskResult(200, "");
         }

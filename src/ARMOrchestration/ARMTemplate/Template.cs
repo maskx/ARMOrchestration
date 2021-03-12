@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 
 namespace maskx.ARMOrchestration.ARMTemplate
@@ -12,7 +11,7 @@ namespace maskx.ARMOrchestration.ARMTemplate
     public class Template : ChangeTracking
     {
         [JsonProperty]
-        public string RawString { get; private set; }
+        private string RawString;
         private TemplateLink _TemplateLink { get; set; }
         public TemplateLink TemplateLink
         {
@@ -173,6 +172,5 @@ namespace maskx.ARMOrchestration.ARMTemplate
         {
             return RootElement.ToString(Formatting.Indented);
         }
-
     }
 }

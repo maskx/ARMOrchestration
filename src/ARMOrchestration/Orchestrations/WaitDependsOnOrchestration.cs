@@ -28,6 +28,7 @@ namespace maskx.ARMOrchestration.Orchestrations
         {
             dependsOnWaitHandler = new TaskCompletionSource<string>();
             input.ServiceProvider = _ServiceProvider;
+           
             if (!context.IsReplaying)
             {
                 try
@@ -54,6 +55,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                         }
                         else
                         {
+                            var policyService = _ServiceProvider.GetService<IPolicyService>();
+                            if (policyService != null)
+                            {
+                                var tr = policyService.EvaluateResource(input.Resource);
+                                if (tr.Code != 200)
+                                    return tr;
+                            }
                             operation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                             {
                                 InstanceId = input.InstanceId,
@@ -121,7 +129,6 @@ new
                         Content = response
                     };
                 }
-
             }
 
             await dependsOnWaitHandler.Task;
@@ -147,6 +154,16 @@ new
             else
             {
                 input.Resource.Refresh();
+                if (!string.IsNullOrEmpty(input.ResourceId))
+                {
+                    var policyService = _ServiceProvider.GetService<IPolicyService>();
+                    if (policyService != null)
+                    {
+                        var tr = policyService.EvaluateResource(input.Resource);
+                        if (tr.Code != 200)
+                            return tr;
+                    }
+                }
                 _Helper.SaveDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId)
                 {
                     Result = DataConverter.Serialize(r),

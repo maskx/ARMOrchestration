@@ -554,7 +554,7 @@ namespace maskx.ARMOrchestration.Functions
                 if (!cxt.TryGetValue(ContextKeys.FUNCTION_PATH, out object p))
                     throw new Exception("You can only use newGuid function within an expression for the default value of a parameter ");
                 var segs = p.ToString().Split('/');
-                if(segs.Length<3 || segs[0]!="parameters" || segs[2]!="defaultValue")
+                if (segs.Length < 3 || segs[0] != "parameters" || segs[2] != "defaultValue")
                     throw new Exception("You can only use newGuid function within an expression for the default value of a parameter ");
                 if (!deployment.PersistenceValue.TryGetValue(p.ToString(), out object v))
                 {
@@ -978,7 +978,7 @@ namespace maskx.ARMOrchestration.Functions
                 }
                 if (rtv.HasResult && rtv.Result is string s)
                 {
-                    rtv.Result = Evaluate(s, cxt,path);
+                    rtv.Result = Evaluate(s, cxt, path);
                 }
             }
             return rtv;
@@ -1041,7 +1041,7 @@ namespace maskx.ARMOrchestration.Functions
                 // paramete's default value can be included function
                 if (rtv.HasResult && rtv.Result is string s)
                 {
-                    rtv.Result = Evaluate(s, cxt,path);
+                    rtv.Result = Evaluate(s, cxt, path);
                 }
             }
             return rtv;
@@ -1356,6 +1356,7 @@ namespace maskx.ARMOrchestration.Functions
         }
         public object EvaluateParameters(FunctionArgs args, Dictionary<string, object> context, int index)
         {
+            //context.TryGetValue(ContextKeys.FUNCTION_PATH, out object p);
             var p = context[ContextKeys.FUNCTION_PATH];
             context[ContextKeys.FUNCTION_PATH] = $"{p}/par[{index}]";
             var r = args.Parameters[index].Evaluate(context);

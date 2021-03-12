@@ -89,7 +89,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                 }
             }
-            bool loadFromDb = false;
+
             var options = ServiceProvider.GetService<IOptions<ARMOrchestrationOptions>>().Value;
             using var db = new SQLServerAccess(options.Database.ConnectionString, ServiceProvider.GetService<ILoggerFactory>());
             db.AddStatement($"select Id,input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and ResourceId=@ResourceId",
@@ -102,23 +102,11 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
 
                 _DeploymentOperationId = reader.GetString(0);
-                if (!reader.IsDBNull(1))
+                if (!reader.IsDBNull(1) && !(CopyIndex == -1 && _Resource.Copy != null)) // load from database except copy resource 
                 {
-                    loadFromDb = true;
                     _Resource.Change(reader.GetString(1));
                 }
             }).Wait();
-            // 仅Resouce报文做运行时展开后才会保存到数据库Input字段
-            if (!loadFromDb)
-            {
-                IPolicyService policyService = ServiceProvider.GetService<IPolicyService>();
-                if (policyService != null)
-                {
-                    var tr = policyService.EvaluateResource(_Resource);
-                    if (tr.Code != 200)
-                        throw new Exception(tr.Content.ToString());
-                }
-            }
         }
     }
 }

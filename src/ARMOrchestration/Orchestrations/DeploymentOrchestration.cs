@@ -6,6 +6,7 @@ using maskx.OrchestrationService.Worker;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace maskx.ARMOrchestration.Orchestrations
 {
@@ -46,16 +47,17 @@ namespace maskx.ARMOrchestration.Orchestrations
             {
                 ResourceOrchestrationInput res = DataConverter.Deserialize<ResourceOrchestrationInput>(arg);
                 res.ServiceProvider = this._ServiceProvider;
-                if (!res.IsRetry)
+                if (res.IsRetry)
+                    _DeploymentOperationId = res.DeploymentOperationId;
+                else
                     _DeploymentOperationId = context.OrchestrationInstance.InstanceId;
                 if (!context.IsReplaying)
                 {
                     var dep = Deployment.Parse(res.Resource);
-                    var _ = dep.Template.Variables;
                     dep.IsRetry = res.IsRetry;
                     if (res.IsRetry)
                     {
-                        var r = helper.PrepareRetry(res.DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
+                        var r = helper.PrepareRetry(_DeploymentOperationId, context.OrchestrationInstance.InstanceId, context.OrchestrationInstance.ExecutionId, res.LastRunUserId, DataConverter.Serialize(dep));
                         if (r == null)
                             return new TaskResult(400, new ErrorResponse()
                             {
@@ -74,6 +76,13 @@ namespace maskx.ARMOrchestration.Orchestrations
                     else
                     {
                         dep.DeploymentId = context.OrchestrationInstance.InstanceId;
+                        var policy = _ServiceProvider.GetService<IPolicyService>();
+                        if(policy!=null)
+                        {
+                            var tr=policy.EvaluateDeployment(dep);
+                            if (tr.Code != 200)
+                                return tr;
+                        }
                         var operation = helper.CreatDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,

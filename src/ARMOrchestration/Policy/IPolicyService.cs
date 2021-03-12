@@ -6,6 +6,6 @@ namespace maskx.ARMOrchestration
     public interface IPolicyService
     {
         TaskResult EvaluateResource(Resource resource);
-        TaskResult ValidateDeployment(Deployment deployment);
+        TaskResult EvaluateDeployment(Deployment deployment);
     }
 }
