@@ -8,7 +8,6 @@ using maskx.OrchestrationService;
 using maskx.OrchestrationService.Activity;
 using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -25,17 +24,14 @@ namespace maskx.ARMOrchestration
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMFunctions _ARMFunctions;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
-        private readonly ILoggerFactory _LoggerFactory;
         private readonly IInfrastructure _Infrastructure;
         public ARMTemplateHelper(
             IOptions<ARMOrchestrationOptions> options,
             ARMFunctions aRMFunctions,
             IServiceProvider serviceProvider,
-            ILoggerFactory loggerFactory,
             IInfrastructure infrastructure)
         {
             this._Infrastructure = infrastructure;
-            this._LoggerFactory = loggerFactory;
             this._ServiceProvider = serviceProvider;
             this.options = options?.Value;
             this._ARMFunctions = aRMFunctions;
@@ -49,7 +45,7 @@ where Id=@Id
         public async Task<DeploymentOperation> CreatDeploymentOperation(DeploymentOperation deploymentOperation)
         {
             DeploymentOperation rtv = null;
-            using var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(options.Database.ConnectionString);
             await db.ExecuteStoredProcedureASync(options.Database.CreateDeploymentOperationSPName,
                 (reader, index) =>
                 {
@@ -117,7 +113,7 @@ where Id=@Id
                 deploymentOperation.Input,
                 deploymentOperation.Stage.ToString());
 
-            using var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
             db.AddStatement(this._saveDeploymentOperationCommandString, deploymentOperation);
             if (db.ExecuteNonQueryAsync().Result != 1)
             {
@@ -239,7 +235,7 @@ where Id=@Id
         public async Task<T> GetInputAsync<T>(string deploymentOperationId)
         {
             T input = default;
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where Id=@Id",
                     new { Id = deploymentOperationId });
@@ -253,7 +249,7 @@ where Id=@Id
         public async Task<Deployment> GetDeploymentAsync(string deploymentId)
         {
             Deployment input = null;
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement($"select Input from {this.options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and [Type]=N'{_Infrastructure.BuiltinServiceTypes.Deployments}'",
                     new { DeploymentId = deploymentId });
@@ -268,7 +264,7 @@ where Id=@Id
         public async Task<ProvisioningStage> GetProvisioningStageAsync(string deploymentOperationId)
         {
             ProvisioningStage stage = ProvisioningStage.Pending;
-            using (var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(options.Database.ConnectionString))
             {
                 db.AddStatement($"select Stage from {options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>
@@ -280,7 +276,7 @@ where Id=@Id
         }
         public ProvisioningStage? PrepareRetry(string id, string newInstanceId, string newExecutionId, string lastRunUserId, string input = null)
         {
-            using var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(options.Database.ConnectionString);
             var r = db.ExecuteScalarAsync(options.Database.RetrySPName, new
             {
                 Id = id,
@@ -296,7 +292,7 @@ where Id=@Id
         public async Task<List<string>> GetAllRetryResource(string deploymentOperationId, bool deepSearch = true)
         {
             List<string> rtv = new List<string>();
-            using var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
             db.AddStatement(@$"
 select op.Id,op.ResourceId from {this.options.Database.DeploymentOperationsTableName} as op
 inner join {this.options.Database.DeploymentOperationsTableName} as dp on dp.ResourceId=op.ParentResourceId
@@ -318,7 +314,7 @@ new
         {
             ProvisioningStage? Stage = null;
             string DeploymentOpeartionId = null;
-            using var db = new SQLServerAccess(options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(options.Database.ConnectionString);
             db.ExecuteStoredProcedureASync(options.Database.RetryResourceSPName,
                 (reader, index) =>
                 {

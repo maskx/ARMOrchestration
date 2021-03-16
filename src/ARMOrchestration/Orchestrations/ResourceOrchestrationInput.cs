@@ -91,7 +91,7 @@ namespace maskx.ARMOrchestration.Orchestrations
             }
 
             var options = ServiceProvider.GetService<IOptions<ARMOrchestrationOptions>>().Value;
-            using var db = new SQLServerAccess(options.Database.ConnectionString, ServiceProvider.GetService<ILoggerFactory>());
+            using var db = new SQLServerAccess(options.Database.ConnectionString);
             db.AddStatement($"select Id,input from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and ResourceId=@ResourceId",
                 new
                 {

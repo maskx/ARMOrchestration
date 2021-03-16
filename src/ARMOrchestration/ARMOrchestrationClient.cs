@@ -5,7 +5,6 @@ using maskx.ARMOrchestration.Orchestrations;
 using maskx.OrchestrationService;
 using maskx.OrchestrationService.SQL;
 using maskx.OrchestrationService.Worker;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -21,16 +20,13 @@ namespace maskx.ARMOrchestration
         private readonly IServiceProvider _ServiceProvider;
         private readonly ARMTemplateHelper _Helper;
         private readonly IInfrastructure _Infrastructure;
-        private readonly ILoggerFactory _LoggerFactory;
         public ARMOrchestrationClient(
             OrchestrationWorkerClient orchestrationWorkerClient,
             IOptions<ARMOrchestrationOptions> options,
             IServiceProvider serviceProvider,
             ARMTemplateHelper helper,
-            IInfrastructure infrastructure,
-            ILoggerFactory loggerFactory)
+            IInfrastructure infrastructure)
         {
-            this._LoggerFactory = loggerFactory;
             this._ServiceProvider = serviceProvider;
             this._Infrastructure = infrastructure;
             this._OrchestrationWorkerClient = orchestrationWorkerClient;
@@ -103,7 +99,7 @@ namespace maskx.ARMOrchestration
         {
             int result = 400;
             string message = $"cannot find DeploymentOperation with Id:{deploymentOPerationId}";
-            using var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(this._Options.Database.ConnectionString);
             await db.ExecuteStoredProcedureASync(this._Options.Database.InitRetrySPName,
                 (reader, index) =>
                 {
@@ -217,7 +213,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetDeploymentOperationListAsync(string deploymentId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
                 db.AddStatement($"select * from { this._Options.Database.DeploymentOperationsTableName} where deploymentId=@deploymentId",
                     new Dictionary<string, object>() {
@@ -264,7 +260,7 @@ namespace maskx.ARMOrchestration
         public async Task<List<DeploymentOperation>> GetAllResourceListAsync(string rootId)
         {
             List<DeploymentOperation> rs = new List<DeploymentOperation>();
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
                 db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where RootId=@RootId",
                     new Dictionary<string, object>() {
@@ -302,7 +298,7 @@ namespace maskx.ARMOrchestration
         public async Task<DeploymentOperation> GetDeploymentOperationAsync(string deploymentOperationId)
         {
             DeploymentOperation deployment = null;
-            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(this._Options.Database.ConnectionString))
             {
                 db.AddStatement($"select * from {this._Options.Database.DeploymentOperationsTableName} where Id=@Id", new { Id = deploymentOperationId });
                 await db.ExecuteReaderAsync((reader, index) =>

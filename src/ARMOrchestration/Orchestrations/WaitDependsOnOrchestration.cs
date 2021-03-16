@@ -84,7 +84,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             });
                     }
                     ARMOrchestrationOptions options = _ServiceProvider.GetService<IOptions<ARMOrchestrationOptions>>().Value;
-                    using (var db = new SQLServerAccess(options.Database.ConnectionString, _ServiceProvider.GetService<ILoggerFactory>()))
+                    using (var db = new SQLServerAccess(options.Database.ConnectionString))
                     {
                         var dependsOn = string.IsNullOrEmpty(input.ResourceId) ? input.Deployment.DependsOn : input.Resource.DependsOn;
                         foreach (var item in dependsOn)

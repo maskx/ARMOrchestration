@@ -1,5 +1,6 @@
 ﻿using DurableTask.Core;
 using DurableTask.Core.Serializing;
+using DurableTask.Core.Tracing;
 using maskx.ARMOrchestration.Activities;
 using maskx.ARMOrchestration.Orchestrations;
 using maskx.ARMOrchestration.Utilities;
@@ -21,18 +22,15 @@ namespace maskx.ARMOrchestration.Workers
         private readonly ARMOrchestrationOptions options;
         private readonly TaskHubClient taskHubClient;
         private readonly DataConverter dataConverter = new JsonDataConverter();
-        private readonly ILoggerFactory _LoggerFactory;
         private readonly IInfrastructure _Infrastructure;
 
         public WaitDependsOnWorker(
             IOrchestrationServiceClient orchestrationServiceClient,
             IOptions<ARMOrchestrationOptions> options,
             OrchestrationWorker orchestrationWorker,
-            ILoggerFactory loggerFactory,
             IInfrastructure infrastructure)
         {
             this._Infrastructure = infrastructure;
-            this._LoggerFactory = loggerFactory;
             this.options = options?.Value;
             this.taskHubClient = new TaskHubClient(orchestrationServiceClient);
             this.fetchCommandString = string.Format(fetchCommandTemplate,
@@ -58,7 +56,7 @@ namespace maskx.ARMOrchestration.Workers
         private async Task<List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>> GetResolvedDependsOn()
         {
             List<(string InstanceId, string ExecutionId, string EventName, int FailCount)> rtv = new List<(string InstanceId, string ExecutionId, string EventName, int FailCount)>();
-            using (var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory))
+            using (var db = new SQLServerAccess(this.options.Database.ConnectionString))
             {
                 db.AddStatement(this.fetchCommandString);
                 await db.ExecuteReaderAsync((reader, index) =>
@@ -90,7 +88,7 @@ namespace maskx.ARMOrchestration.Workers
                 }
                 catch (Exception ex)
                 {
-                    _LoggerFactory.CreateLogger<WaitDependsOnWorker<T>>().LogError($"WaitDependsOnWorker execute error:{ex.Message};{ex.StackTrace}");
+                   TraceHelper.TraceException(System.Diagnostics.TraceEventType.Critical, "ARMOrchestration-WaitDependsOnWorker", ex,$"WaitDependsOnWorker execute error:{ex.Message};{ex.StackTrace}");
                 }
             }
         }
@@ -112,7 +110,7 @@ namespace maskx.ARMOrchestration.Workers
                                            eventName,
                                            dataConverter.Serialize(failCount > 0 ? new TaskResult(500, "One of dependsOn resources has failed") : new TaskResult(200, null))
                                            );
-            using var db = new SQLServerAccess(this.options.Database.ConnectionString, _LoggerFactory);
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
             db.AddStatement(this.removeCommandString,
                new
                {
