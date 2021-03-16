@@ -42,7 +42,7 @@ where Id=@Id
 ;"
                 , this.options.Database.DeploymentOperationsTableName);
         }
-        public async Task<DeploymentOperation> CreatDeploymentOperation(DeploymentOperation deploymentOperation)
+        public async Task<DeploymentOperation> CreateDeploymentOperation(DeploymentOperation deploymentOperation)
         {
             DeploymentOperation rtv = null;
             using var db = new SQLServerAccess(options.Database.ConnectionString);
@@ -66,7 +66,7 @@ where Id=@Id
                         SubscriptionId = reader["SubscriptionId"]?.ToString(),
                         ManagementGroupId = reader["ManagementGroupId"]?.ToString(),
                         ParentResourceId = reader["ParentResourceId"]?.ToString(),
-                        Input = reader["Input"].ToString(),
+                        Input = reader["Input"]?.ToString(),
                         Result = reader["Result"]?.ToString(),
                         CreateByUserId = reader["CreateByUserId"].ToString(),
                         LastRunUserId = reader["LastRunUserId"].ToString(),

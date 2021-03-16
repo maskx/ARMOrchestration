@@ -64,7 +64,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                     }
                     if (input.Resource.DependsOn.Count == 0)
                     {
-                        var operation = templateHelper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                        var operation = templateHelper.CreateDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,

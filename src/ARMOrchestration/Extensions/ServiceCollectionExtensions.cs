@@ -89,7 +89,7 @@ namespace maskx.ARMOrchestration.Extensions
                 var infra = sp.GetService<IInfrastructure>();
                 if (config == null)
                     config = configOption(sp);
-                var func = new ARMFunctions(options, sp, infra);
+                var func = new ARMFunctions(options, infra);
                 config.ConfigARMFunctions?.Invoke(func);
                 return func;
             });

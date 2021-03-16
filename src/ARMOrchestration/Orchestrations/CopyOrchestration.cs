@@ -51,7 +51,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                 }
                 else
                 {
-                    var operation = helper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                    var operation = helper.CreateDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                     {
                         InstanceId = context.OrchestrationInstance.InstanceId,
                         ExecutionId = context.OrchestrationInstance.ExecutionId,

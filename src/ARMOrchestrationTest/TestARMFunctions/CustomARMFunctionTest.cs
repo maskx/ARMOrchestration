@@ -10,7 +10,7 @@ namespace ARMOrchestrationTest.TestARMFunctions
     {
         public void resourcegroup()
         {
-            ARMFunctions functions = new ARMFunctions(Options.Create(new ARMOrchestrationOptions()), null,new MockInfrastructure(null));
+            ARMFunctions functions = new ARMFunctions(Options.Create(new ARMOrchestrationOptions()), new MockInfrastructure(null));
             functions.SetFunction("resourcegroup", (args, cxt) =>
             {
                 if (!cxt.TryGetValue("armcontext", out object armcxt))

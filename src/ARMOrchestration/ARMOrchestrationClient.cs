@@ -64,13 +64,18 @@ namespace maskx.ARMOrchestration
             var (r, s) = args.Validate();
             if (!r)
                 throw new Exception(s);
-            var deploymentOperation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(args.DeploymentId, args)
+            var deploymentOperation = await _Helper.CreateDeploymentOperation(new DeploymentOperation(args.DeploymentId, args)
             {
                 RootId = string.IsNullOrEmpty(args.ParentId) ? args.DeploymentId : args.ParentId,
                 InstanceId = args.DeploymentId,
+                ApiVersion=args.ApiVersion,
                 Stage = ProvisioningStage.Pending,
                 Input = _DataConverter.Serialize(args)
             });
+            if (deploymentOperation == null)
+                return null;
+            if (deploymentOperation.Id != args.DeploymentId)
+                return deploymentOperation;
             var instance = await _OrchestrationWorkerClient.JumpStartOrchestrationAsync(new Job
             {
                 InstanceId = args.DeploymentId,
@@ -103,17 +108,16 @@ namespace maskx.ARMOrchestration
             await db.ExecuteStoredProcedureASync(this._Options.Database.InitRetrySPName,
                 (reader, index) =>
                 {
-                    var effected = reader.GetInt32(0);
-                    var stage = (ProvisioningStage)(int)reader["Stage"];
-                    var correlation = reader["CorrelationId"].ToString();
-                    var userId = reader["LastRunUserId"].ToString();
-                    if (effected == 1)
+                    if (reader.GetInt32(0) == 1)
                     {
                         result = 201;
                         message = "Successed";
                     }
                     else
                     {
+                        var stage = (ProvisioningStage)(int)reader["Stage"];
+                        var correlation = reader["CorrelationId"].ToString();
+                        var userId = reader["LastRunUserId"].ToString();
                         if (userId == lastRunUserId && correlation == correlationId)
                         {
                             result = 202;

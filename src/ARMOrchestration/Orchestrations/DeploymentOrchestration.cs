@@ -83,7 +83,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                             if (tr.Code != 200)
                                 return tr;
                         }
-                        var operation = helper.CreatDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
+                        var operation = helper.CreateDeploymentOperation(new DeploymentOperation(_DeploymentOperationId, dep)
                         {
                             InstanceId = context.OrchestrationInstance.InstanceId,
                             ExecutionId = context.OrchestrationInstance.ExecutionId,

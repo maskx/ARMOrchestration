@@ -3,6 +3,7 @@ using maskx.ARMOrchestration.ARMTemplate;
 using maskx.ARMOrchestration.Extensions;
 using maskx.DurableTask.SQLServer.SQL;
 using maskx.Expression;
+using maskx.OrchestrationService.SQL;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -20,16 +21,13 @@ namespace maskx.ARMOrchestration.Functions
     {
         private readonly Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>> Functions = new Dictionary<string, Action<FunctionArgs, Dictionary<string, object>>>();
         private readonly ARMOrchestrationOptions options;
-        private readonly IServiceProvider serviceProvider;
         private readonly IInfrastructure infrastructure;
         private readonly DataConverter _DataConverter = new JsonDataConverter();
 
         public ARMFunctions(IOptions<ARMOrchestrationOptions> options,
-            IServiceProvider serviceProvider,
             IInfrastructure infrastructure)
         {
             this.options = options?.Value;
-            this.serviceProvider = serviceProvider;
             this.infrastructure = infrastructure;
             this.InitBuiltInFunction();
         }
@@ -59,7 +57,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("concat", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 if (pars[0] is JsonValue)
                     args.Result = new JsonValue($"[{string.Join(",", pars)}]");
                 else
@@ -68,10 +66,10 @@ namespace maskx.ARMOrchestration.Functions
             Functions.Add("contains", (args, cxt) =>
             {
                 args.Result = false;
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args,cxt);
                 if (pars[0] is string s)
                 {
-                    if (s.IndexOf(pars[1] as string) > 0)
+                    if (s.IndexOf(pars[1] as string) >= 0)
                         args.Result = true;
                 }
                 else if (pars[0] is JsonValue jv)
@@ -81,7 +79,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("createarray", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = new JsonValue($"[{string.Join(",", pars.Select(JsonValue.PackageJson))}]");
             });
             Functions.Add("empty", (args, cxt) =>
@@ -109,7 +107,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("intersection", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 JsonValue jv = pars[0] as JsonValue;
                 for (int i = 1; i < pars.Length; i++)
                 {
@@ -135,7 +133,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("max", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 if (pars[0] is JsonValue jv)
                 {
                     args.Result = jv.Max();
@@ -147,7 +145,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("min", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 if (pars[0] is JsonValue jv)
                 {
                     args.Result = jv.Min();
@@ -159,7 +157,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("range", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 List<int> nums = new List<int>();
                 int index = Convert.ToInt32(pars[0]);
                 int length = index + Convert.ToInt32(pars[1]);
@@ -171,7 +169,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("skip", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 int numberToSkip = Convert.ToInt32(pars[1]);
                 if (pars[0] is string s)
                 {
@@ -189,7 +187,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("take", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 int numberToTake = Convert.ToInt32(pars[1]);
                 if (pars[0] is string s)
                 {
@@ -207,7 +205,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("union", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 JsonValue jv = pars[0] as JsonValue;
                 for (int i = 1; i < pars.Length; i++)
                 {
@@ -232,7 +230,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("equals", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 if (pars[0] is JsonValue jv)
                 {
                     args.Result = jv.Equals(pars[1]);
@@ -244,7 +242,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("greater", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = false;
                 if (pars[0] is string s)
                 {
@@ -258,7 +256,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("greaterorequals", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = false;
                 if (pars[0] is string s)
                 {
@@ -272,7 +270,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("less", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = false;
                 if (pars[0] is string s)
                 {
@@ -286,7 +284,7 @@ namespace maskx.ARMOrchestration.Functions
             });
             Functions.Add("lessorequals", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = false;
                 if (pars[0] is string s)
                 {
@@ -306,7 +304,7 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("datetimeadd", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 if (!DateTime.TryParseExact(pars[0].ToString(), "yyyyMMdd'T'HHmmss'Z'", null, System.Globalization.DateTimeStyles.None, out DateTime dt))
                     throw new Exception($"wrong format of datetime {pars[0]}");
                 var duration = pars[1].ToString();
@@ -357,7 +355,7 @@ namespace maskx.ARMOrchestration.Functions
             {
                 var input = cxt[ContextKeys.ARM_CONTEXT] as Deployment;
                 int stage = 0;
-                using (var db = new DbAccess(options.Database.ConnectionString))
+                using (var db = new SQLServerAccess(options.Database.ConnectionString))
                 {
                     db.AddStatement($"select TOP 1 Stage from {options.Database.DeploymentOperationsTableName} where DeploymentId=@DeploymentId and Name=@Name ",
                               new
@@ -419,7 +417,7 @@ namespace maskx.ARMOrchestration.Functions
 
             Functions.Add("and", (args, cxt) =>
             {
-                var pars = args.EvaluateParameters(cxt);
+                var pars = EvaluateParameters(args, cxt);
                 args.Result = true;
                 foreach (var item in pars)
                 {

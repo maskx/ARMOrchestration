@@ -93,7 +93,6 @@ namespace ARMOrchestrationTest.TestARMFunctions
         {
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
-                null,
                 new MockInfrastructure(null));
             object rtv = functions.Evaluate(
                 "[listId('resourceId','2019-01-02')]",
@@ -114,7 +113,6 @@ namespace ARMOrchestrationTest.TestARMFunctions
                 };
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
-                null,
                 new MockInfrastructure(null));
             object rtv = functions.Evaluate("[listId('resourceId','2019-01-02')]", cxt);
             Assert.NotNull(rtv);

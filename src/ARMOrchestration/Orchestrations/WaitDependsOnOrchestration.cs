@@ -45,7 +45,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                         DeploymentOperation operation = null;
                         if (string.IsNullOrEmpty(input.ResourceId))
                         {
-                            operation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Deployment)
+                            operation = await _Helper.CreateDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Deployment)
                             {
                                 InstanceId = input.InstanceId,
                                 ExecutionId = input.ExecutionId,
@@ -62,7 +62,7 @@ namespace maskx.ARMOrchestration.Orchestrations
                                 if (tr.Code != 200)
                                     return tr;
                             }
-                            operation = await _Helper.CreatDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
+                            operation = await _Helper.CreateDeploymentOperation(new DeploymentOperation(input.DeploymentOperationId, input.Resource)
                             {
                                 InstanceId = input.InstanceId,
                                 ExecutionId = input.ExecutionId,

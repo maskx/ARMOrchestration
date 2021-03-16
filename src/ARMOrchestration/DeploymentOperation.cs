@@ -8,13 +8,17 @@ namespace maskx.ARMOrchestration
 {
     public class DeploymentOperation
     {
+        public DeploymentOperation()
+        {
+
+        }
         public DeploymentOperation(string id)
         {
             this.Id = id;
         }
-        public DeploymentOperation(string id, Deployment deployment)
+        public DeploymentOperation(string id, Deployment deployment) : this(id)
         {
-            BuildDeploymentInformation(id, deployment);
+            BuildDeploymentInformation(deployment);
             IInfrastructure infrastructure = deployment.ServiceProvider.GetService<IInfrastructure>();
             this.ResourceId = deployment.ResourceId;
             this.Type = infrastructure.BuiltinServiceTypes.Deployments;
@@ -24,9 +28,9 @@ namespace maskx.ARMOrchestration
             this.ManagementGroupId = deployment.ManagementGroupId;
         }
 
-        public DeploymentOperation(string id, Resource resource)
+        public DeploymentOperation(string id, Resource resource) : this(id)
         {
-            BuildDeploymentInformation(id, resource.Deployment);
+            BuildDeploymentInformation(resource.Deployment);
             this.ResourceId = resource.ResourceId;
             this.Name = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullName : resource.Name;
             this.Type = (resource.Copy != null && !resource.CopyIndex.HasValue) ? resource.Copy.FullType : resource.Type;
@@ -34,10 +38,9 @@ namespace maskx.ARMOrchestration
             this.SubscriptionId = resource.SubscriptionId;
             this.ManagementGroupId = resource.ManagementGroupId;
         }
-        private void BuildDeploymentInformation(string id, Deployment deployment)
+        private void BuildDeploymentInformation(Deployment deployment)
         {
             this.ApiVersion = deployment.ApiVersion;
-            this.Id = id;
             this.GroupType = deployment.GroupType;
             this.GroupId = deployment.GroupId;
             this.HierarchyId = deployment.HierarchyId;

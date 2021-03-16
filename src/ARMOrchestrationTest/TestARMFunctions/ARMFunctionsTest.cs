@@ -465,7 +465,6 @@ namespace ARMOrchestrationTest.TestARMFunctions
             };
             ARMFunctions functions = new ARMFunctions(
                 Options.Create(new ARMOrchestrationOptions()),
-                null,
                 new MockInfrastructure(null));
             object rtv = functions.Evaluate("[copyindex()]", cxt);
             Assert.Equal(2, (int)rtv);
