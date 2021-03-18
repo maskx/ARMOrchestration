@@ -289,6 +289,24 @@ where Id=@Id
                 return null;
             return (ProvisioningStage)(int)r;
         }
+        public async Task<List<(string OperationId, string ResourceId)>> GetRetryResourcesByDeployment(string deploymentId)
+        {
+            List<(string OperationId, string ResourceId)> rtv = new List<(string OperationId, string ResourceId)>();
+            using var db = new SQLServerAccess(this.options.Database.ConnectionString);
+            db.AddStatement(@$"
+select op.Id,op.ResourceId from {this.options.Database.DeploymentOperationsTableName} as op
+where op.DeploymentId=@DeploymentId and op.Stage={(int)ProvisioningStage.Pending} and [type]<>N'{_Infrastructure.BuiltinServiceTypes.Deployments}'",
+new
+{
+    DeploymentId = deploymentId
+});
+            await db.ExecuteReaderAsync((reader, index) =>
+            {
+                rtv.Add((reader.GetString(0), reader.GetString(1)));
+            });
+            return rtv;
+        }
+
         public async Task<List<string>> GetAllRetryResource(string deploymentOperationId, bool deepSearch = true)
         {
             List<string> rtv = new List<string>();

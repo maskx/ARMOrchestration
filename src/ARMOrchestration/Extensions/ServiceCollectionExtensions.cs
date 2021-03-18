@@ -98,7 +98,7 @@ namespace maskx.ARMOrchestration.Extensions
 
             return services;
         }
-        public static IServiceCollection UsingARMOrhcestrationClient<T>(this IServiceCollection services, Func<IServiceProvider, ARMOrchestrationSqlServerConfig> configOption)
+        public static IServiceCollection UsingARMOrchestrationClient<T>(this IServiceCollection services, Func<IServiceProvider, ARMOrchestrationSqlServerConfig> configOption)
             where T : CommunicationJob, new()
         {
             ARMOrchestrationSqlServerConfig config = null;

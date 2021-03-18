@@ -225,7 +225,7 @@ namespace ARMOrchestrationTest
                  if (interfaceActivitys != null)
                      sqlConfig.OrchestrationSettings.GetBuildInTaskActivitiesFromInterface = (sp) => interfaceActivitys;
                  services.UsingARMOrchestration<CustomCommunicationJob>(sp => sqlConfig);
-                 services.UsingARMOrhcestrationClient<CustomCommunicationJob>(sp => sqlConfig);
+                 services.UsingARMOrchestrationClient<CustomCommunicationJob>(sp => sqlConfig);
                  services.AddSingleton<ICommunicationProcessor<CustomCommunicationJob>>((sp) =>
                  {
                      return new MockCommunicationProcessor();
